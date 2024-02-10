@@ -30,7 +30,6 @@ jobs:
 
     - name: unit tests
       run: |
-        cp tests/*.json .
         cargo test --all --release
 
     - name: bundle
