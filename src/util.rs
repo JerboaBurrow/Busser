@@ -1,3 +1,4 @@
+use core::fmt;
 use std::{fmt::Write, fs::File, io::{Write as ioWrite, Read}};
 use regex::Regex;
 
@@ -52,5 +53,32 @@ pub fn read_file_utf8(path: &str) -> Option<String>
             return None
         },
         Ok(_) => Some(s)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ListDirError
+{
+    pub why: String
+}
+
+impl fmt::Display for ListDirError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.why)
+    }
+}
+
+pub fn list_dir(path: String) -> Result<std::fs::ReadDir, ListDirError>
+{
+    match std::fs::read_dir(path)
+    {
+        Ok(files) => 
+        {
+            Ok(files)
+        },
+        Err(why) => 
+        {
+            Err(ListDirError { why: format!("{}", why)})
+        }
     }
 }

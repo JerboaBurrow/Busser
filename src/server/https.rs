@@ -1,7 +1,6 @@
 use crate::
 {
-    web::throttle::{IpThrottler, handle_throttle},
-    util::read_file_utf8
+    pages::read_pages, util::read_file_utf8, web::throttle::{handle_throttle, IpThrottler}
 };
 
 use std::{net::{IpAddr, Ipv4Addr, SocketAddr}, path::Path};
@@ -76,22 +75,26 @@ impl Server
 
         let app = Arc::new(Mutex::new(AppState::new()));
 
-        let page = r#"<!doctype html>
-        <html>
-          <head>
-            <title>This is the title of the webpage!</title>
-          </head>
-          <body>
-            <p>This is an example paragraph. Anything in the <strong>body</strong> tag will appear on the page, just like this <strong>p</strong> tag and its contents.</p>
-          </body>
-        </html>"#.to_string();
+        let pages = read_pages(None);
+
+        let mut router: Router<(), axum::body::Body> = Router::new();
+
+        for page in pages
+        {
+            crate::debug(format!("Adding page {:?}", page), None);
+            router = router.route
+            (
+                &page.get_uri(), 
+                get(|| async move {page.clone().into_response()})
+            )
+        }
+
+        router = router.layer(middleware::from_fn_with_state(throttle_state.clone(), handle_throttle));
 
         Server
         {
             addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(a,b,c,d)), config.get_port_https()),
-            router: Router::new()
-            .route("/", get(|| async move {axum::response::Html(page)}))
-            .layer(middleware::from_fn_with_state(throttle_state.clone(), handle_throttle)),
+            router: router,
             config: config
         }
     }

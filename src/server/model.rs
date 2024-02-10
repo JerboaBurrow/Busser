@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use serde::{Serialize, Deserialize};
 
 use crate::web::discord::request::model::Webhook;
@@ -9,7 +11,8 @@ pub struct Config
 {
     port_https: u16,
     port_http: u16,
-    stats_endpoint: Webhook,
+    path: String,
+    notification_endpoint: Webhook,
     cert_path: String,
     key_path: String
 }
@@ -28,7 +31,7 @@ impl Config
 
     pub fn get_end_point(&self) -> Webhook
     {
-        self.stats_endpoint.clone()
+        self.notification_endpoint.clone()
     }
 
     pub fn get_cert_path(&self) -> String
@@ -39,6 +42,11 @@ impl Config
     pub fn get_key_path(&self) -> String
     {
         self.key_path.clone()
+    }
+
+    pub fn get_path(&self) -> String
+    {
+        self.path.clone()
     }
     
 }
