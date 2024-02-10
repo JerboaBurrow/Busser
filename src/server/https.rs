@@ -1,6 +1,6 @@
 use crate::
 {
-    pages::read_pages, util::read_file_utf8, web::throttle::{handle_throttle, IpThrottler}
+    pages::get_pages, util::read_file_utf8, web::throttle::{handle_throttle, IpThrottler}
 };
 
 use std::{net::{IpAddr, Ipv4Addr, SocketAddr}, path::Path};
@@ -76,7 +76,7 @@ impl Server
 
         let app = Arc::new(Mutex::new(AppState::new()));
 
-        let pages = read_pages(None);
+        let pages = get_pages(Some(&config.get_path()));
 
         let mut router: Router<(), axum::body::Body> = Router::new();
 
@@ -84,7 +84,13 @@ impl Server
         {
             crate::debug(format!("Adding page {:?}", page), None);
 
-            let uri = if page.get_uri().starts_with("/")
+            let path = config.get_path()+"/";
+
+            let uri = if page.get_uri().starts_with(&path)
+            {
+                page.get_uri().replace(&path, "/")
+            }
+            else if page.get_uri().starts_with("/")
             {
                 page.get_uri()
             }
@@ -92,6 +98,8 @@ impl Server
             {
                 "/".to_string()+&page.get_uri()
             };
+
+            crate::debug(format!("Serving: {}", uri), None);
             
             router = router.route
             (

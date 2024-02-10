@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{fmt::Write, fs::File, io::{Write as ioWrite, Read}};
+use std::{fmt::{format, Write}, fs::{DirEntry, File}, io::{Read, Write as ioWrite}};
 use regex::Regex;
 
 pub fn dump_bytes(v: &[u8]) -> String 
@@ -81,4 +81,121 @@ pub fn list_dir(path: String) -> Result<std::fs::ReadDir, ListDirError>
             Err(ListDirError { why: format!("{}", why)})
         }
     }
+}
+
+pub fn dir_entry_to_path(d: DirEntry) -> Option<String>
+{
+    let file_os_string = d.file_name();
+
+    match file_os_string.to_str()
+    {
+        Some(name) => Some(name.to_string()),
+        None =>
+        {
+            crate::debug(format!("could not load file name: {:?}", file_os_string), None);
+            None
+        }
+    }
+}
+
+pub fn list_sub_dirs(path: String) -> Vec<String>
+{
+    let mut found_dirs: Vec<String> = vec![];
+    match std::fs::read_dir(path.clone())
+    {
+        Ok(files) => 
+        {
+            
+            for file in files
+            {
+                let name = match file
+                {
+                    Ok(d) => dir_entry_to_path(d),
+                    Err(e) =>
+                    {
+                        crate::debug(format!("could not load file name: {}", e), None);
+                        continue
+                    }
+                };
+
+                match name 
+                {
+                    Some(n) =>
+                    {
+                        let p = path.clone()+"/"+&n;
+                        match std::fs::metadata(p.clone())
+                        {
+                            Ok(md) =>
+                            {
+                                match md.is_dir()
+                                {
+                                    true => found_dirs.push(p),
+                                    false => 
+                                    {
+                                        crate::debug(format!("not a folder: {}", n), None);
+                                        continue
+                                    }
+                                }
+                            },
+                            Err(e) =>
+                            {
+                                crate::debug(format!("error getting file: {}", e), None);
+                                continue
+                            }
+                        }
+                    },
+                    None => continue
+                }
+            } 
+        },
+        Err(why) => 
+        {
+            crate::debug(format!("Error reading dir {}\n {}", path, why), None); 
+        }
+    }
+
+    found_dirs
+}
+
+pub fn list_dir_by(pattern: Regex, path: String) -> Vec<String>
+{
+    match std::fs::read_dir(path.clone())
+    {
+        Ok(files) => 
+        {
+            let mut found_files: Vec<String> = vec![];
+            for file in files 
+            {
+                
+                let file_name = match file
+                {
+                    Ok(d) => dir_entry_to_path(d),
+                    Err(e) =>
+                    {
+                        crate::debug(format!("could not load file name: {}", e), None);
+                        continue
+                    }
+                };
+
+                let file_path = match file_name
+                {
+                    Some(name) => path.clone() + "/" + &name,
+                    None => continue
+                };
+            
+                match pattern.captures(&file_path)
+                {
+                    Some(_caps) => {found_files.push(file_path.to_string())},
+                    None => {continue}
+                }
+            }
+
+            return found_files
+        },
+        Err(why) => 
+        {
+            crate::debug(format!("Error reading dir {}\n {}", path, why), None); 
+        }
+    }
+    vec![]
 }

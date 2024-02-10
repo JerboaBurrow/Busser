@@ -1,0 +1,9 @@
+{
+    "port_https": 443,
+    "port_http": 80, 
+    "throttle": {"max_requests_per_second": 5.0, "timeout_millis": 5000, "clear_period_seconds": 86400},
+    "path": "pages",
+    "notification_endpoint": { "addr": "https://discord.com/api/webhooks/xxx/yyy" },
+    "cert_path": "certs/cert.pem",
+    "key_path": "certs/key.pem"
+}
