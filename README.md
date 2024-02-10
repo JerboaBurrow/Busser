@@ -13,6 +13,21 @@ Simple website hosting in Rust with Axum
 🏗️ Host Image content (png, jpg, gif, webp, ...)
 
 🏗️ Discord webhook integration for status messages
+
+#### GDPR, Cookie Policies, and Privacy Policies
+
+Please be aware the following data is store/processed
+
+Currently the IP throttler stores for each IP a hit count/last request time, i.e
+
+```rust
+pub struct Requests
+{
+    count: u32,
+    last_request_time: Instant,
+    timeout: bool
+}
+```
 ____
 
 ### Free static website hosting example with Google Cloud Free Tier
