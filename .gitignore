@@ -3,7 +3,5 @@
 target/
 *.stats*
 .vscode
-config.json
-event_config.json
-!tests/event_config.json
+./config.json
 pages/*
