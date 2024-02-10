@@ -1,0 +1,22 @@
+name: Build and test
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build_test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, ubuntu-20.04, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: setup rust stable
+      run: curl https://sh.rustup.rs -sSf | sh -s -- -y
+
+    - name: unit tests
+      run: |
+        cargo test --all --release

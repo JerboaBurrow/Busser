@@ -1,0 +1,97 @@
+name: Release
+
+on:
+  push:
+    branches: [ "main" ]
+    tags:     'v*'
+    paths-ignore:
+      - 'doc/**'
+      - '.github/**'
+      - 'README.md'
+      - 'LICENSE'
+      - '.gitignore'
+      - 'CONTRIBUTING'
+      
+  workflow_dispatch:
+
+
+jobs:
+  build_test_and_bundle:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, ubuntu-20.04, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: setup rust stable
+      run: curl https://sh.rustup.rs -sSf | sh -s -- -y
+
+    - name: unit tests
+      run: |
+        cp tests/*.json .
+        cargo test --all --release
+
+    - name: bundle
+      shell: bash
+      run: |
+          mkdir Busser
+          cp target/release/busser Busser/busser-${{ matrix.os }}
+          cp LICENSE Busser/
+
+    - name: upload bundle
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.os }}
+        path: Busser
+
+  release:
+    needs: [build_test_and_bundle]
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-22.04
+    
+    steps:
+
+      - name: get linux build
+        uses: actions/download-artifact@v4
+        with:
+          name: ubuntu-20.04
+
+      - name: get windows build
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-latest
+
+      - name: get macos build
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-latest
+
+      - name: pack
+        run: |
+              mkdir linux windows macos
+              ls
+              mv busser-ubuntu-20.04 busser
+              chmod +x busser
+              tar -cvf busser-linux-x86_64.tar.gz busser LICENSE
+              mv busser-windows-latest.exe busser.exe
+              chmod +x busser.exe
+              zip busser-windows.zip busser.exe LICENSE
+              mv busser-macos-latest busser
+              chmod +x busser
+              tar -cvf busser-macOS.tar.gz busser LICENSE
+              
+
+  #     https://github.com/softprops/action-gh-release
+      - name: release
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: true
+          prerelease: true
+          name: "release-${{ github.ref_name }}"
+          tag_name: ${{ github.ref }}
+          files: |
+            busser-linux-x86_64.tar.gz
+            busser-windows.zip
+            busser-macOS.tar.gz
