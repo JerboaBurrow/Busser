@@ -1,10 +1,34 @@
-use std::path::Path;
-
 use serde::{Serialize, Deserialize};
 
 use crate::web::discord::request::model::Webhook;
 
 pub const CONFIG_PATH: &str = "config.json";
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ThrottleConfig
+{
+    max_requests_per_second: f64,
+    timeout_millis: u128,
+    clear_period_seconds: u64
+}
+
+impl ThrottleConfig 
+{
+    pub fn get_max_requests_per_second(&self) -> f64
+    {
+        self.max_requests_per_second
+    }
+
+    pub fn get_timeout_millis(&self) -> u128
+    {
+        self.timeout_millis
+    }
+
+    pub fn get_clear_period_seconds(&self) -> u64
+    {
+        self.clear_period_seconds
+    }
+}
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Config
@@ -14,7 +38,8 @@ pub struct Config
     path: String,
     notification_endpoint: Webhook,
     cert_path: String,
-    key_path: String
+    key_path: String,
+    throttle: ThrottleConfig
 }
 
 impl Config 
@@ -49,6 +74,11 @@ impl Config
         self.path.clone()
     }
     
+    pub fn get_throttle_config(&self) -> ThrottleConfig
+    {
+        self.throttle.clone()
+    }
+
 }
 
 #[derive(Clone)]

@@ -67,8 +67,9 @@ impl Server
 
         let requests: IpThrottler = IpThrottler::new
         (
-            10.0, 
-            5000
+            config.get_throttle_config().get_max_requests_per_second(), 
+            config.get_throttle_config().get_timeout_millis(),
+            config.get_throttle_config().get_clear_period_seconds()
         );
 
         let throttle_state = Arc::new(Mutex::new(requests));
@@ -82,9 +83,19 @@ impl Server
         for page in pages
         {
             crate::debug(format!("Adding page {:?}", page), None);
+
+            let uri = if page.get_uri().starts_with("/")
+            {
+                page.get_uri()
+            }
+            else
+            {
+                "/".to_string()+&page.get_uri()
+            };
+            
             router = router.route
             (
-                &page.get_uri(), 
+                &uri, 
                 get(|| async move {page.clone().into_response()})
             )
         }
