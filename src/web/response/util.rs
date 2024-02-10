@@ -28,7 +28,7 @@ use chrono::Local;
 ///     middleware
 /// };
 /// 
-/// use pulse::web::response::util::reflect;
+/// use busser::web::response::util::reflect;
 /// 
 /// pub async fn server() {
 /// let app = Router::new()
@@ -85,7 +85,7 @@ where B: axum::body::HttpBody<Data = Bytes>
 ///     middleware
 /// };
 /// 
-/// use pulse::web::response::util::stdout_log;
+/// use busser::web::response::util::stdout_log;
 /// 
 /// 
 /// pub async fn server() {

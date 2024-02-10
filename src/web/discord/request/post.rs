@@ -15,7 +15,7 @@ use crate::web::discord::request::model::Webhook;
 /// # Example
 /// ```rust
 /// 
-/// use pulse::web::discord::request::{model::Webhook, post::post};
+/// use busser::web::discord::request::{model::Webhook, post::post};
 /// 
 /// pub async fn post_to_discord(){
 ///     let w = Webhook::new("https://discord.com/api/webhooks/xxx/yyy".to_string());
