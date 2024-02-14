@@ -1,6 +1,6 @@
 use crate::
 {
-    pages::get_pages, util::read_file_utf8, web::throttle::{handle_throttle, IpThrottler}
+    pages::{get_pages, page::Page}, resources::get_resources, util::read_file_utf8, web::throttle::{handle_throttle, IpThrottler}
 };
 
 use std::{net::{IpAddr, Ipv4Addr, SocketAddr}, path::Path};
@@ -21,6 +21,22 @@ pub struct Server
     addr: SocketAddr,
     router: Router,
     config: Config
+}
+
+pub fn parse_uri(uri: String, path: String) -> String
+{
+    if uri.starts_with(&path)
+    {
+        uri.replace(&path, "/")
+    }
+    else if uri.starts_with("/")
+    {
+        uri
+    }
+    else
+    {
+        "/".to_string()+&uri
+    }
 }
 
 impl Server 
@@ -77,27 +93,17 @@ impl Server
         let app = Arc::new(Mutex::new(AppState::new()));
 
         let pages = get_pages(Some(&config.get_path()));
+        let resources = get_resources(Some(&config.get_path()));
 
         let mut router: Router<(), axum::body::Body> = Router::new();
 
         for page in pages
         {
-            crate::debug(format!("Adding page {:?}", page), None);
+            crate::debug(format!("Adding page {:?}", page.preview(64)), None);
 
             let path = config.get_path()+"/";
 
-            let uri = if page.get_uri().starts_with(&path)
-            {
-                page.get_uri().replace(&path, "/")
-            }
-            else if page.get_uri().starts_with("/")
-            {
-                page.get_uri()
-            }
-            else
-            {
-                "/".to_string()+&page.get_uri()
-            };
+            let uri = parse_uri(page.get_uri(), path);
 
             crate::debug(format!("Serving: {}", uri), None);
             
@@ -106,6 +112,33 @@ impl Server
                 &uri, 
                 get(|| async move {page.clone().into_response()})
             )
+        }
+
+        for resource in resources
+        {
+            crate::debug(format!("Adding resource {:?}", resource.preview(8)), None);
+
+            let path = config.get_path()+"/";
+
+            let uri = parse_uri(resource.get_uri(), path);
+
+            crate::debug(format!("Serving: {}", uri), None);
+            
+            router = router.route
+            (
+                &uri, 
+                get(|| async move {resource.clone().into_response()})
+            )
+        }
+
+        match Page::from_file(config.get_home())
+        {
+            Some(page) => 
+            { 
+                crate::debug(format!("Serving home page, /, {}", page.preview(64)), None);
+                router = router.route("/", get(|| async move {page.clone().into_response()}))
+            },
+            None => {}
         }
 
         router = router.layer(middleware::from_fn_with_state(throttle_state.clone(), handle_throttle));

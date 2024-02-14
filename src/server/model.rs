@@ -36,6 +36,7 @@ pub struct Config
     port_https: u16,
     port_http: u16,
     path: String,
+    home: String,
     notification_endpoint: Webhook,
     cert_path: String,
     key_path: String,
@@ -72,6 +73,11 @@ impl Config
     pub fn get_path(&self) -> String
     {
         self.path.clone()
+    }
+
+    pub fn get_home(&self) -> String
+    {
+        self.home.clone()
     }
     
     pub fn get_throttle_config(&self) -> ThrottleConfig
