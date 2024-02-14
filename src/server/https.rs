@@ -1,6 +1,6 @@
 use crate::
 {
-    pages::get_pages, resources::get_resources, util::read_file_utf8, web::throttle::{handle_throttle, IpThrottler}
+    pages::{get_pages, page::Page}, resources::get_resources, util::read_file_utf8, web::throttle::{handle_throttle, IpThrottler}
 };
 
 use std::{net::{IpAddr, Ipv4Addr, SocketAddr}, path::Path};
@@ -99,7 +99,7 @@ impl Server
 
         for page in pages
         {
-            crate::debug(format!("Adding page {:?}", page), None);
+            crate::debug(format!("Adding page {:?}", page.preview(64)), None);
 
             let path = config.get_path()+"/";
 
@@ -116,7 +116,7 @@ impl Server
 
         for resource in resources
         {
-            crate::debug(format!("Adding resource {:?}", resource.get_uri()), None);
+            crate::debug(format!("Adding resource {:?}", resource.preview(8)), None);
 
             let path = config.get_path()+"/";
 
@@ -129,6 +129,16 @@ impl Server
                 &uri, 
                 get(|| async move {resource.clone().into_response()})
             )
+        }
+
+        match Page::from_file(config.get_home())
+        {
+            Some(page) => 
+            { 
+                crate::debug(format!("Serving home page, /, {}", page.preview(64)), None);
+                router = router.route("/", get(|| async move {page.clone().into_response()}))
+            },
+            None => {}
         }
 
         router = router.layer(middleware::from_fn_with_state(throttle_state.clone(), handle_throttle));

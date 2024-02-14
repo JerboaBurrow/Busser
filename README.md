@@ -1,18 +1,42 @@
 ## Busser
 
-Simple website hosting in Rust with Axum
+#### Simple HTTPS website hosting in Rust with [Axum](https://github.com/tokio-rs/axum).
 
-✔️ Host HTML/JS (text) content from a given directory 
+1. Just create a folder with your ```.html/.css/.js``` and other resources, ```.png, .gif, ...```
+2. Point Busser to it with a config.json.
+3. Run it, and that's it!*
+
+\* you'll need certificates for https, and open ports if on a server
+```json
+// config.json
+{
+    "port_https": 443,
+    "port_http": 80, 
+    "throttle": {"max_requests_per_second": 5.0, "timeout_millis": 5000, "clear_period_seconds": 86400},
+    "path": "pages",
+    "notification_endpoint": { "addr": "https://discord.com/api/webhooks/xxx/yyy" },
+    "cert_path": "certs/cert.pem",
+    "key_path": "certs/key.pem"
+}
+```
+
+✔️ Host HTML content from a given directory 
 
 ✔️ Http redirect to https
 
-✔️ Https certifactes
+✔️ Https certificates
 
 ✔️ IP throttling
 
-🏗️ Host Image content (png, jpg, gif, webp, ...)
+✔️ Host Image content (png, jpg, gif, webp, ...)
+
+✔️ Host js, css content
+
+✔️ Host via **free tier** cloud services!
 
 🏗️ Discord webhook integration for status messages
+
+____
 
 #### GDPR, Cookie Policies, and Privacy Policies
 

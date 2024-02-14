@@ -151,12 +151,8 @@ pub fn list_sub_dirs(path: String) -> Vec<String>
                             {
                                 match md.is_dir()
                                 {
-                                    true => found_dirs.push(p),
-                                    false => 
-                                    {
-                                        crate::debug(format!("not a folder: {}", n), None);
-                                        continue
-                                    }
+                                    true => {found_dirs.push(p.clone()); crate::debug(format!("found folder: {}", p), None)},
+                                    false => {continue}
                                 }
                             },
                             Err(e) =>

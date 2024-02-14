@@ -1,18 +1,59 @@
+use std::{cmp::min, collections::HashMap};
+
 use axum::response::{Html, IntoResponse, Response};
+use regex::Regex;
 use serde::{Serialize, Deserialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Resource
 {
     uri: String,
-    body: Vec<u8>
+    body: Vec<u8>,
+    content_type: String
+}
+
+pub fn content_type(extension: String) -> &'static str
+{
+    let content_types = HashMap::from
+    ( 
+        [
+            (r"\.txt$", "text/plain"),
+            (r"\.css$", "text/css"),
+            (r"\.csv$", "text/csv"),
+            (r"\.(javascript|js)$", "text/javascript"),
+            (r"\.xml$", "text/xml"),
+            (r"\.gif$", "image/gif"),   
+            (r"\.(jpg|jpeg)$", "image/jpeg"),   
+            (r"\.png$", "image/png"),   
+            (r"\.tiff$", "image/tiff"),      
+            (r"\.ico$", "image/x-icon"),  
+            (r"\.(djvu)|(djv)$", "image/vnd.djvu"),  
+            (r"\.svg$", "image/svg+xml"),
+            (r"\.(mpeg|mpg|mp2|mpe|mpv|m2v)$", "video/mpeg"),    
+            (r"\.(mp4|m4v)$", "video/mp4"),    
+            (r"\.(qt|mov)$", "video/quicktime"),    
+            (r"\.(wmv)$", "video/x-ms-wmv"),    
+            (r"\.(flv|f4v|f4p|f4a|f4b)$", "video/x-flv"),   
+            (r"\.webm$", "video/webm")    
+        ]
+    );
+
+    for (re, content) in content_types
+    {
+        if Regex::new(re).unwrap().is_match(&extension)
+        {
+            return content
+        }
+    }
+
+    "application/octet-stream"
 }
 
 impl Resource
 {
-    pub fn new(uri: &str, body: Vec<u8>) -> Resource
+    pub fn new(uri: &str, body: Vec<u8>, content_type: &str) -> Resource
     {
-        Resource { uri: uri.to_string(), body }
+        Resource { uri: uri.to_string(), body, content_type: content_type.to_string() }
     }
 
     pub fn get_uri(&self) -> String
@@ -24,10 +65,17 @@ impl Resource
     {
         self.body.clone()
     }
+
+    pub fn preview(&self, n: usize) -> String
+    {
+        format!("uri: {}, type: {}, bytes: {:?} ...", self.get_uri(), self.content_type, self.body[1..min(n, self.body.len())].to_vec())
+    }
 }
 
 impl IntoResponse for Resource {
     fn into_response(self) -> Response {
-        Html(self.body).into_response()
+        let mut response = Html(self.body).into_response();
+        response.headers_mut().insert("content-type", self.content_type.parse().unwrap());
+        response
     }
 }

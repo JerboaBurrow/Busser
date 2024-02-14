@@ -4,7 +4,7 @@ use regex::Regex;
 
 use crate::{util::{list_dir_by, list_sub_dirs, read_file_bytes}, HTML_REGEX, RESOURCE_REGEX};
 
-use self::resource::Resource;
+use self::resource::{content_type, Resource};
 
 pub fn get_resources(path: Option<&str>) -> Vec<Resource>
 {
@@ -34,7 +34,7 @@ pub fn get_resources(path: Option<&str>) -> Vec<Resource>
             None => continue
         };
 
-        resources.push(Resource::new(resource_path.as_str(), data));
+        resources.push(Resource::new(resource_path.as_str(), data, content_type(resource_path.to_string())));
     }
 
     let dirs = list_sub_dirs(scan_path.to_string());
