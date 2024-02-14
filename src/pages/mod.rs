@@ -1,8 +1,6 @@
-use std::path::Path;
-
 use regex::Regex;
 
-use crate::{server::model::{Config, CONFIG_PATH}, util::{list_dir, list_dir_by, list_sub_dirs, read_file_utf8}};
+use crate::{util::{list_dir_by, list_sub_dirs, read_file_utf8}, HTML_REGEX};
 
 use self::page::Page;
 
@@ -16,7 +14,7 @@ pub fn get_pages(path: Option<&str>) -> Vec<Page>
         None => ""
     };
 
-    let html_regex = Regex::new(".html").unwrap();
+    let html_regex = Regex::new(HTML_REGEX).unwrap();
     let page_paths = list_dir_by(html_regex, scan_path.to_string());
     let mut pages: Vec<Page> = vec![];
 

@@ -10,6 +10,9 @@ const MAJOR: &str = env!("CARGO_PKG_VERSION_MAJOR");
 const MINOR: &str = env!("CARGO_PKG_VERSION_MINOR");
 const PATCH: &str = env!("CARGO_PKG_VERSION_PATCH");
 
+const RESOURCE_REGEX: &str = r"(\.\S+)";
+const HTML_REGEX: &str = ".html";
+
 const DEBUG: bool = true;
 
 pub fn debug(msg: String, context: Option<String>)
