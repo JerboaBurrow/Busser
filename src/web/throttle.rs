@@ -123,11 +123,12 @@ pub async fn handle_throttle<B>
         throttler.check_clear();
         if throttler.is_limited(addr)
         {
+            crate::debug(format!("Denying: {} @/{}", addr, request.uri().to_string()), None);
             Err(StatusCode::TOO_MANY_REQUESTS)
         }
         else 
         {
-            crate::debug(format!("Allowing: {}", addr), None);
+            crate::debug(format!("Allowing: {} @/{}", addr, request.uri().to_string()), None);
             let response = next.run(request).await;
             Ok(response)
         }

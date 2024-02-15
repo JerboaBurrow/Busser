@@ -23,10 +23,12 @@ pub fn debug(msg: String, context: Option<String>)
 
     let mut message = String::new();
 
+    let time = chrono::offset::Utc::now().to_rfc3339();
+
     let tag = match context
     {
-        Some(s) => format!("[{s}] "),
-        None => format!("[DEBUG] ")
+        Some(s) => format!("{time} [{s}] "),
+        None => format!("{time} [DEBUG] ")
     };
 
     for line in msg.split("\n")
