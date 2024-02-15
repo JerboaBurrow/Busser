@@ -67,7 +67,11 @@ pub async fn log_stats<B>
 {
 
     {
+        let start_time = Instant::now();
+
         let mut stats = state.lock().await;
+
+        let compute_start_time = Instant::now();
 
         let stats_config = read_stats_config().unwrap();
         
@@ -92,7 +96,20 @@ pub async fn log_stats<B>
                         let delta = (chrono::offset::Utc::now()-t.to_utc()).num_seconds();
                         if delta < (stats_config.hit_cooloff_seconds as i64)
                         {
+                            let total_time = start_time.elapsed().as_secs_f64();
+                            let compute_time = compute_start_time.elapsed().as_secs_f64();
+
+                            crate::debug(format!
+                            (
+                                "\nTotal stats time:         {} s (Passthrough)\nCompute stats time:       {} s (Passthrough)", 
+                                total_time,
+                                compute_time
+                            ), Some("PERFORMANCE".to_string()));
+
+                            let serve_start = Instant::now();
                             let response = next.run(request).await;
+                            crate::debug(format!("Serve time:               {} s", serve_start.elapsed().as_secs_f64()), Some("PERFORMANCE".to_string()));
+        
                             return Ok(response)
                         }
                     },
@@ -115,6 +132,10 @@ pub async fn log_stats<B>
 
         stats.hits.insert(addr.ip(), hit);
 
+        let compute_time = compute_start_time.elapsed().as_secs_f64();
+
+        let write_start_time = Instant::now();
+
         if stats.last_save.elapsed() >= std::time::Duration::from_secs(stats_config.save_period_seconds)
         {
             let file_name = stats_config.path.to_string()+"-"+&chrono::offset::Utc::now().to_rfc3339();
@@ -124,16 +145,31 @@ pub async fn log_stats<B>
                 Err(e) => {crate::debug(format!("Error saving stats {}", e), None)}
             }
 
-            if stats.last_save.elapsed() >= std::time::Duration::from_secs(stats_config.clear_period_second)
+            if stats.last_save.elapsed() >= std::time::Duration::from_secs(stats_config.clear_period_seconds)
             {
                 stats.hits.clear()
             }
 
             stats.last_save = Instant::now();
         }
+
+        let write_time = write_start_time.elapsed().as_secs_f64();
+        let total_time = start_time.elapsed().as_secs_f64();
+
+        crate::debug(format!
+        (
+            "\nTotal stats time:         {} s\nCompute stats time:       {} s\nWrite stats time:         {} s", 
+            total_time,
+            compute_time,
+            write_time
+        ), Some("PERFORMANCE".to_string()));
+
     }
 
+    let serve_start = Instant::now();
     let response = next.run(request).await;
+    crate::debug(format!("Serve time:               {} s", serve_start.elapsed().as_secs_f64()), Some("PERFORMANCE".to_string()));
+
     Ok(response)
     
 }

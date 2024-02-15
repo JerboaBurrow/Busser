@@ -21,12 +21,23 @@ pub fn debug(msg: String, context: Option<String>)
 {
     if DEBUG == false { return }
 
-    match context
+    let mut message = String::new();
+
+    let tag = match context
     {
-        Some(s) => println!("[DEBUG] {msg} in context {s}"),
-        None => println!("[DEBUG] {msg}")
+        Some(s) => format!("[{s}] "),
+        None => format!("[DEBUG] ")
+    };
+
+    for line in msg.split("\n")
+    {
+        message.push_str(&tag);
+        message.push_str(line);
+        message.push_str("\n");
     }
-    
+
+    print!("{message}");
+
 }
 
 pub fn program_version() -> Version 
