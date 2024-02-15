@@ -12,6 +12,7 @@ use crate::util::{read_bytes, dump_bytes};
 pub mod throttle;
 pub mod response;
 pub mod discord;
+pub mod stats;
 
 pub fn is_authentic
 (

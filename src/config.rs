@@ -4,6 +4,17 @@ use serde::{Serialize, Deserialize};
 
 use crate::{util::read_file_utf8, web::discord::request::model::Webhook};
 
+pub const STATS_CONFIG_PATH: &str = "stats_config.json";
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StatsConfig
+{
+    pub save_frequency_seconds: u64,
+    pub path: String,
+    pub hit_cooloff_seconds: u64,
+    pub ipinfo_token: Option<String>
+}
+
 pub const CONFIG_PATH: &str = "config.json";
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -118,6 +129,39 @@ pub fn read_config() -> Option<Config>
         };
 
         let config: Config = match serde_json::from_str(&data)
+        {
+            Ok(data) => {data},
+            Err(why) => 
+            {
+                println!("Error reading configuration file {}\n{}", CONFIG_PATH, why);
+                return None
+            }
+        };
+
+        Some(config)
+    }
+    else 
+    {
+        println!("Error configuration file {} does not exist", CONFIG_PATH);
+        None
+    }
+}
+
+pub fn read_stats_config() -> Option<StatsConfig>
+{
+    if Path::new(STATS_CONFIG_PATH).exists()
+    {
+        let data = match read_file_utf8(STATS_CONFIG_PATH)
+        {
+            Some(d) => d,
+            None =>
+            {
+                println!("Error reading configuration file {} no data", CONFIG_PATH);
+                return None
+            }
+        };
+
+        let config: StatsConfig = match serde_json::from_str(&data)
         {
             Ok(data) => {data},
             Err(why) => 

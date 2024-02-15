@@ -5,3 +5,5 @@ target/
 .vscode
 config.json
 pages/*
+stats-*
+stats_config.json
