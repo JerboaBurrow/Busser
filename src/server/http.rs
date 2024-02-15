@@ -51,16 +51,23 @@ impl ServerHttp
 
         let throttle_state = Arc::new(Mutex::new(requests));
 
-        let self_uri = format!("https://{}.{}.{}.{}",a,b,c,d);
+        let mut domain = config.get_domain();
 
+        domain = domain.replacen("http://", "https://", 1);
+
+        if !domain.starts_with("https://")
+        {
+            domain = "https://".to_string()+&domain
+        }
+        
         ServerHttp
         {
             addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(a,b,c,d)), config.get_port_http()),
             router: Router::new()
             .route("/", get(|| async move 
             {
-                    crate::debug(format!("http redirect"), None);
-                    Redirect::permanent(&self_uri)
+                    crate::debug(format!("http redirect to {}", domain), None);
+                    Redirect::permanent(&domain)
             }))
             .layer(middleware::from_fn_with_state(throttle_state.clone(), handle_throttle))
 

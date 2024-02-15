@@ -54,6 +54,7 @@ pub struct Config
     notification_endpoint: Webhook,
     cert_path: String,
     key_path: String,
+    domain: String,
     throttle: ThrottleConfig
 }
 
@@ -97,6 +98,11 @@ impl Config
     pub fn get_throttle_config(&self) -> ThrottleConfig
     {
         self.throttle.clone()
+    }
+
+    pub fn get_domain(&self) -> String
+    {
+        self.domain.clone()
     }
 
 }
