@@ -1,6 +1,6 @@
 use crate::
 {
-    pages::{get_pages, page::Page}, resources::get_resources, util::read_file_utf8, web::throttle::{handle_throttle, IpThrottler}
+    config::{read_config, Config}, pages::{get_pages, page::Page}, resources::get_resources, util::read_file_utf8, web::throttle::{handle_throttle, IpThrottler}
 };
 
 use std::{net::{IpAddr, Ipv4Addr, SocketAddr}, path::Path};
@@ -13,8 +13,6 @@ use axum::
     middleware, response::{IntoResponse, Redirect}, routing::{get, post}, Router
 };
 use axum_server::tls_rustls::RustlsConfig;
-
-use super::model::{AppState, Config, CONFIG_PATH};
 
 pub struct Server
 {
@@ -51,34 +49,13 @@ impl Server
     -> Server
     {
 
-        let config = if Path::new(CONFIG_PATH).exists()
+        let config = match read_config()
         {
-            let data = match read_file_utf8(CONFIG_PATH)
+            Some(c) => c,
+            None =>
             {
-                Some(d) => d,
-                None =>
-                {
-                    println!("Error reading configuration file {} no data", CONFIG_PATH);
-                    std::process::exit(1);
-                }
-            };
-
-            let config: Config = match serde_json::from_str(&data)
-            {
-                Ok(data) => {data},
-                Err(why) => 
-                {
-                    println!("Error reading configuration file {}\n{}", CONFIG_PATH, why);
-                    std::process::exit(1);
-                }
-            };
-
-            config
-        }
-        else 
-        {
-            println!("Error configuration file {} does not exist", CONFIG_PATH);
-            std::process::exit(1);
+                std::process::exit(1)
+            }
         };
 
         let requests: IpThrottler = IpThrottler::new
@@ -89,8 +66,6 @@ impl Server
         );
 
         let throttle_state = Arc::new(Mutex::new(requests));
-
-        let app = Arc::new(Mutex::new(AppState::new()));
 
         let pages = get_pages(Some(&config.get_path()));
         let resources = get_resources(Some(&config.get_path()));
