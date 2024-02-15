@@ -1,6 +1,7 @@
 use std::cmp::min;
 
 use axum::response::{IntoResponse, Response, Html};
+use regex::Regex;
 use serde::{Serialize, Deserialize};
 
 use crate::util::read_file_utf8;
@@ -41,6 +42,24 @@ impl Page
     pub fn preview(&self, n: usize) -> String
     {
         format!("uri: {}, body: {} ...", self.get_uri(), self.body[1..min(n, self.body.len())].to_string())
+    }
+
+    pub fn insert_tag(&mut self)
+    {   
+        let head = Regex::new(r"<head>").unwrap();
+        let tag = r#"<head><meta name="hostedby" content="Busser, https://github.com/JerboaBurrow/Busser">"#;
+        let tag_no_head = r#"<html><head><meta name="hostedby" content="Busser, https://github.com/JerboaBurrow/Busser"></head>"#;
+        match head.clone().captures_iter(&self.body).count()
+        {
+            0 => 
+            {
+                self.body = self.body.replacen("<html>", tag_no_head, 1);
+            },
+            _ => 
+            {
+                self.body = self.body.replacen("<head>", tag, 1);
+            }
+        }
     }
 }
 

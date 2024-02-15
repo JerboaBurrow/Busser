@@ -1,9 +1,9 @@
 use crate::
 {
-    config::{read_config, Config}, pages::{get_pages, page::Page}, resources::get_resources, util::read_file_utf8, web::throttle::{handle_throttle, IpThrottler}
+    config::{read_config, Config}, pages::{get_pages, page::Page}, resources::get_resources, util::read_file_utf8, web::{stats::{log_stats, Stats}, throttle::{handle_throttle, IpThrottler}}
 };
 
-use std::{net::{IpAddr, Ipv4Addr, SocketAddr}, path::Path};
+use std::{collections::HashMap, net::{IpAddr, Ipv4Addr, SocketAddr}, path::Path, time::{Duration, Instant}};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -45,6 +45,7 @@ impl Server
         b: u8,
         c: u8,
         d: u8,
+        tag: bool
     ) 
     -> Server
     {
@@ -72,7 +73,7 @@ impl Server
 
         let mut router: Router<(), axum::body::Body> = Router::new();
 
-        for page in pages
+        for mut page in pages
         {
             crate::debug(format!("Adding page {:?}", page.preview(64)), None);
 
@@ -81,7 +82,9 @@ impl Server
             let uri = parse_uri(page.get_uri(), path);
 
             crate::debug(format!("Serving: {}", uri), None);
-            
+
+            if tag { page.insert_tag(); }
+
             router = router.route
             (
                 &uri, 
@@ -108,14 +111,24 @@ impl Server
 
         match Page::from_file(config.get_home())
         {
-            Some(page) => 
+            Some(mut page) => 
             { 
+                if tag { page.insert_tag(); }
                 crate::debug(format!("Serving home page, /, {}", page.preview(64)), None);
                 router = router.route("/", get(|| async move {page.clone().into_response()}))
             },
             None => {}
         }
 
+        let stats = Arc::new(Mutex::new(
+            Stats 
+            {
+                hits: HashMap::new(), 
+                last_save: Instant::now()
+            }
+        ));
+
+        router = router.layer(middleware::from_fn_with_state(stats.clone(), log_stats));
         router = router.layer(middleware::from_fn_with_state(throttle_state.clone(), handle_throttle));
 
         Server
