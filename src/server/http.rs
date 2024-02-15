@@ -1,7 +1,6 @@
 use crate::
 {
-    web::throttle::{IpThrottler, handle_throttle},
-    util::read_file_utf8
+    config::read_config, util::read_file_utf8, web::throttle::{handle_throttle, IpThrottler}
 };
 
 use std::{net::{IpAddr, Ipv4Addr, SocketAddr}, path::Path};
@@ -15,8 +14,6 @@ use axum::
     response::Redirect,
     middleware
 };
-
-use super::model::{AppState, CONFIG_PATH, Config};
 
 pub struct ServerHttp
 {
@@ -36,34 +33,13 @@ impl ServerHttp
     -> ServerHttp
     {
 
-        let config = if Path::new(CONFIG_PATH).exists()
+        let config = match read_config()
         {
-            let data = match read_file_utf8(CONFIG_PATH)
+            Some(c) => c,
+            None =>
             {
-                Some(d) => d,
-                None =>
-                {
-                    println!("Error reading configuration file {} no data", CONFIG_PATH);
-                    std::process::exit(1);
-                }
-            };
-
-            let config: Config = match serde_json::from_str(&data)
-            {
-                Ok(data) => {data},
-                Err(why) => 
-                {
-                    println!("Error reading configuration file {}\n{}", CONFIG_PATH, why);
-                    std::process::exit(1);
-                }
-            };
-
-            config
-        }
-        else 
-        {
-            println!("Error configuration file {} does not exist", CONFIG_PATH);
-            std::process::exit(1);
+                std::process::exit(1)
+            }
         };
 
         let requests: IpThrottler = IpThrottler::new
@@ -75,8 +51,6 @@ impl ServerHttp
 
         let throttle_state = Arc::new(Mutex::new(requests));
 
-        let app = Arc::new(Mutex::new(AppState::new()));
-        
         let self_uri = format!("https://{}.{}.{}.{}",a,b,c,d);
 
         ServerHttp
