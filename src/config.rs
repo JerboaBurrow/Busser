@@ -9,9 +9,10 @@ pub const STATS_CONFIG_PATH: &str = "stats_config.json";
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StatsConfig
 {
-    pub save_frequency_seconds: u64,
+    pub save_period_seconds: u64,
     pub path: String,
     pub hit_cooloff_seconds: u64,
+    pub clear_period_second: u64,
     pub ipinfo_token: Option<String>
 }
 
@@ -53,7 +54,8 @@ pub struct Config
     notification_endpoint: Webhook,
     cert_path: String,
     key_path: String,
-    throttle: ThrottleConfig
+    throttle: ThrottleConfig,
+    debug: bool
 }
 
 impl Config 
@@ -96,6 +98,11 @@ impl Config
     pub fn get_throttle_config(&self) -> ThrottleConfig
     {
         self.throttle.clone()
+    }
+
+    pub fn get_debug(&self) -> bool
+    {
+        self.debug
     }
 
 }

@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::net::{SocketAddr, IpAddr};
 use std::sync::Arc;
 use std::time::Instant;
-use axum::response::IntoResponse;
 use chrono::DateTime;
 use tokio::sync::Mutex;
 
@@ -15,7 +14,8 @@ pub struct Hit
 {
     count: u64,
     last: String,
-    details: Option<IpDetails>
+    path: String,
+    details: IpDetails
 }
 
 #[derive(Debug, Clone)]
@@ -33,7 +33,7 @@ use axum::
     middleware::Next
 };
 
-pub async fn get_ip_info(token: String, sip: String) -> Option<IpDetails>
+pub async fn get_ip_info(token: String, sip: String) -> IpDetails
 {
     let config = IpInfoConfig {
         token: Some(token),
@@ -46,11 +46,11 @@ pub async fn get_ip_info(token: String, sip: String) -> Option<IpDetails>
     let res = ipinfo.lookup(&sip).await;
     
     match res {
-        Ok(r) => Some(r),
+        Ok(r) => r,
         Err(e) => 
         {
             crate::debug(format!("Error getting ip details {}", e), None);
-            None
+            IpDetails { ip: sip, ..Default::default()}
         }
     }
 }
@@ -104,26 +104,32 @@ pub async fn log_stats<B>
         let details = match stats_config.ipinfo_token
         {
             Some(token) => get_ip_info(token, sip).await,
-            None => None
+            None => IpDetails { ip: sip, ..Default::default() }
         };
 
         let last = chrono::offset::Utc::now().to_rfc3339();
 
-        let hit = Hit { details, count, last };
+        let hit = Hit { details, path: request.uri().to_string(), count, last };
 
         crate::debug(format!("[Hit] {:?}", hit), None);
 
         stats.hits.insert(addr.ip(), hit);
 
-        if stats.last_save.elapsed() >= std::time::Duration::from_secs(stats_config.save_frequency_seconds)
+        if stats.last_save.elapsed() >= std::time::Duration::from_secs(stats_config.save_period_seconds)
         {
-            stats.last_save = Instant::now();
             let file_name = stats_config.path.to_string()+"-"+&chrono::offset::Utc::now().to_rfc3339();
             match serde_json::to_string(&stats.hits)
             {
                 Ok(s) => {write_file(&file_name, s.as_bytes())},
                 Err(e) => {crate::debug(format!("Error saving stats {}", e), None)}
             }
+
+            if stats.last_save.elapsed() >= std::time::Duration::from_secs(stats_config.clear_period_second)
+            {
+                stats.hits.clear()
+            }
+
+            stats.last_save = Instant::now();
         }
     }
 
