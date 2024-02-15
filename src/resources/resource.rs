@@ -68,7 +68,13 @@ impl Resource
 
     pub fn preview(&self, n: usize) -> String
     {
-        format!("uri: {}, type: {}, bytes: {:?} ...", self.get_uri(), self.content_type, self.body[1..min(n, self.body.len())].to_vec())
+        let preview_body = match self.body.len() > 0
+        {
+            true => self.body[1..min(n, self.body.len())].to_vec(),
+            false => vec![]
+        };
+
+        format!("uri: {}, type: {}, bytes: {:?} ...", self.get_uri(), self.content_type, preview_body)
     }
 }
 
