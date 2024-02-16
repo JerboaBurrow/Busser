@@ -7,20 +7,41 @@
 3. Run it, and that's it!*
 
 \* you'll need certificates for https, and open ports if on a server
+
+### Configuration
+
+The ```config.json``` specifies key properties of the site and its content
+
 ```json
-// config.json
 {
     "port_https": 443,
     "port_http": 80, 
-    "throttle": {"max_requests_per_second": 5.0, "timeout_millis": 5000, "clear_period_seconds": 86400},
+    "throttle": {"max_requests_per_second": 512.0, "timeout_millis": 5000, "clear_period_seconds": 86400},
     "path": "pages",
+    "home": "pages/index.html",
+    "domain": "your.cool.domain",
+    "allow_without_extension": true,
     "notification_endpoint": { "addr": "https://discord.com/api/webhooks/xxx/yyy" },
     "cert_path": "certs/cert.pem",
     "key_path": "certs/key.pem"
 }
 ```
+You'll also need to configure the statistics collection, the ipinfo_token is an optional ipinfo.io API token (50k requests for free per month)
+```json
+{
+    "save_period_seconds": 86400,
+    "path": "stats",
+    "hit_cooloff_seconds": 3600,
+    "clear_period_seconds": 604800,
+    "ipinfo_token": "xxxxxxxxxxxxxx" 
+}
+```
 
-✔️ Host HTML content from a given directory 
+✔️ Host HTML/css/js/text content from a given directory 
+
+✔️ Serve with and without ```.html```, e.g. ```/x/y/z/webpage.html``` via ```/x/y/z/webpage```
+
+✔️ Host Image/video content (png, jpg, gif, webp, mp4, ...)
 
 ✔️ Http redirect to https
 
@@ -28,9 +49,7 @@
 
 ✔️ IP throttling
 
-✔️ Host Image content (png, jpg, gif, webp, ...)
-
-✔️ Host js, css content
+✔️ Hit statistics (with optional ipinfo.io integration)
 
 ✔️ Host via **free tier** cloud services!
 
@@ -40,7 +59,7 @@ ____
 
 #### GDPR, Cookie Policies, and Privacy Policies
 
-Please be aware the following data is store/processed
+Please be aware the following data is store/processed but is configurable for auto-deletetion
 
 Currently the IP throttler stores for each IP a hit count/last request time, i.e
 
@@ -52,6 +71,8 @@ pub struct Requests
     timeout: bool
 }
 ```
+
+The statistics collection stores the IP as well, if you use the optional ipfino.io integration the the data will also include e.g. country code and lattidue/longitude etc, that may be considered identifiable information.
 ____
 
 ### Free static website hosting example with Google Cloud Free Tier
