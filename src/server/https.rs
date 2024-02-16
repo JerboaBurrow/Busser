@@ -6,6 +6,7 @@ use crate::
 use std::{collections::HashMap, net::{IpAddr, Ipv4Addr, SocketAddr}, path::Path, time::{Duration, Instant}};
 use std::path::PathBuf;
 use std::sync::Arc;
+use regex::Regex;
 use tokio::sync::Mutex;
 
 use axum::
@@ -85,11 +86,27 @@ impl Server
 
             if tag { page.insert_tag(); }
 
+            if config.get_allow_without_extension()
+            {
+                let extension_regex = Regex::new(r"\.\S+$").unwrap();
+                let short_uri = extension_regex.replacen(&uri, 1, "");
+
+                println!("{}",short_uri);
+
+                let page_short = page.clone();
+
+                router = router.route
+                (
+                    &short_uri, 
+                    get(|| async move {page_short.clone().into_response()})
+                );
+            }
+
             router = router.route
             (
                 &uri, 
-                get(|| async move {page.clone().into_response()})
-            )
+                get(|| async move {page.into_response()})
+            );
         }
 
         for resource in resources

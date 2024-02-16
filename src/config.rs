@@ -55,7 +55,8 @@ pub struct Config
     cert_path: String,
     key_path: String,
     domain: String,
-    throttle: ThrottleConfig
+    throttle: ThrottleConfig,
+    allow_without_extension: bool
 }
 
 impl Config 
@@ -103,6 +104,11 @@ impl Config
     pub fn get_domain(&self) -> String
     {
         self.domain.clone()
+    }
+
+    pub fn get_allow_without_extension(&self) -> bool
+    {
+        self.allow_without_extension.clone()
     }
 
 }
