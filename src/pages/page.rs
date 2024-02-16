@@ -6,6 +6,22 @@ use serde::{Serialize, Deserialize};
 
 use crate::util::read_file_utf8;
 
+/// An HTML webpage with a uri and body
+/// 
+/// A Page may also be converted into an Axum HTML response via
+/// ```rust page.into_response()```
+/// # Example
+/// ```rust
+/// use busser::pages::page::Page;
+/// 
+/// pub fn main()
+/// {
+/// 
+///     let page = Page::new("index.html", "<p>Welcome!</p>");
+/// 
+///     println!("{}",page.preview(64));
+/// }
+/// ``` 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Page
 {
@@ -44,6 +60,8 @@ impl Page
         format!("uri: {}, body: {} ...", self.get_uri(), self.body[1..min(n, self.body.len())].to_string())
     }
 
+    /// Insert a tag indicating the page was served by busser
+    /// this may be disabled by launching as busser --no-tagging
     pub fn insert_tag(&mut self)
     {   
         let head = Regex::new(r"<head>").unwrap();

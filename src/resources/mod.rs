@@ -6,6 +6,23 @@ use crate::{util::{list_dir_by, list_sub_dirs, read_file_bytes}, HTML_REGEX, RES
 
 use self::resource::{content_type, Resource};
 
+/// Scan the path (if None the current dir) for non .html resources
+/// 
+/// # Example
+/// ```rust
+/// // with files resources/index.html, resources/animation.js
+/// 
+/// use busser::resources::{get_resources, resource::Resource};
+/// 
+/// pub fn main()
+/// {
+///     let resources = get_resources(Some("resources"));
+/// 
+///     // assert_eq!(resources.len(), 1);
+///     // assert!(!resources.contains(&Resource::new("resources/index.html", "")));
+///     // assert!(resources.contains(&Resource::new("resources/animation.js", "")));
+/// }
+/// ``` 
 pub fn get_resources(path: Option<&str>) -> Vec<Resource>
 {
     let scan_path = match path

@@ -6,6 +6,25 @@ use self::page::Page;
 
 pub mod page;
 
+/// Scan the path (if None the current dir) for .html pages
+///   note Busser can be configured to server .html pages without
+///   the extension, but for scanning the extension is required.
+/// 
+/// # Example
+/// ```rust
+/// // with files pages/index.html, pages/animation.js
+/// 
+/// use busser::pages::{get_pages, page::Page};
+/// 
+/// pub fn main()
+/// {
+///     let pages = get_pages(Some("pages"));
+/// 
+///     // assert_eq!(pages.len(), 1);
+///     // assert!(pages.contains(&Page::new("pages/index.html", "")));
+///     // assert!(!pages.contains(&Page::new("pages/animation.js", "")));
+/// }
+/// ``` 
 pub fn get_pages(path: Option<&str>) -> Vec<Page>
 {
     let scan_path = match path

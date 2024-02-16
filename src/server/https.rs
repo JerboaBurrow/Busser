@@ -1,9 +1,13 @@
 use crate::
 {
-    config::{read_config, Config}, pages::{get_pages, page::Page}, resources::get_resources, util::read_file_utf8, web::{stats::{log_stats, Stats}, throttle::{handle_throttle, IpThrottler}}
+    config::{read_config, Config}, 
+    pages::{get_pages, page::Page}, 
+    resources::get_resources, 
+    web::{stats::{log_stats, Stats}, 
+    throttle::{handle_throttle, IpThrottler}}
 };
 
-use std::{collections::HashMap, net::{IpAddr, Ipv4Addr, SocketAddr}, path::Path, time::{Duration, Instant}};
+use std::{collections::HashMap, net::{IpAddr, Ipv4Addr, SocketAddr}, time::Instant};
 use std::path::PathBuf;
 use std::sync::Arc;
 use regex::Regex;
@@ -11,10 +15,23 @@ use tokio::sync::Mutex;
 
 use axum::
 {
-    middleware, response::{IntoResponse, Redirect}, routing::{get, post}, Router
+    middleware, response::IntoResponse, routing::get, 
+    Router
 };
 use axum_server::tls_rustls::RustlsConfig;
 
+/// An https server that reads a directory configured with [Config]
+/// ```.html``` pages and resources, then serves them.
+/// # Example
+/// ```no_run
+/// use busser::server::https::Server;
+/// #[tokio::main]
+/// async fn main() 
+/// {
+///     let server = Server::new(0,0,0,0,true);
+///     server.serve().await;
+/// }
+/// ```
 pub struct Server
 {
     addr: SocketAddr,
@@ -22,6 +39,7 @@ pub struct Server
     config: Config
 }
 
+/// Checks a uri has a leading /, adds it if not
 pub fn parse_uri(uri: String, path: String) -> String
 {
     if uri.starts_with(&path)

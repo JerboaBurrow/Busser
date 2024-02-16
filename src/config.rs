@@ -6,6 +6,12 @@ use crate::{util::read_file_utf8, web::discord::request::model::Webhook};
 
 pub const STATS_CONFIG_PATH: &str = "stats_config.json";
 
+/// Configure the stats collection
+/// - ```save_period_seconds```: periodically save to disc
+/// - ```path```: where to save to disc (time-stamped files)
+/// - ```hit_cooloff_seconds```: cooloff period after which the same IP is counted as a new hit
+/// - ```clear_period_seconds```: periodcially clear data in memory
+/// - ```ipinfo_token```: Optional API token for ipinfo.io data
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StatsConfig
 {
@@ -18,6 +24,10 @@ pub struct StatsConfig
 
 pub const CONFIG_PATH: &str = "config.json";
 
+/// Configure the IP throttler
+/// - ```max_requests_per_second```: includes all requests to html and resources per second per ip
+/// - ```timeout_millis```: a cool off period between IP-blocks
+/// - ```clear_period_seconds```: time period to clear all stored IPs
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ThrottleConfig
 {
@@ -44,6 +54,17 @@ impl ThrottleConfig
     }
 }
 
+/// Configure the server
+/// - ```port_https```: https port to serve on
+/// - ```port_http```: http port to serve on
+/// - ```path```: path to site data
+/// - ```home```: path to home page served on /
+/// - ```notification_endpoint```: currently unspported Discord webhook
+/// - ```cert_path```: ssl certificate
+/// - ```key_path```: ssl key
+/// - ```domain```: domain name for https redirect etc.
+/// - ```throttle```: [ThrottleConfig]
+/// - ```allow_without_extension```: allow serving without .html
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Config
 {
