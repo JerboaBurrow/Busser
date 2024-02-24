@@ -118,6 +118,7 @@ pub async fn handle_throttle<B>
 ) -> Result<Response, StatusCode>
 {
     let serve_start = Instant::now();
+    println!("{:?}", chrono::offset::Utc::now().to_rfc3339());
     {
         let mut throttler = state.lock().await;
         throttler.check_clear();
@@ -132,6 +133,7 @@ pub async fn handle_throttle<B>
             crate::debug(format!("Allowing: {} @/{}", addr, request.uri().to_string()), None);
             let response = next.run(request).await;
             crate::debug(format!("Serve time:               {} s", serve_start.elapsed().as_secs_f64()), Some("PERFORMANCE".to_string()));
+            println!("{:?}", chrono::offset::Utc::now().to_rfc3339());
             Ok(response)
         }
     }
