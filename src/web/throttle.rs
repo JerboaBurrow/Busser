@@ -117,19 +117,21 @@ pub async fn handle_throttle<B>
     next: Next<B>
 ) -> Result<Response, StatusCode>
 {
-
+    let serve_start = Instant::now();
     {
         let mut throttler = state.lock().await;
         throttler.check_clear();
         if throttler.is_limited(addr)
         {
             crate::debug(format!("Denying: {} @/{}", addr, request.uri().to_string()), None);
+            crate::debug(format!("Serve time:               {} s", serve_start.elapsed().as_secs_f64()), Some("PERFORMANCE".to_string()));
             Err(StatusCode::TOO_MANY_REQUESTS)
         }
         else 
         {
             crate::debug(format!("Allowing: {} @/{}", addr, request.uri().to_string()), None);
             let response = next.run(request).await;
+            crate::debug(format!("Serve time:               {} s", serve_start.elapsed().as_secs_f64()), Some("PERFORMANCE".to_string()));
             Ok(response)
         }
     }
