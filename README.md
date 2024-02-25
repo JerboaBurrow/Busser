@@ -2,11 +2,13 @@
 
 #### Simple HTTPS website hosting in Rust with [Axum](https://github.com/tokio-rs/axum).
 
+##### Host for free on Google Cloud
+
 1. Just create a folder with your ```.html/.css/.js``` and other resources, ```.png, .gif, ...```
-2. Point Busser to it with a config.json.
+2. Point Busser to it with a config.json and stats-config.json.
 3. Run it, and that's it!*
 
-\* you'll need certificates for https, and open ports if on a server
+\* you'll need certificates for https, and open ports
 
 ### Configuration
 
@@ -22,6 +24,7 @@ The ```config.json``` specifies key properties of the site and its content
     "domain": "your.cool.domain",
     "allow_without_extension": true,
     "notification_endpoint": { "addr": "https://discord.com/api/webhooks/xxx/yyy" },
+    "cache_period_seconds": 3600,
     "cert_path": "certs/cert.pem",
     "key_path": "certs/key.pem"
 }
@@ -39,9 +42,9 @@ You'll also need to configure the statistics collection, the ipinfo_token is an 
 
 ✔️ Host HTML/css/js/text content from a given directory 
 
-✔️ Serve with and without ```.html```, e.g. ```/x/y/z/webpage.html``` via ```/x/y/z/webpage```
-
 ✔️ Host Image/video content (png, jpg, gif, webp, mp4, ...)
+
+✔️ Serve with and without ```.html```, e.g. ```/x/y/z/webpage.html``` via ```/x/y/z/webpage```
 
 ✔️ Http redirect to https
 
@@ -59,20 +62,10 @@ ____
 
 #### GDPR, Cookie Policies, and Privacy Policies
 
-Please be aware the following data is store/processed but is configurable for auto-deletetion
+- The IP throttler only stores hashes of an IP and a request path, it is likely not considered identifiable information.
 
-Currently the IP throttler stores for each IP a hit count/last request time, i.e
-
-```rust
-pub struct Requests
-{
-    count: u32,
-    last_request_time: Instant,
-    timeout: bool
-}
-```
-
-The statistics collection stores the IP as well, if you use the optional ipfino.io integration the the data will also include e.g. country code and lattidue/longitude etc, that may be considered identifiable information.
+- The statistics collection stores the IP. Additionally, if you use the optional ipfino.io integration the the data will also include e.g. country code and lattidue/longitude etc. 
+This may be considered identifiable information.
 ____
 
 ### Free static website hosting example with Google Cloud Free Tier
