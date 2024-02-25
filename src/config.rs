@@ -77,7 +77,8 @@ pub struct Config
     key_path: String,
     domain: String,
     throttle: ThrottleConfig,
-    allow_without_extension: bool
+    allow_without_extension: bool,
+    cache_period_seconds: u16
 }
 
 impl Config 
@@ -132,6 +133,10 @@ impl Config
         self.allow_without_extension.clone()
     }
 
+    pub fn get_cache_period_seconds(&self) -> u16
+    {
+        self.cache_period_seconds.clone()
+    }
 }
 
 #[derive(Clone)]

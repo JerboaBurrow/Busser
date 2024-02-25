@@ -19,7 +19,8 @@ use serde::{Serialize, Deserialize};
 ///     (
 ///         "index.js", 
 ///         "console.log(\"Hello, World!\")".as_bytes().to_vec(), 
-///         "text/javascript"
+///         "text/javascript",
+///         3600
 ///     );
 /// 
 ///     println!("{}",res.preview(64));
@@ -30,7 +31,8 @@ pub struct Resource
 {
     uri: String,
     body: Vec<u8>,
-    content_type: String
+    content_type: String,
+    cache_period_seconds: u16
 }
 
 /// Identifies the MIME type by file extension, no attempt is made to verify the file's content
@@ -101,9 +103,9 @@ pub fn content_type(extension: String) -> &'static str
 
 impl Resource
 {
-    pub fn new(uri: &str, body: Vec<u8>, content_type: &str) -> Resource
+    pub fn new(uri: &str, body: Vec<u8>, content_type: &str, cache: u16) -> Resource
     {
-        Resource { uri: uri.to_string(), body, content_type: content_type.to_string() }
+        Resource { uri: uri.to_string(), body, content_type: content_type.to_string(), cache_period_seconds: cache }
     }
 
     pub fn get_uri(&self) -> String
@@ -135,6 +137,7 @@ impl IntoResponse for Resource {
         response.headers_mut().insert("content-type", self.content_type.parse().unwrap());
         let time_stamp = chrono::offset::Utc::now().to_rfc3339();
         response.headers_mut().insert("date", time_stamp.parse().unwrap());
+        response.headers_mut().insert("cache-control", format!("public, max-age={}", self.cache_period_seconds).parse().unwrap());
         response
     }
 }

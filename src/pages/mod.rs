@@ -18,14 +18,14 @@ pub mod page;
 /// 
 /// pub fn main()
 /// {
-///     let pages = get_pages(Some("pages"));
+///     let pages = get_pages(Some("pages"), Some(3600));
 /// 
 ///     // assert_eq!(pages.len(), 1);
 ///     // assert!(pages.contains(&Page::new("pages/index.html", "")));
 ///     // assert!(!pages.contains(&Page::new("pages/animation.js", "")));
 /// }
 /// ``` 
-pub fn get_pages(path: Option<&str>) -> Vec<Page>
+pub fn get_pages(path: Option<&str>, cache_period_seconds: Option<u16>) -> Vec<Page>
 {
     let scan_path = match path
     {
@@ -37,6 +37,12 @@ pub fn get_pages(path: Option<&str>) -> Vec<Page>
     let page_paths = list_dir_by(html_regex, scan_path.to_string());
     let mut pages: Vec<Page> = vec![];
 
+    let cache = match cache_period_seconds
+    {
+        Some(p) => p,
+        None => 3600
+    };
+
     for page_path in page_paths
     {
         let data = match read_file_utf8(&page_path)
@@ -45,7 +51,7 @@ pub fn get_pages(path: Option<&str>) -> Vec<Page>
             None => continue
         };
 
-        pages.push(Page::new(page_path.as_str(), data.as_str()));
+        pages.push(Page::new(page_path.as_str(), data.as_str(), cache));
     }
 
     let dirs = list_sub_dirs(scan_path.to_string());
@@ -54,7 +60,7 @@ pub fn get_pages(path: Option<&str>) -> Vec<Page>
     {
         for dir in dirs
         {
-            for page in get_pages(Some(&dir))
+            for page in get_pages(Some(&dir), cache_period_seconds)
             {
                 pages.push(page);
             }
