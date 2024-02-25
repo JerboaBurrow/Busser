@@ -16,14 +16,14 @@ use self::resource::{content_type, Resource};
 /// 
 /// pub fn main()
 /// {
-///     let resources = get_resources(Some("resources"));
+///     let resources = get_resources(Some("resources"), Some(3600));
 /// 
 ///     // assert_eq!(resources.len(), 1);
 ///     // assert!(!resources.contains(&Resource::new("resources/index.html", "")));
 ///     // assert!(resources.contains(&Resource::new("resources/animation.js", "")));
 /// }
 /// ``` 
-pub fn get_resources(path: Option<&str>) -> Vec<Resource>
+pub fn get_resources(path: Option<&str>, cache_period_seconds: Option<u16>) -> Vec<Resource>
 {
     let scan_path = match path
     {
@@ -36,6 +36,12 @@ pub fn get_resources(path: Option<&str>) -> Vec<Resource>
 
     let resource_paths = list_dir_by(resource_regex, scan_path.to_string());
     let mut resources: Vec<Resource> = vec![];
+
+    let cache = match cache_period_seconds
+    {
+        Some(p) => p,
+        None => 3600
+    };
 
     for resource_path in resource_paths
     {
@@ -51,7 +57,7 @@ pub fn get_resources(path: Option<&str>) -> Vec<Resource>
             None => continue
         };
 
-        resources.push(Resource::new(resource_path.as_str(), data, content_type(resource_path.to_string())));
+        resources.push(Resource::new(resource_path.as_str(), data, content_type(resource_path.to_string()), cache));
     }
 
     let dirs = list_sub_dirs(scan_path.to_string());
@@ -60,7 +66,7 @@ pub fn get_resources(path: Option<&str>) -> Vec<Resource>
     {
         for dir in dirs
         {
-            for resource in get_resources(Some(&dir))
+            for resource in get_resources(Some(&dir), cache_period_seconds)
             {
                 resources.push(resource);
             }

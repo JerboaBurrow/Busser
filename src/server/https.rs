@@ -10,6 +10,7 @@ use crate::
 use std::{collections::HashMap, net::{IpAddr, Ipv4Addr, SocketAddr}, time::Instant};
 use std::path::PathBuf;
 use std::sync::Arc;
+use openssl::conf;
 use regex::Regex;
 use tokio::sync::Mutex;
 
@@ -87,8 +88,8 @@ impl Server
 
         let throttle_state = Arc::new(Mutex::new(requests));
 
-        let pages = get_pages(Some(&config.get_path()));
-        let resources = get_resources(Some(&config.get_path()));
+        let pages = get_pages(Some(&config.get_path()), Some(config.get_cache_period_seconds()));
+        let resources = get_resources(Some(&config.get_path()), Some(config.get_cache_period_seconds()));
 
         let mut router: Router<(), axum::body::Body> = Router::new();
 
@@ -144,7 +145,7 @@ impl Server
             )
         }
 
-        match Page::from_file(config.get_home())
+        match Page::from_file(config.get_home(), config.get_cache_period_seconds())
         {
             Some(mut page) => 
             { 

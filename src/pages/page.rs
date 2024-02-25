@@ -17,7 +17,7 @@ use crate::util::read_file_utf8;
 /// pub fn main()
 /// {
 /// 
-///     let page = Page::new("index.html", "<p>Welcome!</p>");
+///     let page = Page::new("index.html", "<p>Welcome!</p>", 3600);
 /// 
 ///     println!("{}",page.preview(64));
 /// }
@@ -26,28 +26,29 @@ use crate::util::read_file_utf8;
 pub struct Page
 {
     uri: String,
-    body: String
+    body: String,
+    cache_period_seconds: u16
 }
 
 impl Page
 {
-    pub fn new(uri: &str, body: &str) -> Page
+    pub fn new(uri: &str, body: &str, cache: u16) -> Page
     {
-        Page { uri: uri.to_string(), body: body.to_string() }
+        Page { uri: uri.to_string(), body: body.to_string(), cache_period_seconds: cache }
     }
 
-    pub fn from_file(path: String) -> Option<Page>
+    pub fn from_file(path: String, cache_period_seconds: u16) -> Option<Page>
     {
         match read_file_utf8(&path)
         {
-            Some(data) => Some(Page::new(path.as_str(), data.as_str())),
+            Some(data) => Some(Page::new(path.as_str(), data.as_str(), cache_period_seconds)),
             None => None
         }
     }
 
     pub fn error(text: &str) -> Page
     {
-        Page::new("/", text)
+        Page::new("/", text, 3600)
     }
 
     pub fn get_uri(&self) -> String
@@ -86,6 +87,7 @@ impl IntoResponse for Page {
         let mut response = Html(self.body).into_response();
         let time_stamp = chrono::offset::Utc::now().to_rfc3339();
         response.headers_mut().insert("date", time_stamp.parse().unwrap());
+        response.headers_mut().insert("cache-control", format!("public, max-age={}", self.cache_period_seconds).parse().unwrap());
         response
     }
 }

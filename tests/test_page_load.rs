@@ -8,15 +8,15 @@ mod test_page_load
     #[test]
     fn test_read_pages()
     {
-        let pages = get_pages(Some("tests/pages"));
+        let pages = get_pages(Some("tests/pages"), None);
 
         assert_eq!(pages.len(), 3);
 
-        assert!(pages.contains(&Page::new("tests/pages/a.html", "this is /a")));
+        assert!(pages.contains(&Page::new("tests/pages/a.html", "this is /a", 3600)));
 
-        assert!(pages.contains(&Page::new("tests/pages/b.html", "this is /b")));
+        assert!(pages.contains(&Page::new("tests/pages/b.html", "this is /b", 3600)));
 
-        assert!(pages.contains(&Page::new("tests/pages/c/d.html", "this is /c/d")));
+        assert!(pages.contains(&Page::new("tests/pages/c/d.html", "this is /c/d", 3600)));
     }
 
 }
