@@ -133,6 +133,8 @@ impl IntoResponse for Resource {
     fn into_response(self) -> Response {
         let mut response = Html(self.body).into_response();
         response.headers_mut().insert("content-type", self.content_type.parse().unwrap());
+        let time_stamp = chrono::offset::Utc::now().to_rfc3339();
+        response.headers_mut().insert("date", time_stamp.parse().unwrap());
         response
     }
 }

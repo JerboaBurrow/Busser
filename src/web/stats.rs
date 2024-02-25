@@ -106,10 +106,8 @@ pub async fn log_stats<B>
                                 compute_time
                             ), Some("PERFORMANCE".to_string()));
 
-                            let serve_start = Instant::now();
                             let response = next.run(request).await;
-                            crate::debug(format!("Serve time:               {} s", serve_start.elapsed().as_secs_f64()), Some("PERFORMANCE".to_string()));
-        
+
                             return Ok(response)
                         }
                     },
@@ -166,9 +164,8 @@ pub async fn log_stats<B>
 
     }
 
-    let serve_start = Instant::now();
+    
     let response = next.run(request).await;
-    crate::debug(format!("Serve time:               {} s", serve_start.elapsed().as_secs_f64()), Some("PERFORMANCE".to_string()));
 
     Ok(response)
     

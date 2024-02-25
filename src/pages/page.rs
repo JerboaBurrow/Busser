@@ -83,6 +83,9 @@ impl Page
 
 impl IntoResponse for Page {
     fn into_response(self) -> Response {
-        Html(self.body).into_response()
+        let mut response = Html(self.body).into_response();
+        let time_stamp = chrono::offset::Utc::now().to_rfc3339();
+        response.headers_mut().insert("date", time_stamp.parse().unwrap());
+        response
     }
 }
