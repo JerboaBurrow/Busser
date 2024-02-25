@@ -25,47 +25,14 @@ pub struct Stats
     pub last_save: Instant
 }
 
-use axum::
+impl Stats
 {
-    http::{Request, StatusCode}, 
-    response::Response, 
-    extract::{State, ConnectInfo},
-    middleware::Next
-};
-
-pub async fn get_ip_info(token: String, sip: String) -> IpDetails
-{
-    let config = IpInfoConfig {
-        token: Some(token),
-        ..Default::default()
-    };
-
-    let mut ipinfo = IpInfo::new(config)
-        .expect("should construct");
-
-    let res = ipinfo.lookup(&sip).await;
-    
-    match res {
-        Ok(r) => r,
-        Err(e) => 
-        {
-            crate::debug(format!("Error getting ip details {}", e), None);
-            IpDetails { ip: sip, ..Default::default()}
-        }
-    }
-}
-
-use crate::config::read_stats_config;
-use crate::util::write_file;
-pub async fn log_stats<B>
-(
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
-    State(state): State<Arc<Mutex<Stats>>>,
-    request: Request<B>,
-    next: Next<B>
-) -> Result<Response, StatusCode>
-{
-
+    pub async fn process_hit
+    (
+        addr: SocketAddr,
+        state: Arc<Mutex<Stats>>,
+        uri: String 
+    )
     {
         let start_time = Instant::now();
 
@@ -106,12 +73,10 @@ pub async fn log_stats<B>
                                 compute_time
                             ), Some("PERFORMANCE".to_string()));
 
-                            let response = next.run(request).await;
-
-                            return Ok(response)
+                            return
                         }
                     },
-                    Err(e) => {}
+                    Err(_e) => {}
                 }
             }            
         }
@@ -124,7 +89,7 @@ pub async fn log_stats<B>
 
         let last = chrono::offset::Utc::now().to_rfc3339();
 
-        let hit = Hit { details, path: request.uri().to_string(), count, last };
+        let hit = Hit { details, path: uri, count, last };
 
         crate::debug(format!("[Hit] {:?}", hit), None);
 
@@ -161,12 +126,57 @@ pub async fn log_stats<B>
             compute_time,
             write_time
         ), Some("PERFORMANCE".to_string()));
-
     }
+}
 
-    
-    let response = next.run(request).await;
+use axum::
+{
+    http::{Request, StatusCode}, 
+    response::Response, 
+    extract::{State, ConnectInfo},
+    middleware::Next
+};
 
-    Ok(response)
+pub async fn get_ip_info(token: String, sip: String) -> IpDetails
+{
+    let config = IpInfoConfig {
+        token: Some(token),
+        ..Default::default()
+    };
+
+    let mut ipinfo = IpInfo::new(config)
+        .expect("should construct");
+
+    let res = ipinfo.lookup(&sip).await;
     
+    match res {
+        Ok(r) => r,
+        Err(e) => 
+        {
+            crate::debug(format!("Error getting ip details {}", e), None);
+            IpDetails { ip: sip, ..Default::default()}
+        }
+    }
+}
+
+use crate::config::read_stats_config;
+use crate::util::write_file;
+pub async fn log_stats<B>
+(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    State(state): State<Arc<Mutex<Stats>>>,
+    request: Request<B>,
+    next: Next<B>
+) -> Result<Response, StatusCode>
+{
+    
+    let uri = request.uri().to_string();
+    tokio::spawn
+    (async move
+        {
+            Stats::process_hit(addr, state, uri).await
+        }
+    );
+           
+    Ok(next.run(request).await)
 }
