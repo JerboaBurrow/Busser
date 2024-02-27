@@ -2,7 +2,7 @@ use std::path::Path;
 
 use serde::{Serialize, Deserialize};
 
-use crate::{util::read_file_utf8, web::discord::request::model::Webhook};
+use crate::{util::read_file_utf8, web::{discord::request::model::Webhook, stats::Stats}};
 
 pub const STATS_CONFIG_PATH: &str = "stats_config.json";
 
@@ -77,6 +77,7 @@ pub struct Config
     key_path: String,
     domain: String,
     throttle: ThrottleConfig,
+    stats: StatsConfig,
     allow_without_extension: bool,
     cache_period_seconds: u16
 }
@@ -121,6 +122,11 @@ impl Config
     pub fn get_throttle_config(&self) -> ThrottleConfig
     {
         self.throttle.clone()
+    }
+
+    pub fn get_stats_config(&self) -> StatsConfig
+    {
+        self.stats.clone()
     }
 
     pub fn get_domain(&self) -> String
@@ -168,39 +174,6 @@ pub fn read_config() -> Option<Config>
         };
 
         let config: Config = match serde_json::from_str(&data)
-        {
-            Ok(data) => {data},
-            Err(why) => 
-            {
-                println!("Error reading configuration file {}\n{}", CONFIG_PATH, why);
-                return None
-            }
-        };
-
-        Some(config)
-    }
-    else 
-    {
-        println!("Error configuration file {} does not exist", CONFIG_PATH);
-        None
-    }
-}
-
-pub fn read_stats_config() -> Option<StatsConfig>
-{
-    if Path::new(STATS_CONFIG_PATH).exists()
-    {
-        let data = match read_file_utf8(STATS_CONFIG_PATH)
-        {
-            Some(d) => d,
-            None =>
-            {
-                println!("Error reading configuration file {} no data", CONFIG_PATH);
-                return None
-            }
-        };
-
-        let config: StatsConfig = match serde_json::from_str(&data)
         {
             Ok(data) => {data},
             Err(why) => 

@@ -9,6 +9,17 @@ use ipinfo::{IpDetails, IpInfo, IpInfoConfig};
 
 use serde::{Deserialize, Serialize};
 
+use axum::
+{
+    http::{Request, StatusCode}, 
+    response::Response, 
+    extract::{State, ConnectInfo},
+    middleware::Next
+};
+
+use crate::config::read_config;
+use crate::util::write_file;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Hit
 {
@@ -36,11 +47,20 @@ impl Stats
     {
         let start_time = Instant::now();
 
+        let config = match read_config()
+        {
+            Some(c) => c,
+            None =>
+            {
+                std::process::exit(1)
+            }
+        };
+
         let mut stats = state.lock().await;
 
         let compute_start_time = Instant::now();
 
-        let stats_config = read_stats_config().unwrap();
+        let stats_config = config.get_stats_config();
         
         let sip = addr.ip().to_string();
 
@@ -129,14 +149,6 @@ impl Stats
     }
 }
 
-use axum::
-{
-    http::{Request, StatusCode}, 
-    response::Response, 
-    extract::{State, ConnectInfo},
-    middleware::Next
-};
-
 pub async fn get_ip_info(token: String, sip: String) -> IpDetails
 {
     let config = IpInfoConfig {
@@ -159,8 +171,6 @@ pub async fn get_ip_info(token: String, sip: String) -> IpDetails
     }
 }
 
-use crate::config::read_stats_config;
-use crate::util::write_file;
 pub async fn log_stats<B>
 (
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
