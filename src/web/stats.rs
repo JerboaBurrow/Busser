@@ -1,11 +1,12 @@
-use std::cmp::min;
+use std::cmp::{max, min};
 use std::collections::HashMap;
 use std::fs::create_dir;
+use std::iter::Enumerate;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-use std::os::linux::raw::stat;
 use std::sync::Arc;
 use std::time::Instant;
 use chrono::{DateTime, Datelike, TimeZone, Timelike};
+use openssl::conf;
 use openssl::sha::sha512;
 use tokio::sync::Mutex;
 
@@ -21,6 +22,8 @@ use axum::
 
 use crate::config::read_config;
 use crate::util::{list_dir_by, read_file_utf8, write_file};
+
+use crate::web::discord::request::post::post;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Hit
@@ -371,6 +374,21 @@ impl Stats
             stats.last_clear = t;
         }
 
+        if (t - stats.last_digest).num_seconds() > stats_config.digest_period_seconds as i64
+        {
+            let mut msg = String::new(); 
+
+            msg.push_str(format!("Hits since {}\n", stats.last_digest).as_str());
+            msg.push_str(format!("Total / Unique: {} / {}\n", stats.summary.total_hits, stats.summary.unique_hits).as_str());
+            msg.push_str(format!("Hits by hour (UTC):\n\n{}", hits_by_hour_text_graph(stats.summary.hits_by_hour_utc, '-', 10)).as_str());
+
+            match post(config.get_end_point(), msg).await
+            {
+                Ok(_s) => (),
+                Err(e) => {crate::debug(format!("Error posting to discord\n{}", e), None);}
+            }
+        }
+
         let wait = min(3600, (chrono::Utc::with_ymd_and_hms
         (
             &chrono::Utc, 
@@ -381,7 +399,7 @@ impl Stats
             0, 
             0
         ).unwrap() + chrono::Duration::days(1) - t).num_seconds()) as u64;
-        tokio::time::sleep(std::time::Duration::from_secs(wait));
+        tokio::time::sleep(std::time::Duration::from_secs(wait)).await;
     }
 }
 
@@ -403,4 +421,26 @@ pub async fn log_stats<B>
     );
            
     Ok(next.run(request).await)
+}
+
+pub fn hits_by_hour_text_graph(hits: [u16; 24], symbol: char, size: u8) -> String
+{
+    let mut graph = String::new();
+
+    let mut top_hour = hits[0];
+    for i in 1..23
+    {
+        top_hour = max(top_hour, hits[i]);
+    }
+
+    for (i, h) in hits.iter().enumerate()
+    {
+        let s = ((size as f64) * (*h as f64) / (top_hour as f64)) as usize;
+
+        graph.push_str(format!("{:0>2}:00", i).as_str());
+        graph.push_str(std::iter::repeat(symbol).take(s).collect::<String>().as_str());
+        graph.push_str("\n");
+    }
+
+    graph
 }
