@@ -34,7 +34,7 @@ pub fn get_pages(path: Option<&str>, cache_period_seconds: Option<u16>) -> Vec<P
     };
 
     let html_regex = Regex::new(HTML_REGEX).unwrap();
-    let page_paths = list_dir_by(html_regex, scan_path.to_string());
+    let page_paths = list_dir_by(Some(html_regex), scan_path.to_string());
     let mut pages: Vec<Page> = vec![];
 
     let cache = match cache_period_seconds

@@ -175,7 +175,7 @@ pub fn list_sub_dirs(path: String) -> Vec<String>
     found_dirs
 }
 
-pub fn list_dir_by(pattern: Regex, path: String) -> Vec<String>
+pub fn list_dir_by(pattern: Option<Regex>, path: String) -> Vec<String>
 {
     match std::fs::read_dir(path.clone())
     {
@@ -201,10 +201,17 @@ pub fn list_dir_by(pattern: Regex, path: String) -> Vec<String>
                     None => continue
                 };
             
-                match pattern.captures(&file_path)
+                if pattern.clone().is_some()
                 {
-                    Some(_caps) => {found_files.push(file_path.to_string())},
-                    None => {continue}
+                    match pattern.clone().unwrap().captures(&file_path)
+                    {
+                        Some(_caps) => {found_files.push(file_path.to_string())},
+                        None => {continue}
+                    }
+                }
+                else
+                {
+                    found_files.push(file_path.to_string())
                 }
             }
 
