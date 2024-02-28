@@ -2,16 +2,14 @@ use std::path::Path;
 
 use serde::{Serialize, Deserialize};
 
-use crate::{util::read_file_utf8, web::{discord::request::model::Webhook, stats::Stats}};
-
-pub const STATS_CONFIG_PATH: &str = "stats_config.json";
+use crate::{util::read_file_utf8, web::discord::request::model::Webhook};
 
 /// Configure the stats collection
 /// - ```save_period_seconds```: periodically save to disc
 /// - ```path```: where to save to disc (time-stamped files)
 /// - ```hit_cooloff_seconds```: cooloff period after which the same IP is counted as a new hit
 /// - ```clear_period_seconds```: periodcially clear data in memory
-/// - ```ipinfo_token```: Optional API token for ipinfo.io data
+/// - ```digest_period_seconds```: periodically send a digts to a Dicsord webhook
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StatsConfig
 {
@@ -19,7 +17,7 @@ pub struct StatsConfig
     pub path: String,
     pub hit_cooloff_seconds: u64,
     pub clear_period_seconds: u64,
-    pub ipinfo_token: Option<String>
+    pub digest_period_seconds: u64
 }
 
 pub const CONFIG_PATH: &str = "config.json";

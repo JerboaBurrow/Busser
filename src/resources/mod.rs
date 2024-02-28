@@ -34,7 +34,7 @@ pub fn get_resources(path: Option<&str>, cache_period_seconds: Option<u16>) -> V
     let resource_regex = Regex::new(RESOURCE_REGEX).unwrap();
     let html_regex = Regex::new(HTML_REGEX).unwrap();
 
-    let resource_paths = list_dir_by(resource_regex, scan_path.to_string());
+    let resource_paths = list_dir_by(Some(resource_regex), scan_path.to_string());
     let mut resources: Vec<Resource> = vec![];
 
     let cache = match cache_period_seconds

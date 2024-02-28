@@ -3,7 +3,7 @@ use crate::
     config::{read_config, Config}, 
     pages::{get_pages, page::Page}, 
     resources::get_resources, 
-    web::{stats::{log_stats, Stats}, 
+    web::{stats::{log_stats, Digest, Stats}, 
     throttle::{handle_throttle, IpThrottler}}
 };
 
@@ -160,7 +160,9 @@ impl Server
             Stats 
             {
                 hits: HashMap::new(), 
-                last_save: Instant::now()
+                last_save: Instant::now(),
+                last_notification: chrono::offset::Utc::now(),
+                summary: Digest::new()
             }
         ));
 
