@@ -9,7 +9,8 @@ use crate::{util::read_file_utf8, web::discord::request::model::Webhook};
 /// - ```path```: where to save to disc (time-stamped files)
 /// - ```hit_cooloff_seconds```: cooloff period after which the same IP is counted as a new hit
 /// - ```clear_period_seconds```: periodcially clear data in memory
-/// - ```digest_period_seconds```: periodically send a digts to a Dicsord webhook
+/// - ```digest_period_seconds```: periodically send a digts to a Discord webhook
+/// - ```log_files_clear_period_seconds```:clear disc log files periodically
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StatsConfig
 {
@@ -17,7 +18,8 @@ pub struct StatsConfig
     pub path: String,
     pub hit_cooloff_seconds: u64,
     pub clear_period_seconds: u64,
-    pub digest_period_seconds: u64
+    pub digest_period_seconds: u64,
+    pub log_files_clear_period_seconds: u64
 }
 
 pub const CONFIG_PATH: &str = "config.json";

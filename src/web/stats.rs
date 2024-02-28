@@ -1,11 +1,11 @@
-use std::clone;
 use std::cmp::min;
 use std::collections::HashMap;
 use std::fs::create_dir;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::os::linux::raw::stat;
 use std::sync::Arc;
 use std::time::Instant;
-use chrono::{DateTime, Timelike};
+use chrono::{DateTime, Datelike, TimeZone, Timelike};
 use openssl::sha::sha512;
 use tokio::sync::Mutex;
 
@@ -20,7 +20,7 @@ use axum::
 };
 
 use crate::config::read_config;
-use crate::util::{list_dir, list_dir_by, read_file_utf8, write_file};
+use crate::util::{list_dir_by, read_file_utf8, write_file};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Hit
@@ -61,7 +61,8 @@ pub struct Stats
 {
     pub hits: HashMap<[u8; 64], Hit>,
     pub last_save: Instant,
-    pub last_notification: DateTime<chrono::Utc>,
+    pub last_digest: DateTime<chrono::Utc>,
+    pub last_clear: DateTime<chrono::Utc>,
     pub summary: Digest
 }
 
@@ -164,7 +165,32 @@ impl Stats
         ), Some("PERFORMANCE".to_string()));
     }
 
-    fn process_hits(path: String, from: DateTime<chrono::Utc>) -> Digest
+    pub fn clear_logs(path: String, before: DateTime<chrono::Utc>)
+    {
+        let stats_files = list_dir_by(None, path);
+
+        for file in stats_files
+        {
+            let t = match DateTime::parse_from_rfc3339(&file)
+            {
+                Ok(date) => date,
+                Err(e) => {crate::debug(format!("Error {} loading stats file {}",e,file), None); continue}
+            };
+
+            if t > before
+            {
+                continue
+            }
+
+            match std::fs::remove_file(file.clone())
+            {
+                Ok(()) => {},
+                Err(e) => {crate::debug(format!("Could not delete stats files {}\n {}", file, e), None);}
+            }
+        }
+    }
+
+    pub fn process_hits(path: String, from: DateTime<chrono::Utc>) -> Digest
     {
 
         let mut digest = Digest::new();
@@ -314,6 +340,48 @@ impl Stats
             "Write stats time:       {} s", 
             write_time
         ), Some("PERFORMANCE".to_string()));
+    }
+
+    pub async fn stats_thread(state: Arc<Mutex<Stats>>)
+    {
+        let mut stats = state.lock().await.to_owned();
+
+        let config = match read_config()
+        {
+            Some(c) => c,
+            None =>
+            {
+                std::process::exit(1)
+            }
+        };
+
+        let stats_config = config.get_stats_config();
+
+        let t = chrono::offset::Utc::now();
+
+        if (t - stats.last_digest).num_seconds() > stats_config.digest_period_seconds as i64
+        {
+            stats.summary = Self::process_hits(stats_config.path.clone(), stats.last_digest);
+            stats.last_digest = t;
+        }
+
+        if (t - stats.last_clear).num_seconds() > stats_config.clear_period_seconds as i64
+        {
+            Self::clear_logs(stats_config.path, t);
+            stats.last_clear = t;
+        }
+
+        let wait = min(3600, (chrono::Utc::with_ymd_and_hms
+        (
+            &chrono::Utc, 
+            t.year(), 
+            t.month(), 
+            t.day(), 
+            1, 
+            0, 
+            0
+        ).unwrap() + chrono::Duration::days(1) - t).num_seconds()) as u64;
+        tokio::time::sleep(std::time::Duration::from_secs(wait));
     }
 }
 

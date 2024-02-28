@@ -7,12 +7,11 @@ use crate::
     throttle::{handle_throttle, IpThrottler}}
 };
 
-use std::{collections::HashMap, net::{IpAddr, Ipv4Addr, SocketAddr}, time::Instant};
+use std::{clone, collections::HashMap, net::{IpAddr, Ipv4Addr, SocketAddr}, time::Instant};
 use std::path::PathBuf;
 use std::sync::Arc;
-use openssl::conf;
 use regex::Regex;
-use tokio::sync::Mutex;
+use tokio::{spawn, sync::Mutex};
 
 use axum::
 {
@@ -161,10 +160,13 @@ impl Server
             {
                 hits: HashMap::new(), 
                 last_save: Instant::now(),
-                last_notification: chrono::offset::Utc::now(),
+                last_digest: chrono::offset::Utc::now(),
+                last_clear: chrono::offset::Utc::now(),
                 summary: Digest::new()
             }
         ));
+
+        let _stats_thread = spawn(Stats::stats_thread(stats.clone()));
 
         router = router.layer(middleware::from_fn_with_state(stats.clone(), log_stats));
         router = router.layer(middleware::from_fn_with_state(throttle_state.clone(), handle_throttle));
