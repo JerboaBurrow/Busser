@@ -2,6 +2,26 @@
 
 #### Simple HTTPS website hosting in Rust with [Axum](https://github.com/tokio-rs/axum).
 
+✔️ Host static HTML/css/js/text and image/video content (png, jpg, gif, webp, mp4, ...) content from a given directory
+
+✔️ Serve with and without ```.html```, e.g. ```/x/y/z/webpage.html``` aliased as ```/x/y/z/webpage```
+
+✔️ Http redirect to https
+
+✔️ Https certificates
+
+✔️ IP throttling
+
+✔️ Hit statistics and statistics digest (Discord webhook integration)
+
+✔️ Hot :fire: loadable configuration
+
+✔️ Host via **free tier** cloud services!
+
+🏗️ Discord webhook integration for status messages
+
+🏗️ Authenticated API for status/statistics polling
+
 ##### Host for free on Google Cloud
 
 1. Just create a folder with your ```.html/.css/.js``` and other resources, ```.png, .gif, ...```
@@ -43,27 +63,6 @@ The ```config.json``` specifies key properties of the site and its content
     "key_path": "certs/key.pem"
 }
 ```
-
-✔️ Host HTML/css/js/text content from a given directory 
-
-✔️ Host Image/video content (png, jpg, gif, webp, mp4, ...)
-
-✔️ Serve with and without ```.html```, e.g. ```/x/y/z/webpage.html``` aliased as ```/x/y/z/webpage```
-
-✔️ Http redirect to https
-
-✔️ Https certificates
-
-✔️ IP throttling
-
-✔️ Hit statistics and statistics digest (Discord webhook integration)
-
-✔️ Hot :fire: loadable configuration
-
-✔️ Host via **free tier** cloud services!
-
-🏗️ Discord webhook integration for status messages
-
 ____
 
 #### GDPR, Cookie Policies, and Privacy Policies
