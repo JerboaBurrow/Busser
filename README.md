@@ -5,7 +5,7 @@
 ##### Host for free on Google Cloud
 
 1. Just create a folder with your ```.html/.css/.js``` and other resources, ```.png, .gif, ...```
-2. Point Busser to it with a config.json and stats-config.json.
+2. Point Busser to it with a config.json
 3. Run it, and that's it!*
 
 \* you'll need certificates for https, and open ports
@@ -18,10 +18,24 @@ The ```config.json``` specifies key properties of the site and its content
 {
     "port_https": 443,
     "port_http": 80, 
-    "throttle": {"max_requests_per_second": 512.0, "timeout_millis": 5000, "clear_period_seconds": 86400},
-    "path": "pages",
-    "home": "pages/index.html",
-    "domain": "your.cool.domain",
+    "throttle": 
+    {
+        "max_requests_per_second": 64.0, 
+        "timeout_millis": 5000, 
+        "clear_period_seconds": 3600
+    },
+    "stats": 
+    {
+        "save_period_seconds": 86400,
+        "path": "stats",
+        "hit_cooloff_seconds": 3600,
+        "clear_period_seconds": 2419200,
+        "digest_period_seconds": 604800,
+        "log_files_clear_period_seconds": 2419200
+    },
+    "path": "/home/jerboa/Website/",
+    "home": "/home/jerboa/Website/jerboa.html",
+    "domain": "jerboa.app",
     "allow_without_extension": true,
     "notification_endpoint": { "addr": "https://discord.com/api/webhooks/xxx/yyy" },
     "cache_period_seconds": 3600,
@@ -29,22 +43,12 @@ The ```config.json``` specifies key properties of the site and its content
     "key_path": "certs/key.pem"
 }
 ```
-You'll also need to configure the statistics collection, the ipinfo_token is an optional ipinfo.io API token (50k requests for free per month)
-```json
-{
-    "save_period_seconds": 86400,
-    "path": "stats",
-    "hit_cooloff_seconds": 3600,
-    "clear_period_seconds": 604800,
-    "ipinfo_token": "xxxxxxxxxxxxxx" 
-}
-```
 
 ✔️ Host HTML/css/js/text content from a given directory 
 
 ✔️ Host Image/video content (png, jpg, gif, webp, mp4, ...)
 
-✔️ Serve with and without ```.html```, e.g. ```/x/y/z/webpage.html``` via ```/x/y/z/webpage```
+✔️ Serve with and without ```.html```, e.g. ```/x/y/z/webpage.html``` aliased as ```/x/y/z/webpage```
 
 ✔️ Http redirect to https
 
@@ -52,7 +56,9 @@ You'll also need to configure the statistics collection, the ipinfo_token is an 
 
 ✔️ IP throttling
 
-✔️ Hit statistics (with optional ipinfo.io integration)
+✔️ Hit statistics and statistics digest (Discord webhook integration)
+
+✔️ Hot :fire: loadable configuration
 
 ✔️ Host via **free tier** cloud services!
 
@@ -64,8 +70,7 @@ ____
 
 - The IP throttler only stores hashes of an IP and a request path, it is likely not considered identifiable information.
 
-- The statistics collection stores the IP. Additionally, if you use the optional ipfino.io integration the the data will also include e.g. country code and lattidue/longitude etc. 
-This may be considered identifiable information.
+- The statistics collection stores the IP, hit time, path, and counts for each IP-path pair. This may be considered identifieable information. Automatic deletion of this data is carried out, hot-configurable in config.json. 
 ____
 
 ### Free static website hosting example with Google Cloud Free Tier
@@ -136,6 +141,30 @@ Make sure 443 and 80 are open ports (or whatever ports you wish to serve on)
 
 - get a domain (e.g. from squarespace)
 - create a custom DNS record, e.g.
-    - ```your.domain.somwhere    A	1 hour	google.cloud.instance.ip ```
+    - ```your.domain.somewhere    A	1 hour	google.cloud.instance.ip ```
 - Use [Let's Encrypts](https://letsencrypt.org/) recommendation of [certbot](https://certbot.eff.org/) it really is very easy
+    - Something like ```sudo certbot certonly --standalone -d your.domain.somewhere -d sub.your.domain.somehwere```
     - You will need to enable http in the cloud instance firewall for provisioning as well as https
+
+#### Spinning up
+
+Either: Run at login, root may be required for certificates (should be for certbot ones)
+  
+Or: Use a service file in ```/lib/systemd/system```, e.g
+
+```
+[Unit]
+Description=Busser
+
+[Service]
+ExecStart=busser -d
+WorkingDirectory=/home/busser
+User=root
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Then start and monitor it with
+
+```sudo systemctl start busser.service``` and ```sudo journalctl -e -u busser.service```
