@@ -15,6 +15,16 @@ async fn main() {
         std::process::exit(0);
     }
 
+    if args.iter().any(|x| x == "-d")
+    {
+        unsafe { busser::OPTIONS.debug = true; }
+    }
+
+    if args.iter().any(|x| x == "-t")
+    {
+        unsafe { busser::OPTIONS.debug_timestamp = true; }
+    }
+
     let insert_tag = if args.iter().any(|x| x == "--no-tagging")
     {
         false
