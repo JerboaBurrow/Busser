@@ -1,12 +1,10 @@
 use std::cmp::{max, min};
 use std::collections::HashMap;
 use std::fs::create_dir;
-use std::iter::Enumerate;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Arc;
 use std::time::Instant;
 use chrono::{DateTime, Datelike, TimeZone, Timelike};
-use openssl::conf;
 use openssl::sha::sha512;
 use tokio::sync::Mutex;
 
@@ -345,6 +343,17 @@ impl Stats
         ), Some("PERFORMANCE".to_string()));
     }
 
+    pub fn digest_message(digest: Digest, from: DateTime<chrono::Utc>) -> String
+    {
+        let mut msg = String::new(); 
+
+        msg.push_str(format!("Hits since {}\n", from).as_str());
+        msg.push_str(format!("Total / Unique: {} / {}\n", digest.total_hits, digest.unique_hits).as_str());
+        msg.push_str(format!("Hits by hour (UTC):\n\n{}", hits_by_hour_text_graph(digest.hits_by_hour_utc, '-', 10)).as_str());
+
+        msg
+    }
+
     pub async fn stats_thread(state: Arc<Mutex<Stats>>)
     {
         let mut stats = state.lock().await.to_owned();
@@ -376,12 +385,7 @@ impl Stats
 
         if (t - stats.last_digest).num_seconds() > stats_config.digest_period_seconds as i64
         {
-            let mut msg = String::new(); 
-
-            msg.push_str(format!("Hits since {}\n", stats.last_digest).as_str());
-            msg.push_str(format!("Total / Unique: {} / {}\n", stats.summary.total_hits, stats.summary.unique_hits).as_str());
-            msg.push_str(format!("Hits by hour (UTC):\n\n{}", hits_by_hour_text_graph(stats.summary.hits_by_hour_utc, '-', 10)).as_str());
-
+            let msg = Stats::digest_message(stats.summary, stats.last_digest);
             match post(config.get_end_point(), msg).await
             {
                 Ok(_s) => (),

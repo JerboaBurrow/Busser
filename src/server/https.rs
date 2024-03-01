@@ -4,10 +4,11 @@ use crate::
     pages::{get_pages, page::Page}, 
     resources::get_resources, 
     web::{stats::{log_stats, Digest, Stats}, 
-    throttle::{handle_throttle, IpThrottler}}
+    throttle::{handle_throttle, IpThrottler}},
+    server::api::stats
 };
 
-use std::{clone, collections::HashMap, net::{IpAddr, Ipv4Addr, SocketAddr}, time::Instant};
+use std::{collections::HashMap, net::{IpAddr, Ipv4Addr, SocketAddr}};
 use std::path::PathBuf;
 use std::sync::Arc;
 use regex::Regex;
@@ -19,6 +20,8 @@ use axum::
     Router
 };
 use axum_server::tls_rustls::RustlsConfig;
+
+use super::api::{stats::StatsDigest, ApiRequest};
 
 /// An https server that reads a directory configured with [Config]
 /// ```.html``` pages and resources, then serves them.
@@ -170,6 +173,8 @@ impl Server
 
         router = router.layer(middleware::from_fn_with_state(stats.clone(), log_stats));
         router = router.layer(middleware::from_fn_with_state(throttle_state.clone(), handle_throttle));
+
+        router = router.layer(middleware::from_fn(StatsDigest::filter));
 
         Server
         {
