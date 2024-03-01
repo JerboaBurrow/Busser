@@ -4,7 +4,8 @@ use crate::
     pages::{get_pages, page::Page}, 
     resources::get_resources, 
     web::{stats::{log_stats, Digest, Stats}, 
-    throttle::{handle_throttle, IpThrottler}}
+    throttle::{handle_throttle, IpThrottler}},
+    server::api::stats
 };
 
 use std::{clone, collections::HashMap, net::{IpAddr, Ipv4Addr, SocketAddr}, time::Instant};
