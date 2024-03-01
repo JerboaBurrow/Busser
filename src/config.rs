@@ -65,6 +65,9 @@ impl ThrottleConfig
 /// - ```domain```: domain name for https redirect etc.
 /// - ```throttle```: [ThrottleConfig]
 /// - ```allow_without_extension```: allow serving without .html
+/// - ```stats```: [StatsConfig]
+/// - ```cache_period_seconds: u16```: page/resource max cache age
+/// - ```api_token```: token to use for the server's POST api
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Config
 {
@@ -79,7 +82,8 @@ pub struct Config
     throttle: ThrottleConfig,
     stats: StatsConfig,
     allow_without_extension: bool,
-    cache_period_seconds: u16
+    cache_period_seconds: u16,
+    api_token: String
 }
 
 impl Config 
@@ -142,6 +146,11 @@ impl Config
     pub fn get_cache_period_seconds(&self) -> u16
     {
         self.cache_period_seconds.clone()
+    }
+
+    pub fn get_api_token(&self) -> String
+    {
+        self.api_token.clone()
     }
 }
 
