@@ -17,7 +17,6 @@ pub struct StatsConfig
     pub save_period_seconds: u64,
     pub path: String,
     pub hit_cooloff_seconds: u64,
-    pub clear_period_seconds: u64,
     pub digest_period_seconds: u64,
     pub log_files_clear_period_seconds: u64
 }
