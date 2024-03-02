@@ -112,7 +112,7 @@ impl Server
                 let extension_regex = Regex::new(r"\.\S+$").unwrap();
                 let short_uri = extension_regex.replacen(&uri, 1, "");
 
-                println!("{}",short_uri);
+                crate::debug(format!("Serving as short url: {}",short_uri), None);
 
                 let page_short = page.clone();
 
@@ -162,7 +162,7 @@ impl Server
             Stats 
             {
                 hits: HashMap::new(), 
-                last_save: Instant::now(),
+                last_save: chrono::offset::Utc::now(),
                 last_digest: chrono::offset::Utc::now(),
                 last_clear: chrono::offset::Utc::now(),
                 summary: Digest::new()

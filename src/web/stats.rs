@@ -61,7 +61,7 @@ impl Digest
 pub struct Stats
 {
     pub hits: HashMap<[u8; 64], Hit>,
-    pub last_save: Instant,
+    pub last_save: DateTime<chrono::Utc>,
     pub last_digest: DateTime<chrono::Utc>,
     pub last_clear: DateTime<chrono::Utc>,
     pub summary: Digest
@@ -108,7 +108,7 @@ impl Stats
         {
             true =>
             {
-                let hit = stats.hits[&hash].clone();
+                let mut hit = stats.hits[&hash].clone();
                 let last_hit = stats.hits[&hash].times.last();
 
                 match last_hit 
@@ -136,6 +136,8 @@ impl Stats
 
                                     return
                                 }
+                                hit.times.push(chrono::offset::Utc::now().to_rfc3339());
+                                hit.count += 1;
                                 hit
                             },
                             Err(_e) => {hit}
@@ -150,7 +152,7 @@ impl Stats
             }
         };
 
-        crate::debug(format!("[Hit] {:?}", hit), None);
+        crate::debug(format!("{:?}", hit), Some("Statistics".to_string()));
 
         stats.hits.insert(hash, hit);
 
@@ -203,7 +205,15 @@ impl Stats
 
         for file in stats_files
         {
-            let t = match DateTime::parse_from_rfc3339(&file)
+            crate::debug(format!("Processing stats files: {}", file), None);
+            
+            let time_string = match file.split("/").last()
+            {
+                Some(s) => s,
+                None => {crate::debug(format!("Could not parse time from stats file name {}",file), None); continue}
+            };
+
+            let t = match DateTime::parse_from_rfc3339(&time_string)
             {
                 Ok(date) => date,
                 Err(e) => {crate::debug(format!("Error {} loading stats file {}",e,file), None); continue}
@@ -231,7 +241,11 @@ impl Stats
                 match hitters.contains_key(&hit.ip)
                 {
                     true => {hitters.insert(hit.ip.clone(), hit.count+hitters[&hit.ip]);},
-                    false => {hitters.insert(hit.ip, hit.count);}
+                    false => 
+                    {
+                        hitters.insert(hit.ip, hit.count);
+                        digest.unique_hits += 1;
+                    }
                 }
 
                 match paths.contains_key(&hit.path)
@@ -241,7 +255,6 @@ impl Stats
                 }
 
                 digest.total_hits += hit.count;
-                digest.unique_hits += 1;
 
                 for time in hit.times
                 {
@@ -292,7 +305,7 @@ impl Stats
 
     }
 
-    pub async fn save(state: Arc<Mutex<Stats>>)
+    pub fn save(stats: Stats)
     {
         let config = match read_config()
         {
@@ -307,31 +320,21 @@ impl Stats
 
         let write_start_time = Instant::now();
 
-        let mut stats = state.lock().await.to_owned();
-
-        if stats.last_save.elapsed() >= std::time::Duration::from_secs(stats_config.save_period_seconds)
+        if !std::path::Path::new(&stats_config.path).exists()
         {
-
             match create_dir(stats_config.path.to_string())
             {
                 Ok(_s) => {},
-                Err(_e) => {}
+                Err(e) => {crate::debug(format!("Error creating stats dir {}",e), None)}
             }
+        }
 
-            let file_name = stats_config.path.to_string()+"/"+&chrono::offset::Utc::now().to_rfc3339();
-            let hits: Vec<Hit> = stats.hits.values().cloned().collect();
-            match serde_json::to_string(&hits)
-            {
-                Ok(s) => {write_file(&file_name, s.as_bytes())},
-                Err(e) => {crate::debug(format!("Error saving stats {}", e), None)}
-            }
-
-            if stats.last_save.elapsed() >= std::time::Duration::from_secs(stats_config.clear_period_seconds)
-            {
-                stats.hits.clear()
-            }
-
-            stats.last_save = Instant::now();
+        let file_name = stats_config.path.to_string()+"/"+&chrono::offset::Utc::now().to_rfc3339();
+        let hits: Vec<Hit> = stats.hits.values().cloned().collect();
+        match serde_json::to_string(&hits)
+        {
+            Ok(s) => {write_file(&file_name, s.as_bytes())},
+            Err(e) => {crate::debug(format!("Error saving stats {}", e), None)}
         }
 
         let write_time = write_start_time.elapsed().as_secs_f64();
@@ -341,6 +344,7 @@ impl Stats
             "Write stats time:       {} s", 
             write_time
         ), Some("PERFORMANCE".to_string()));
+
     }
 
     pub fn digest_message(digest: Digest, from: DateTime<chrono::Utc>) -> String
@@ -356,54 +360,64 @@ impl Stats
 
     pub async fn stats_thread(state: Arc<Mutex<Stats>>)
     {
-        let mut stats = state.lock().await.to_owned();
-
-        let config = match read_config()
+        loop
         {
-            Some(c) => c,
-            None =>
+
+            let t = chrono::offset::Utc::now();
+            
             {
-                std::process::exit(1)
+                let mut stats = state.lock().await;
+
+                let config = match read_config()
+                {
+                    Some(c) => c,
+                    None =>
+                    {
+                        std::process::exit(1)
+                    }
+                };
+
+                let stats_config = config.get_stats_config();
+
+                if (t - stats.last_save).num_seconds() > stats_config.save_period_seconds as i64
+                {
+                    Stats::save(stats.to_owned());
+                    stats.last_save = chrono::offset::Utc::now();
+                    stats.hits.clear();
+                }
+
+                if (t - stats.last_digest).num_seconds() > stats_config.digest_period_seconds as i64
+                {
+                    stats.summary = Self::process_hits(stats_config.path.clone(), stats.last_digest);
+                    let msg = Stats::digest_message(stats.summary.clone(), stats.last_digest);
+                    match post(config.get_end_point(), msg).await
+                    {
+                        Ok(_s) => (),
+                        Err(e) => {crate::debug(format!("Error posting to discord\n{}", e), None);}
+                    }
+                    stats.last_digest = t;
+                }
+
+                if (t - stats.last_clear).num_seconds() > stats_config.log_files_clear_period_seconds as i64
+                {
+                    Self::clear_logs(stats_config.path, t);
+                    stats.last_clear = t;
+                }
             }
-        };
 
-        let stats_config = config.get_stats_config();
-
-        let t = chrono::offset::Utc::now();
-
-        if (t - stats.last_digest).num_seconds() > stats_config.digest_period_seconds as i64
-        {
-            stats.summary = Self::process_hits(stats_config.path.clone(), stats.last_digest);
-            stats.last_digest = t;
+            let wait = min(10, (chrono::Utc::with_ymd_and_hms
+            (
+                &chrono::Utc, 
+                t.year(), 
+                t.month(), 
+                t.day(), 
+                1, 
+                0, 
+                0
+            ).unwrap() + chrono::Duration::days(1) - t).num_seconds()) as u64;
+            crate::debug(format!("Sleeping for {}", wait), Some("Statistics".to_string()));
+            tokio::time::sleep(std::time::Duration::from_secs(wait)).await;
         }
-
-        if (t - stats.last_clear).num_seconds() > stats_config.clear_period_seconds as i64
-        {
-            Self::clear_logs(stats_config.path, t);
-            stats.last_clear = t;
-        }
-
-        if (t - stats.last_digest).num_seconds() > stats_config.digest_period_seconds as i64
-        {
-            let msg = Stats::digest_message(stats.summary, stats.last_digest);
-            match post(config.get_end_point(), msg).await
-            {
-                Ok(_s) => (),
-                Err(e) => {crate::debug(format!("Error posting to discord\n{}", e), None);}
-            }
-        }
-
-        let wait = min(3600, (chrono::Utc::with_ymd_and_hms
-        (
-            &chrono::Utc, 
-            t.year(), 
-            t.month(), 
-            t.day(), 
-            1, 
-            0, 
-            0
-        ).unwrap() + chrono::Duration::days(1) - t).num_seconds()) as u64;
-        tokio::time::sleep(std::time::Duration::from_secs(wait)).await;
     }
 }
 
