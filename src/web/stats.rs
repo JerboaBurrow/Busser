@@ -19,7 +19,7 @@ use axum::
 };
 
 use crate::config::read_config;
-use crate::util::{list_dir_by, read_file_utf8, write_file};
+use crate::util::{dump_bytes, list_dir_by, read_file_utf8, write_file};
 
 use crate::web::discord::request::post::post;
 
@@ -29,7 +29,7 @@ pub struct Hit
     count: u16,
     times: Vec<String>,
     path: String,
-    ip: String
+    ip_hash: String
 }
 
 #[derive(Debug, Clone)]
@@ -148,7 +148,7 @@ impl Stats
             false => 
             {
 
-                Hit {path: uri, count: 1, times: vec![chrono::offset::Utc::now().to_rfc3339()], ip: ipv4.to_string()}
+                Hit {path: uri, count: 1, times: vec![chrono::offset::Utc::now().to_rfc3339()], ip_hash: dump_bytes(&hash)}
             }
         };
 
@@ -238,12 +238,12 @@ impl Stats
 
             for hit in hits
             {
-                match hitters.contains_key(&hit.ip)
+                match hitters.contains_key(&hit.ip_hash)
                 {
-                    true => {hitters.insert(hit.ip.clone(), hit.count+hitters[&hit.ip]);},
+                    true => {hitters.insert(hit.ip_hash.clone(), hit.count+hitters[&hit.ip_hash]);},
                     false => 
                     {
-                        hitters.insert(hit.ip, hit.count);
+                        hitters.insert(hit.ip_hash, hit.count);
                         digest.unique_hits += 1;
                     }
                 }
@@ -405,7 +405,7 @@ impl Stats
                 }
             }
 
-            let wait = min(10, (chrono::Utc::with_ymd_and_hms
+            let wait = min(3600, (chrono::Utc::with_ymd_and_hms
             (
                 &chrono::Utc, 
                 t.year(), 
