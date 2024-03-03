@@ -354,6 +354,16 @@ impl Stats
 
         msg.push_str(format!("Hits since {}\n", from).as_str());
         msg.push_str(format!("Total / Unique: {} / {}\n", digest.total_hits, digest.unique_hits).as_str());
+
+        let mut top_content = String::new();
+        for i in 0..2
+        {
+            if digest.top_three_hitters[i].1 > 0
+            {
+                top_content.push_str(format!("  {} : {}\n", digest.top_three_hitters[i].0, digest.top_three_hitters[i].1).as_str());
+            }
+        }
+        msg.push_str(format!("Top 3 content:\n{}\n", top_content).as_str());
         msg.push_str(format!("Hits by hour (UTC):\n\n{}", hits_by_hour_text_graph(digest.hits_by_hour_utc, '-', 10)).as_str());
 
         msg
