@@ -18,9 +18,9 @@
 
 ✔️ Host via **free tier** cloud services!
 
-🏗️ Discord webhook integration for status messages
+✔️ Discord webhook integration for status messages
 
-🏗️ Authenticated API for status/statistics polling
+✔️ Authenticated API for status/statistics polling
 
 ##### Host for free on Google Cloud
 
@@ -49,18 +49,18 @@ The ```config.json``` specifies key properties of the site and its content
         "save_period_seconds": 86400,
         "path": "stats",
         "hit_cooloff_seconds": 3600,
-        "clear_period_seconds": 2419200,
         "digest_period_seconds": 604800,
         "log_files_clear_period_seconds": 2419200
     },
-    "path": "/home/jerboa/Website/",
-    "home": "/home/jerboa/Website/jerboa.html",
-    "domain": "jerboa.app",
+    "path": "/path/to/your/Website/files",
+    "home": "/path/to/your/Website/homepage.html",
+    "domain": "your.domain.name",
+    "api_token": "create_your_own_api_token_here",
     "allow_without_extension": true,
     "notification_endpoint": { "addr": "https://discord.com/api/webhooks/xxx/yyy" },
     "cache_period_seconds": 3600,
-    "cert_path": "certs/cert.pem",
-    "key_path": "certs/key.pem"
+    "cert_path": "path/to/your/ssl/cert.pem",
+    "key_path": "path/to/your/ssl/key.pem"
 }
 ```
 ____
@@ -69,8 +69,19 @@ ____
 
 - The IP throttler only stores hashes of an IP and a request path, it is likely not considered identifiable information.
 
-- The statistics collection stores the IP, hit time, path, and counts for each IP-path pair. This may be considered identifieable information. Automatic deletion of this data is carried out, hot-configurable in config.json. 
+- The statistics collection stores the IP, hit time, path, and counts for each IP-path pair. The IP is stored as a hash value.
 ____
+
+### API
+
+Currently there is an API function to request a statistics digest, the following bash script will perform the request. It is currently limited to only returning stats based on already saved data.
+
+```
+# ./get_stats.sh the_secret_token '{"from_utc":"2024-03-07T08:40:50.948868839+00:00","post_discord": false}'
+hmac=$(echo -n $2 | openssl dgst -sha256 -hmac $1 | sed 's/SHA2-256(stdin)= //g') 
+curl -v -H 'Content-Type: application/json' -d "$2" -H 'api: StatsDigest' -H "busser-token: ${hmac}" -X POST https://your.domain
+```
+___
 
 ### Free static website hosting example with Google Cloud Free Tier
 
