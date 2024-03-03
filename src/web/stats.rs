@@ -102,6 +102,7 @@ impl Stats
             IpAddr::V6(_ip6) => {return}
         }
         
+        let ip_hash = sha512(&uri.as_bytes());
         let hash = sha512(&[uri.as_bytes(), &ipv4.octets()].concat());
 
         let hit = match stats.hits.contains_key(&hash)
@@ -148,7 +149,7 @@ impl Stats
             false => 
             {
 
-                Hit {path: uri, count: 1, times: vec![chrono::offset::Utc::now().to_rfc3339()], ip_hash: dump_bytes(&hash)}
+                Hit {path: uri, count: 1, times: vec![chrono::offset::Utc::now().to_rfc3339()], ip_hash: dump_bytes(&ip_hash)}
             }
         };
 
