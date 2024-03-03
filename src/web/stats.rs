@@ -102,7 +102,7 @@ impl Stats
             IpAddr::V6(_ip6) => {return}
         }
         
-        let ip_hash = sha512(&uri.as_bytes());
+        let ip_hash = sha512(&ipv4.octets());
         let hash = sha512(&[uri.as_bytes(), &ipv4.octets()].concat());
 
         let hit = match stats.hits.contains_key(&hash)
