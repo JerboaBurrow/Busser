@@ -358,9 +358,9 @@ impl Stats
         let mut top_content = String::new();
         for i in 0..2
         {
-            if digest.top_three_hitters[i].1 > 0
+            if digest.top_three_paths[i].1 > 0
             {
-                top_content.push_str(format!("  {} : {}\n", digest.top_three_hitters[i].0, digest.top_three_hitters[i].1).as_str());
+                top_content.push_str(format!("  {} : {}\n", digest.top_three_paths[i].0, digest.top_three_paths[i].1).as_str());
             }
         }
         msg.push_str(format!("Top 3 content:\n{}\n", top_content).as_str());
