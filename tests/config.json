@@ -1,8 +1,29 @@
 {
     "port_https": 443,
     "port_http": 80, 
-    "throttle": {"max_requests_per_second": 5.0, "timeout_millis": 5000, "clear_period_seconds": 86400},
-    "path": "tests/pages",
+    "throttle": 
+    {
+        "max_requests_per_second": 64.0, 
+        "timeout_millis": 5000, 
+        "clear_period_seconds": 3600
+    },
+    "stats": 
+    {
+        "save_period_seconds": 10,
+        "path": "stats",
+        "hit_cooloff_seconds": 60,
+        "digest_period_seconds": 86400,
+        "log_files_clear_period_seconds": 2419200
+    },
+    "content": 
+    {
+        "path": "tests/pages",
+        "home": "/home/jerboa/Website/jerboa.html",
+        "allow_without_extension": true,
+        "cache_period_seconds": 3600
+    },
+    "domain": "jerboa.app",
+    "api_token": "a_secret_token",
     "notification_endpoint": { "addr": "https://discord.com/api/webhooks/xxx/yyy" },
     "cert_path": "certs/cert.pem",
     "key_path": "certs/key.pem"

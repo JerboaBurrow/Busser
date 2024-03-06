@@ -91,7 +91,7 @@ impl Stats
 
         let compute_start_time = Instant::now();
 
-        let stats_config = config.get_stats_config();
+        let stats_config = config.stats;
 
         let ip = addr.ip();
         let ipv4: Ipv4Addr;
@@ -334,7 +334,7 @@ impl Stats
             }
         };
 
-        let stats_config = config.get_stats_config();
+        let stats_config = config.stats;
 
         let write_start_time = Instant::now();
 
@@ -408,7 +408,7 @@ impl Stats
                     }
                 };
 
-                let stats_config = config.get_stats_config();
+                let stats_config = config.stats;
 
                 if (t - stats.last_save).num_seconds() > stats_config.save_period_seconds as i64
                 {
@@ -419,7 +419,7 @@ impl Stats
                 {
                     stats.summary = Self::process_hits(stats_config.path.clone(), stats.last_digest, Some(stats.to_owned()));
                     let msg = Stats::digest_message(stats.summary.clone(), stats.last_digest);
-                    match post(config.get_end_point(), msg).await
+                    match post(config.notification_endpoint, msg).await
                     {
                         Ok(_s) => (),
                         Err(e) => {crate::debug(format!("Error posting to discord\n{}", e), None);}

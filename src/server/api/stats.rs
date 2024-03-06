@@ -61,7 +61,7 @@ impl ApiRequest for StatsDigest
         (
             headers, 
             "busser-token", 
-            config.get_api_token(), 
+            config.api_token, 
             body
         )
     }
@@ -114,12 +114,12 @@ impl ApiRequest for StatsDigest
             }
         };
 
-        let digest = Stats::process_hits(config.get_stats_config().path, from.into(),stats);
+        let digest = Stats::process_hits(config.stats.path, from.into(),stats);
         let msg = Stats::digest_message(digest, from.into());
 
         if self.payload.post_discord
         {
-            match post(config.get_end_point(), msg.clone()).await
+            match post(config.notification_endpoint, msg.clone()).await
             {
                 Ok(_s) => (),
                 Err(e) => {crate::debug(format!("Error posting to discord\n{}", e), None);}

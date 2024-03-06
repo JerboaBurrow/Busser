@@ -4,8 +4,7 @@ use crate::
     pages::{get_pages, page::Page}, 
     resources::get_resources, 
     web::{stats::{log_stats, Digest, Stats}, 
-    throttle::{handle_throttle, IpThrottler}},
-    server::api::stats
+    throttle::{handle_throttle, IpThrottler}}
 };
 
 use std::{collections::HashMap, net::{IpAddr, Ipv4Addr, SocketAddr}};
@@ -83,15 +82,15 @@ impl Server
 
         let requests: IpThrottler = IpThrottler::new
         (
-            config.get_throttle_config().get_max_requests_per_second(), 
-            config.get_throttle_config().get_timeout_millis(),
-            config.get_throttle_config().get_clear_period_seconds()
+            config.throttle.max_requests_per_second, 
+            config.throttle.timeout_millis,
+            config.throttle.clear_period_seconds
         );
 
         let throttle_state = Arc::new(Mutex::new(requests));
 
-        let pages = get_pages(Some(&config.get_path()), Some(config.get_cache_period_seconds()));
-        let resources = get_resources(Some(&config.get_path()), Some(config.get_cache_period_seconds()));
+        let pages = get_pages(Some(&config.content.path), Some(config.content.cache_period_seconds));
+        let resources = get_resources(Some(&config.content.path), Some(config.content.cache_period_seconds));
 
         let mut router: Router<(), axum::body::Body> = Router::new();
 
@@ -99,7 +98,7 @@ impl Server
         {
             crate::debug(format!("Adding page {:?}", page.preview(64)), None);
 
-            let path = config.get_path()+"/";
+            let path = config.content.path.clone()+"/";
 
             let uri = parse_uri(page.get_uri(), path);
 
@@ -107,7 +106,7 @@ impl Server
 
             if tag { page.insert_tag(); }
 
-            if config.get_allow_without_extension()
+            if config.content.allow_without_extension
             {
                 let extension_regex = Regex::new(r"\.\S+$").unwrap();
                 let short_uri = extension_regex.replacen(&uri, 1, "");
@@ -134,7 +133,7 @@ impl Server
         {
             crate::debug(format!("Adding resource {:?}", resource.preview(8)), None);
 
-            let path = config.get_path()+"/";
+            let path = config.content.path.clone()+"/";
 
             let uri = parse_uri(resource.get_uri(), path);
 
@@ -147,7 +146,7 @@ impl Server
             )
         }
 
-        match Page::from_file(config.get_home(), config.get_cache_period_seconds())
+        match Page::from_file(config.content.home.clone(), config.content.cache_period_seconds)
         {
             Some(mut page) => 
             { 
@@ -178,7 +177,7 @@ impl Server
 
         Server
         {
-            addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(a,b,c,d)), config.get_port_https()),
+            addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(a,b,c,d)), config.port_https),
             router: router,
             config: config
         }
@@ -194,8 +193,8 @@ impl Server
 
         // configure https
 
-        let cert_path = self.config.get_cert_path();
-        let key_path = self.config.get_key_path();
+        let cert_path = self.config.cert_path;
+        let key_path = self.config.key_path;
 
         let config = match RustlsConfig::from_pem_file(
             PathBuf::from(cert_path.clone()),

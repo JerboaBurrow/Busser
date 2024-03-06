@@ -56,14 +56,14 @@ impl ServerHttp
 
         let requests: IpThrottler = IpThrottler::new
         (
-            config.get_throttle_config().get_max_requests_per_second(), 
-            config.get_throttle_config().get_timeout_millis(),
-            config.get_throttle_config().get_clear_period_seconds()
+            config.throttle.max_requests_per_second, 
+            config.throttle.timeout_millis,
+            config.throttle.clear_period_seconds
         );
 
         let throttle_state = Arc::new(Mutex::new(requests));
 
-        let mut domain = config.get_domain();
+        let mut domain = config.domain;
 
         domain = domain.replacen("http://", "https://", 1);
 
@@ -74,7 +74,7 @@ impl ServerHttp
         
         ServerHttp
         {
-            addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(a,b,c,d)), config.get_port_http()),
+            addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(a,b,c,d)), config.port_http),
             router: Router::new()
             .route("/", get(|| async move 
             {
