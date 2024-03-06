@@ -204,6 +204,8 @@ impl Stats
         let mut hitters: HashMap<String, u16> = HashMap::new();
         let mut paths: HashMap<String, u16> = HashMap::new();
 
+        let mut hits: Vec<Hit> = vec![];
+
         for file in stats_files
         {
             crate::debug(format!("Processing stats files: {}", file), None);
@@ -231,50 +233,55 @@ impl Stats
                 None => {continue}
             };
 
-            let mut hits: Vec<Hit> = match serde_json::from_str(&data)
+            let file_hits: Vec<Hit> = match serde_json::from_str(&data)
             {
                 Ok(s) => s,
                 Err(e) => {crate::debug(format!("Error {} loading stats file {}",e,file), None); continue}
             };
 
-            if stats.is_some()
+            for hit in file_hits
             {
-                for (_hash, hit) in &stats.as_ref().unwrap().hits
+                hits.push(hit);
+            }
+        }
+
+        if stats.is_some()
+        {
+            for (_hash, hit) in &stats.as_ref().unwrap().hits
+            {
+                hits.push(hit.clone());
+            }
+        }
+
+        for hit in hits
+        {
+            match hitters.contains_key(&hit.ip_hash)
+            {
+                true => {hitters.insert(hit.ip_hash.clone(), hit.count+hitters[&hit.ip_hash]);},
+                false => 
                 {
-                    hits.push(hit.clone());
+                    hitters.insert(hit.ip_hash, hit.count);
+                    digest.unique_hits += 1;
                 }
             }
 
-            for hit in hits
+            match paths.contains_key(&hit.path)
             {
-                match hitters.contains_key(&hit.ip_hash)
+                true => {paths.insert(hit.path.clone(), hit.count+paths[&hit.path]);},
+                false => {paths.insert(hit.path, hit.count);}
+            }
+
+            digest.total_hits += hit.count;
+
+            for time in hit.times
+            {
+                match DateTime::parse_from_rfc3339(&time)
                 {
-                    true => {hitters.insert(hit.ip_hash.clone(), hit.count+hitters[&hit.ip_hash]);},
-                    false => 
+                    Ok(t) => 
                     {
-                        hitters.insert(hit.ip_hash, hit.count);
-                        digest.unique_hits += 1;
-                    }
-                }
-
-                match paths.contains_key(&hit.path)
-                {
-                    true => {paths.insert(hit.path.clone(), hit.count+paths[&hit.path]);},
-                    false => {paths.insert(hit.path, hit.count);}
-                }
-
-                digest.total_hits += hit.count;
-
-                for time in hit.times
-                {
-                    match DateTime::parse_from_rfc3339(&time)
-                    {
-                        Ok(t) => 
-                        {
-                            if (0..23).contains(&t.hour()) { digest.hits_by_hour_utc[t.hour() as usize]+= 1; }
-                        },
-                        Err(_e) => {}
-                    }
+                        if (0..23).contains(&t.hour()) { digest.hits_by_hour_utc[t.hour() as usize]+= 1; }
+                    },
+                    Err(_e) => {}
                 }
             }
         }
