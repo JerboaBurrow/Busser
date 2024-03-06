@@ -174,7 +174,7 @@ impl Server
         router = router.layer(middleware::from_fn_with_state(stats.clone(), log_stats));
         router = router.layer(middleware::from_fn_with_state(throttle_state.clone(), handle_throttle));
 
-        router = router.layer(middleware::from_fn(StatsDigest::filter));
+        router = router.layer(middleware::from_fn_with_state(Some(stats), StatsDigest::filter));
 
         Server
         {

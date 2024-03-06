@@ -1,11 +1,12 @@
-use std::str::from_utf8;
+use std::{str::from_utf8, sync::Arc};
 
-use axum::{body::Bytes, http::{HeaderMap, Request}, middleware::Next, response::{IntoResponse, Response}};
+use axum::{body::Bytes, extract::State, http::{HeaderMap, Request}, middleware::Next, response::{IntoResponse, Response}};
 use chrono::DateTime;
 use reqwest::StatusCode;
 use serde::Deserialize;
+use tokio::sync::Mutex;
 
-use crate::{config::read_config, web::{discord::request::post::post, is_authentic, stats::Stats}};
+use crate::{config::read_config, web::{discord::request::post::post, is_authentic, stats::{self, Stats}}};
 
 use super::ApiRequest;
 
@@ -92,7 +93,7 @@ impl ApiRequest for StatsDigest
         StatusCode::OK
     }
 
-    async fn into_response(&self) -> (Option<String>, StatusCode)
+    async fn into_response(&self, stats: Option<Stats>) -> (Option<String>, StatusCode)
     {
         let config = match read_config()
         {
@@ -113,7 +114,7 @@ impl ApiRequest for StatsDigest
             }
         };
 
-        let digest = Stats::process_hits(config.get_stats_config().path, from.into());
+        let digest = Stats::process_hits(config.get_stats_config().path, from.into(),stats);
         let msg = Stats::digest_message(digest, from.into());
 
         if self.payload.post_discord
@@ -130,6 +131,7 @@ impl ApiRequest for StatsDigest
 
     async fn filter<B>
     (
+        State(stats): State<Option<Arc<Mutex<Stats>>>>,
         headers: HeaderMap,
         request: Request<B>,
         next: Next<B>
@@ -180,7 +182,18 @@ impl ApiRequest for StatsDigest
             e => { return Ok(e.into_response()) }
         }
 
-        let (result, status) = response.into_response().await;
+        let (result, status) = if stats.is_none()
+        {
+            response.into_response(None).await
+        }
+        else
+        {
+            let stats_unwrapped = stats.unwrap();
+            let stats_lock = stats_unwrapped.lock().await;
+            let s = stats_lock.to_owned();
+            response.into_response(Some(s)).await
+        };
+        
 
         match result
         {
