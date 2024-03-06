@@ -1,9 +1,6 @@
 use crate::
 {
-    config::{read_config, Config}, 
-    pages::{get_pages, page::Page}, 
-    resources::get_resources, 
-    web::{stats::{log_stats, Digest, Stats}, 
+    config::{read_config, Config}, pages::{get_pages, page::Page}, resources::get_resources, util::matches_one, web::{stats::{log_stats, Digest, Stats}, 
     throttle::{handle_throttle, IpThrottler}}
 };
 
@@ -58,28 +55,6 @@ pub fn parse_uri(uri: String, path: String) -> String
     }
 }
 
-pub fn ignoring(uri: &str, patterns: &Vec<String>) -> bool
-{
-    let mut ignore = false;  
-    for re_string in patterns.into_iter()
-    {
-        let re = match Regex::new(re_string.as_str())
-        {
-            Ok(r) => r,
-            Err(e) => 
-            {crate::debug(format!("Could not parse content ingnore regex\n{e}\n Got {re_string}"), None); continue;}
-        };
-
-        if re.is_match(uri)
-        {
-            crate::debug(format!("Ignoring {} due to pattern {re_string}", uri), None);
-            ignore = true;
-            break;
-        }
-    }
-    ignore
-}
-
 impl Server 
 {
     pub fn new 
@@ -125,7 +100,7 @@ impl Server
         for mut page in pages
         {
 
-            if ignoring(&page.get_uri(), &ignore_patterns)
+            if matches_one(&page.get_uri(), &ignore_patterns)
             {
                 continue
             }           
@@ -166,7 +141,7 @@ impl Server
         for resource in resources
         {
 
-            if ignoring(&resource.get_uri(), &ignore_patterns)
+            if matches_one(&resource.get_uri(), &ignore_patterns)
             {
                 continue
             }  

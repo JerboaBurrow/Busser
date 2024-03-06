@@ -11,6 +11,7 @@ use crate::{util::read_file_utf8, web::discord::request::model::Webhook};
 /// - ```clear_period_seconds```: periodcially clear data in memory
 /// - ```digest_period_seconds```: periodically send a digts to a Discord webhook
 /// - ```log_files_clear_period_seconds```:clear disc log files periodically
+/// - ```ignore_regexes: Option<Vec<String>>```: collect, but do not report, hits on these regexes
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StatsConfig
 {
@@ -18,7 +19,8 @@ pub struct StatsConfig
     pub path: String,
     pub hit_cooloff_seconds: u64,
     pub digest_period_seconds: u64,
-    pub log_files_clear_period_seconds: u64
+    pub log_files_clear_period_seconds: u64,
+    pub ignore_regexes: Option<Vec<String>>,
 }
 
 pub const CONFIG_PATH: &str = "config.json";
@@ -40,6 +42,7 @@ pub struct ThrottleConfig
 /// - ```home```: path to home page served on /
 /// - ```allow_without_extension```: allow serving without .html
 /// - ```cache_period_seconds: u16```: page/resource max cache age
+/// - ```ignore_regexes: Option<Vec<String>>```: do not serve content matching any of these patterns
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ContentConfig
 {

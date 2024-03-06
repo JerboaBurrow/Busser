@@ -19,7 +19,7 @@ use axum::
 };
 
 use crate::config::read_config;
-use crate::util::{dump_bytes, list_dir_by, read_file_utf8, write_file};
+use crate::util::{dump_bytes, list_dir_by, matches_one, read_file_utf8, write_file};
 
 use crate::web::discord::request::post::post;
 
@@ -197,6 +197,15 @@ impl Stats
     pub fn process_hits(path: String, from: DateTime<chrono::Utc>, stats: Option<Stats>) -> Digest
     {
 
+        let config = match read_config()
+        {
+            Some(c) => c,
+            None =>
+            {
+                std::process::exit(1)
+            }
+        };
+
         let mut digest = Digest::new();
 
         let stats_files = list_dir_by(None, path);
@@ -253,8 +262,19 @@ impl Stats
             }
         }
 
+        let ignore_patterns = match config.content.ignore_regexes.clone()
+        {
+            Some(p) => p,
+            None => vec![]
+        };
+
         for hit in hits
         {
+            if matches_one(&hit.path, &ignore_patterns)
+            {
+                continue
+            }  
+
             match hitters.contains_key(&hit.ip_hash)
             {
                 true => {hitters.insert(hit.ip_hash.clone(), hit.count+hitters[&hit.ip_hash]);},
