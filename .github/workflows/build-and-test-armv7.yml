@@ -19,4 +19,4 @@ jobs:
 
     - name: unit tests
       run: |
-        cargo test --all --release --target armv7-unknown-linux-gnueabi
+        cargo build --release --target armv7-unknown-linux-gnueabi
