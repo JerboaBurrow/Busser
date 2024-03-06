@@ -290,6 +290,7 @@ impl Stats
         let mut all_paths: Vec<(String, u16)> = paths.into_iter().collect();
 
         all_hitters.sort_by(|a: &(String, u16), b: &(String, u16)| a.1.cmp(&b.1));
+        all_hitters.reverse();
 
         for i in 0..3
         {
@@ -304,6 +305,7 @@ impl Stats
         }
 
         all_paths.sort_by(|a: &(String, u16), b: &(String, u16)| a.1.cmp(&b.1));
+        all_paths.reverse();
 
         for i in 0..3
         {
