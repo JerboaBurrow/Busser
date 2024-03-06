@@ -46,6 +46,7 @@ pub struct ContentConfig
     pub path: String,
     pub home: String,
     pub allow_without_extension: bool,
+    pub ignore_regexes: Option<Vec<String>>,
     pub cache_period_seconds: u16
 }
 

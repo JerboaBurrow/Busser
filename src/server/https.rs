@@ -58,6 +58,28 @@ pub fn parse_uri(uri: String, path: String) -> String
     }
 }
 
+pub fn ignoring(uri: &str, patterns: &Vec<String>) -> bool
+{
+    let mut ignore = false;  
+    for re_string in patterns.into_iter()
+    {
+        let re = match Regex::new(re_string.as_str())
+        {
+            Ok(r) => r,
+            Err(e) => 
+            {crate::debug(format!("Could not parse content ingnore regex\n{e}\n Got {re_string}"), None); continue;}
+        };
+
+        if re.is_match(uri)
+        {
+            crate::debug(format!("Ignoring {} due to pattern {re_string}", uri), None);
+            ignore = true;
+            break;
+        }
+    }
+    ignore
+}
+
 impl Server 
 {
     pub fn new 
@@ -93,9 +115,21 @@ impl Server
         let resources = get_resources(Some(&config.content.path), Some(config.content.cache_period_seconds));
 
         let mut router: Router<(), axum::body::Body> = Router::new();
+        
+        let ignore_patterns = match config.content.ignore_regexes.clone()
+        {
+            Some(p) => p,
+            None => vec![]
+        };
 
         for mut page in pages
         {
+
+            if ignoring(&page.get_uri(), &ignore_patterns)
+            {
+                continue
+            }           
+
             crate::debug(format!("Adding page {:?}", page.preview(64)), None);
 
             let path = config.content.path.clone()+"/";
@@ -131,6 +165,12 @@ impl Server
 
         for resource in resources
         {
+
+            if ignoring(&resource.get_uri(), &ignore_patterns)
+            {
+                continue
+            }  
+
             crate::debug(format!("Adding resource {:?}", resource.preview(8)), None);
 
             let path = config.content.path.clone()+"/";
@@ -178,8 +218,8 @@ impl Server
         Server
         {
             addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(a,b,c,d)), config.port_https),
-            router: router,
-            config: config
+            router,
+            config
         }
     }
 
