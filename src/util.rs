@@ -224,3 +224,25 @@ pub fn list_dir_by(pattern: Option<Regex>, path: String) -> Vec<String>
     }
     vec![]
 }
+
+pub fn matches_one(uri: &str, patterns: &Vec<String>) -> bool
+{
+    let mut ignore = false;  
+    for re_string in patterns.into_iter()
+    {
+        let re = match Regex::new(re_string.as_str())
+        {
+            Ok(r) => r,
+            Err(e) => 
+            {crate::debug(format!("Could not parse content ingnore regex\n{e}\n Got {re_string}"), None); continue;}
+        };
+
+        if re.is_match(uri)
+        {
+            crate::debug(format!("Ignoring {} due to pattern {re_string}", uri), None);
+            ignore = true;
+            break;
+        }
+    }
+    ignore
+}
