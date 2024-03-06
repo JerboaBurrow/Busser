@@ -6,7 +6,7 @@ use std::sync::Arc;
 use std::time::Instant;
 use chrono::{DateTime, Datelike, TimeZone, Timelike};
 use openssl::sha::sha512;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, MutexGuard};
 
 use serde::{Deserialize, Serialize};
 
@@ -194,7 +194,7 @@ impl Stats
         }
     }
 
-    pub fn process_hits(path: String, from: DateTime<chrono::Utc>) -> Digest
+    pub fn process_hits(path: String, from: DateTime<chrono::Utc>, stats: Option<Stats>) -> Digest
     {
 
         let mut digest = Digest::new();
@@ -231,11 +231,19 @@ impl Stats
                 None => {continue}
             };
 
-            let hits: Vec<Hit> = match serde_json::from_str(&data)
+            let mut hits: Vec<Hit> = match serde_json::from_str(&data)
             {
                 Ok(s) => s,
                 Err(e) => {crate::debug(format!("Error {} loading stats file {}",e,file), None); continue}
             };
+
+            if stats.is_some()
+            {
+                for (_hash, hit) in &stats.as_ref().unwrap().hits
+                {
+                    hits.push(hit.clone());
+                }
+            }
 
             for hit in hits
             {
@@ -306,7 +314,7 @@ impl Stats
 
     }
 
-    pub fn save(stats: Stats)
+    pub fn save(stats: &mut MutexGuard<'_, Stats>)
     {
         let config = match read_config()
         {
@@ -340,6 +348,9 @@ impl Stats
 
         let write_time = write_start_time.elapsed().as_secs_f64();
 
+        stats.last_save = chrono::offset::Utc::now();
+        stats.hits.clear();
+
         crate::debug(format!
         (
             "Write stats time:       {} s", 
@@ -356,7 +367,7 @@ impl Stats
         msg.push_str(format!("Total / Unique: {} / {}\n", digest.total_hits, digest.unique_hits).as_str());
 
         let mut top_content = String::new();
-        for i in 0..2
+        for i in 0..3
         {
             if digest.top_three_paths[i].1 > 0
             {
@@ -392,14 +403,12 @@ impl Stats
 
                 if (t - stats.last_save).num_seconds() > stats_config.save_period_seconds as i64
                 {
-                    Stats::save(stats.to_owned());
-                    stats.last_save = chrono::offset::Utc::now();
-                    stats.hits.clear();
+                    Stats::save(&mut stats);
                 }
 
                 if (t - stats.last_digest).num_seconds() > stats_config.digest_period_seconds as i64
                 {
-                    stats.summary = Self::process_hits(stats_config.path.clone(), stats.last_digest);
+                    stats.summary = Self::process_hits(stats_config.path.clone(), stats.last_digest, Some(stats.to_owned()));
                     let msg = Stats::digest_message(stats.summary.clone(), stats.last_digest);
                     match post(config.get_end_point(), msg).await
                     {
