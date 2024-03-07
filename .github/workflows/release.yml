@@ -123,6 +123,8 @@ jobs:
               ls
               mv busser-ubuntu-20.04 busser-linux-x86_64
               for arch in linux-x86_64 macos-latest armv7 aarch64; do mv busser-$arch busser && chmod +x busser && tar -cvf busser-$arch.tar.gz busser LICENSE; done
+              
+              mv busser-macos-latest.tar.gz busser-macOS.tar.gz
               mv busser-windows-latest.exe busser.exe
               chmod +x busser.exe
               zip busser-windows.zip busser.exe LICENSE
