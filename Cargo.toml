@@ -22,6 +22,7 @@ serde_json = "1.0"
 reqwest = { version = "0.11", features = ["json"] }
 regex = "1.10.2"
 semver = "1.0.20"
+libflate = "2"
 
 [profile.dev]
 opt-level = 0

@@ -1,5 +1,6 @@
 use core::fmt;
-use std::{fmt::{format, Write}, fs::{DirEntry, File}, io::{Read, Write as ioWrite}};
+use std::{fmt::Write, fs::{DirEntry, File}, io::{Read, Write as ioWrite}};
+use libflate::deflate::{Encoder, Decoder};
 use regex::Regex;
 
 pub fn dump_bytes(v: &[u8]) -> String 
@@ -245,4 +246,63 @@ pub fn matches_one(uri: &str, patterns: &Vec<String>) -> bool
         }
     }
     ignore
+}
+
+#[derive(Debug, Clone)]
+pub struct CompressionError
+{
+    pub why: String
+}
+
+impl fmt::Display for CompressionError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.why)
+    }
+}
+
+pub fn compress(bytes: &[u8]) -> Result<Vec<u8>, CompressionError>
+{
+    let mut encoder = Encoder::new(Vec::new());
+    
+    match encoder.write_all(&bytes)
+    {
+        Ok(_) => (),
+        Err(e) => 
+        {
+            return Err(CompressionError { why: format!("Error writing to compressor: {}", e) })
+        }
+    };
+
+    match encoder.finish().into_result()
+    {
+        Ok(data) => Ok(data), 
+        Err(e) => 
+        {
+            Err(CompressionError { why: format!("Error finalising compressor: {}", e) })
+        }
+    }
+}
+
+pub fn decompress(bytes: Vec<u8>) -> Result<String, CompressionError>
+{
+    let mut decoder = Decoder::new(&bytes[..]);
+    let mut decoded_data = Vec::new();
+
+    match decoder.read_to_end(&mut decoded_data)
+    {
+        Ok(_) => (),
+        Err(e) => 
+        {
+            return Err(CompressionError { why: format!("Error decoding data: {}", e) })
+        }
+    }
+    
+    match std::str::from_utf8(&decoded_data)
+    {
+        Ok(s) => Ok(s.to_string()),
+        Err(e) => 
+        {
+            Err(CompressionError { why: format!("Decoded data is not utf8: {}", e) })
+        }
+    }
 }
