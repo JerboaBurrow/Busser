@@ -114,7 +114,7 @@ impl ApiRequest for StatsDigest
             }
         };
 
-        let digest = Stats::process_hits(config.stats.path, from.into(),stats);
+        let digest = Stats::process_hits(config.stats.path, from.into(),config.stats.top_n_digest,stats);
         let msg = Stats::digest_message(digest, from.into());
 
         if self.payload.post_discord
