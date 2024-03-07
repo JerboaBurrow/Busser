@@ -4,6 +4,7 @@ use std::fs::create_dir;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Arc;
 use std::time::Instant;
+use axum::middleware::from_fn;
 use chrono::{DateTime, Datelike, TimeZone, Timelike};
 use openssl::sha::sha512;
 use tokio::sync::{Mutex, MutexGuard};
@@ -19,6 +20,7 @@ use axum::
 };
 
 use crate::config::read_config;
+use crate::pages::page::is_page;
 use crate::util::{dump_bytes, list_dir_by, matches_one, read_file_utf8, write_file};
 
 use crate::web::discord::request::post::post;
@@ -35,8 +37,9 @@ pub struct Hit
 #[derive(Debug, Clone)]
 pub struct Digest
 {
-    pub top_three_hitters: [(String, u16); 3],
-    pub top_three_paths: [(String, u16); 3],
+    pub top_hitters: Vec<(String, u16)>,
+    pub top_pages: Vec<(String, u16)>,
+    pub top_resources: Vec<(String, u16)>,
     pub hits_by_hour_utc: [u16; 24],
     pub total_hits: u16,
     pub unique_hits: u16
@@ -46,10 +49,11 @@ impl Digest
 {
     pub fn new() -> Digest
     {
-        Digest 
+        Digest
         {
-            top_three_hitters: [(String::new(),0), (String::new(),0), (String::new(),0)],
-            top_three_paths: [(String::new(),0), (String::new(),0), (String::new(),0)],
+            top_hitters: vec![],
+            top_pages: vec![],
+            top_resources: vec![],
             hits_by_hour_utc: [0;24],
             total_hits: 0,
             unique_hits: 0
@@ -194,8 +198,14 @@ impl Stats
         }
     }
 
-    pub fn process_hits(path: String, from: DateTime<chrono::Utc>, stats: Option<Stats>) -> Digest
+    pub fn process_hits(path: String, from: DateTime<chrono::Utc>, top_n: Option<usize>, stats: Option<Stats>) -> Digest
     {
+
+        let n = match top_n
+        {
+            Some(n) => n,
+            None => 3
+        };
 
         let config = match read_config()
         {
@@ -211,7 +221,8 @@ impl Stats
         let stats_files = list_dir_by(None, path);
 
         let mut hitters: HashMap<String, u16> = HashMap::new();
-        let mut paths: HashMap<String, u16> = HashMap::new();
+        let mut pages: HashMap<String, u16> = HashMap::new();
+        let mut resources: HashMap<String, u16> = HashMap::new();
 
         let mut hits: Vec<Hit> = vec![];
 
@@ -285,10 +296,21 @@ impl Stats
                 }
             }
 
-            match paths.contains_key(&hit.path)
+            if is_page(&hit.path)
             {
-                true => {paths.insert(hit.path.clone(), hit.count+paths[&hit.path]);},
-                false => {paths.insert(hit.path, hit.count);}
+                match pages.contains_key(&hit.path)
+                {
+                    true => {pages.insert(hit.path.clone(), hit.count+pages[&hit.path]);},
+                    false => {pages.insert(hit.path, hit.count);}
+                }
+            }
+            else
+            {
+                match resources.contains_key(&hit.path)
+                {
+                    true => {resources.insert(hit.path.clone(), hit.count+resources[&hit.path]);},
+                    false => {resources.insert(hit.path, hit.count);}
+                }
             }
 
             digest.total_hits += hit.count;
@@ -307,35 +329,53 @@ impl Stats
         }
 
         let mut all_hitters: Vec<(String, u16)> = hitters.into_iter().collect();
-        let mut all_paths: Vec<(String, u16)> = paths.into_iter().collect();
+        let mut all_pages: Vec<(String, u16)> = pages.into_iter().collect();
+        let mut all_resources: Vec<(String, u16)> = resources.into_iter().collect();
 
         all_hitters.sort_by(|a: &(String, u16), b: &(String, u16)| a.1.cmp(&b.1));
         all_hitters.reverse();
 
-        for i in 0..3
+        digest.top_hitters = (0..n).map(|i| ("".to_string(), 0)).collect();
+
+        for i in 0..n
         {
             if i < all_hitters.len()
             {
-                digest.top_three_hitters[i] = all_hitters[i].clone();
+                digest.top_hitters[i] = all_hitters[i].clone();
             }
             else
             {
-                digest.top_three_hitters[i] = ("".to_string(), 0);
+                digest.top_hitters[i] = ("".to_string(), 0);
             }
         }
 
-        all_paths.sort_by(|a: &(String, u16), b: &(String, u16)| a.1.cmp(&b.1));
-        all_paths.reverse();
+        all_pages.sort_by(|a: &(String, u16), b: &(String, u16)| a.1.cmp(&b.1));
+        all_pages.reverse();
 
-        for i in 0..3
+        all_resources.sort_by(|a: &(String, u16), b: &(String, u16)| a.1.cmp(&b.1));
+        all_resources.reverse();
+
+        digest.top_pages = (0..n).map(|i| ("".to_string(), 0)).collect();
+        digest.top_resources = (0..n).map(|i| ("".to_string(), 0)).collect();
+
+        for i in 0..n
         {
-            if i < all_paths.len()
+            if i < all_pages.len()
             {
-                digest.top_three_paths[i] = all_paths[i].clone();
+                digest.top_pages[i] = all_pages[i].clone();
             }
             else
             {
-                digest.top_three_paths[i] = ("".to_string(), 0);
+                digest.top_pages[i] = ("".to_string(), 0);
+            }
+
+            if i < all_resources.len()
+            {
+                digest.top_resources[i] = all_resources[i].clone();
+            }
+            else
+            {
+                digest.top_resources[i] = ("".to_string(), 0);
             }
         }
 
@@ -395,15 +435,23 @@ impl Stats
         msg.push_str(format!("Hits since {}\n", from).as_str());
         msg.push_str(format!("Total / Unique: {} / {}\n", digest.total_hits, digest.unique_hits).as_str());
 
-        let mut top_content = String::new();
-        for i in 0..3
+        let mut top_resources = String::new();
+        let mut top_pages = String::new();
+        let n = min(digest.top_resources.len(), digest.top_pages.len());
+        for i in 0..n
         {
-            if digest.top_three_paths[i].1 > 0
+            if digest.top_resources[i].1 > 0
             {
-                top_content.push_str(format!("  {} : {}\n", digest.top_three_paths[i].0, digest.top_three_paths[i].1).as_str());
+                top_resources.push_str(format!("  {} : {}\n", digest.top_resources[i].0, digest.top_resources[i].1).as_str());
+            }
+
+            if digest.top_pages[i].1 > 0
+            {
+                top_pages.push_str(format!("  {} : {}\n", digest.top_pages[i].0, digest.top_pages[i].1).as_str());
             }
         }
-        msg.push_str(format!("Top 3 content:\n{}\n", top_content).as_str());
+        msg.push_str(format!("Top {n} pages:\n{}\n", top_pages).as_str());
+        msg.push_str(format!("Top {n} resources:\n{}\n", top_resources).as_str());
         msg.push_str(format!("Hits by hour (UTC):\n\n{}", hits_by_hour_text_graph(digest.hits_by_hour_utc, '-', 10)).as_str());
 
         msg
@@ -437,7 +485,7 @@ impl Stats
 
                 if (t - stats.last_digest).num_seconds() > stats_config.digest_period_seconds as i64
                 {
-                    stats.summary = Self::process_hits(stats_config.path.clone(), stats.last_digest, Some(stats.to_owned()));
+                    stats.summary = Self::process_hits(stats_config.path.clone(), stats.last_digest, stats_config.top_n_digest, Some(stats.to_owned()));
                     let msg = Stats::digest_message(stats.summary.clone(), stats.last_digest);
                     match post(config.notification_endpoint, msg).await
                     {

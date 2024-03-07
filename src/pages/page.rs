@@ -6,6 +6,8 @@ use serde::{Serialize, Deserialize};
 
 use crate::util::read_file_utf8;
 
+const re_is_page: &str = r"^[^\.]+$|\.html";
+
 /// An HTML webpage with a uri and body
 /// 
 /// A Page may also be converted into an Axum HTML response via
@@ -89,5 +91,17 @@ impl IntoResponse for Page {
         response.headers_mut().insert("date", time_stamp.parse().unwrap());
         response.headers_mut().insert("cache-control", format!("public, max-age={}", self.cache_period_seconds).parse().unwrap());
         response
+    }
+}
+
+pub fn is_page(uri: &str) -> bool
+{
+    match Regex::new(re_is_page)
+    {
+        Ok(re) => 
+        {
+            re.is_match(uri)
+        },
+        Err(_e) => {false}
     }
 }

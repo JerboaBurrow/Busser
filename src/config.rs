@@ -11,7 +11,8 @@ use crate::{util::read_file_utf8, web::discord::request::model::Webhook};
 /// - ```clear_period_seconds```: periodcially clear data in memory
 /// - ```digest_period_seconds```: periodically send a digts to a Discord webhook
 /// - ```log_files_clear_period_seconds```:clear disc log files periodically
-/// - ```ignore_regexes: Option<Vec<String>>```: collect, but do not report, hits on these regexes
+/// - ```ignore_regexes```: collect, but do not report, hits on these regexes
+/// - ```top_n_digest```: top n listing of pages and resources in API/discord default is 3
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StatsConfig
 {
@@ -21,6 +22,7 @@ pub struct StatsConfig
     pub digest_period_seconds: u64,
     pub log_files_clear_period_seconds: u64,
     pub ignore_regexes: Option<Vec<String>>,
+    pub top_n_digest: Option<usize>
 }
 
 pub const CONFIG_PATH: &str = "config.json";
