@@ -10,7 +10,7 @@ use crate::{util::read_file_utf8, web::discord::request::model::Webhook};
 /// - ```hit_cooloff_seconds```: cooloff period after which the same IP is counted as a new hit
 /// - ```clear_period_seconds```: periodcially clear data in memory
 /// - ```digest_period_seconds```: periodically send a digts to a Discord webhook
-/// - ```log_files_clear_period_seconds```:clear disc log files periodically
+/// - ```log_files_clear_period_seconds```:archive and clear stats log files periodically
 /// - ```ignore_regexes```: collect, but do not report, hits on these regexes
 /// - ```top_n_digest```: top n listing of pages and resources in API/discord default is 3
 #[derive(Debug, Clone, Serialize, Deserialize)]

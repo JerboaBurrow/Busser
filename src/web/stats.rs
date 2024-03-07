@@ -21,7 +21,7 @@ use axum::
 
 use crate::config::read_config;
 use crate::pages::page::is_page;
-use crate::util::{dump_bytes, list_dir_by, matches_one, read_file_utf8, write_file};
+use crate::util::{compress, dump_bytes, list_dir_by, matches_one, read_file_utf8, write_file};
 
 use crate::web::discord::request::post::post;
 
@@ -171,31 +171,6 @@ impl Stats
             total_time,
             compute_time
         ), Some("PERFORMANCE".to_string()));
-    }
-
-    pub fn clear_logs(path: String, before: DateTime<chrono::Utc>)
-    {
-        let stats_files = list_dir_by(None, path);
-
-        for file in stats_files
-        {
-            let t = match DateTime::parse_from_rfc3339(&file)
-            {
-                Ok(date) => date,
-                Err(e) => {crate::debug(format!("Error {} loading stats file {}",e,file), None); continue}
-            };
-
-            if t > before
-            {
-                continue
-            }
-
-            match std::fs::remove_file(file.clone())
-            {
-                Ok(()) => {},
-                Err(e) => {crate::debug(format!("Could not delete stats files {}\n {}", file, e), None);}
-            }
-        }
     }
 
     pub fn process_hits(path: String, from: DateTime<chrono::Utc>, top_n: Option<usize>, stats: Option<Stats>) -> Digest
@@ -428,6 +403,65 @@ impl Stats
 
     }
 
+    pub fn archive()
+    {
+        let config = match read_config()
+        {
+            Some(c) => c,
+            None =>
+            {
+                std::process::exit(1)
+            }
+        };
+
+        let stats_files = list_dir_by(None, config.stats.path.clone());
+
+        for file in stats_files
+        {
+            let time_string = match file.split("/").last()
+            {
+                Some(s) => s,
+                None => {crate::debug(format!("Could not parse time from stats file name {}",file), None); continue}
+            };
+
+            let _t = match DateTime::parse_from_rfc3339(&time_string)
+            {
+                Ok(date) => date,
+                Err(e) => {crate::debug(format!("Error {} loading stats file {}",e,file), None); continue}
+            };
+
+            let data = match read_file_utf8(&file)
+            {
+                Some(d) => d,
+                None => {continue}
+            };
+
+            let _file_hits: Vec<Hit> = match serde_json::from_str(&data)
+            {
+                Ok(s) => s,
+                Err(e) => {crate::debug(format!("Error {} loading stats file {}",e,file), None); continue}
+            };
+
+            let zip = match compress(data.as_bytes())
+            {
+                Ok(z) => z,
+                Err(e) => {crate::debug(format!("{e}, compressing stats file {}", file), None); continue}
+            };
+
+            let mut name = String::new();
+            name.push_str(config.stats.path.as_str());
+            name.push_str(&time_string);
+            name.push_str(".zip");
+            write_file(&name, &zip);
+
+            match std::fs::remove_file(file.clone())
+            {
+                Ok(_) => {},
+                Err(e) => {crate::debug(format!("{e}, while deleting stats file {}", file), None);}
+            }
+        }
+    }
+
     pub fn digest_message(digest: Digest, from: DateTime<chrono::Utc>) -> String
     {
         let mut msg = String::new(); 
@@ -497,7 +531,7 @@ impl Stats
 
                 if (t - stats.last_clear).num_seconds() > stats_config.log_files_clear_period_seconds as i64
                 {
-                    Self::clear_logs(stats_config.path, t);
+                    Self::archive();
                     stats.last_clear = t;
                 }
             }
