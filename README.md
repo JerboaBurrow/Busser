@@ -2,8 +2,15 @@
 
 #### Simple HTTPS website hosting in Rust with [Axum](https://github.com/tokio-rs/axum).
 
-[![Linux x86_64](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-linux.yml/badge.svg)](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-linux.yml) [![macOS](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-macos.yml/badge.svg)](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-macos.yml) [![Windows](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-windows.yml/badge.svg)](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-windows.yml) [![aarch64](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-aarch64.yml/badge.svg)](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-aarch64.yml) [![armv7](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-armv7.yml/badge.svg)](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-armv7.yml)
+___
+Desktop
 
+[![Linux x86_64](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-linux.yml/badge.svg)](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-linux.yml) [![macOS](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-macos.yml/badge.svg)](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-macos.yml) [![Windows](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-windows.yml/badge.svg)](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-windows.yml) 
+___
+Arm (e.g. Rhaspberry Pi, check with ```uname --machine``` on you Pi
+
+[![aarch64](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-aarch64.yml/badge.svg)](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-aarch64.yml) [![armv7](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-armv7.yml/badge.svg)](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-armv7.yml)
+___
 ✔️ Host static HTML/css/js/text and image/video content (png, jpg, gif, webp, mp4, ...) content from a given directory
 
 ✔️ Serve with and without ```.html```, e.g. ```/x/y/z/webpage.html``` aliased as ```/x/y/z/webpage```
