@@ -20,3 +20,9 @@ jobs:
     - name: unit tests
       run: |
         cargo build --release --target armv7-unknown-linux-gnueabi
+
+    - name: upload bundle
+      uses: actions/upload-artifact@v4
+      with:
+        name: armv7
+        path: target/armv7-unknown-linux-gnueabi/release/busser
