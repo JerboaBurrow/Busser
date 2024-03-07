@@ -12,11 +12,13 @@ use super::ApiRequest;
 
 /// Payload for [StatsDigest] Api request
 ///  - ```from_utc```: takes a utc date to compile statistics from
+///  - ```to_utc```: takes a utc date to compile statistics to
 ///  - ```post_discord```: whether to post to dicsord or not
 #[derive(Deserialize)]
 pub struct StatsDigestPayload
 {
-    from_utc: String,
+    from_utc: Option<String>,
+    to_utc: Option<String>,
     post_discord: bool
 }
 
@@ -36,7 +38,8 @@ impl StatsDigest
         { 
             payload: StatsDigestPayload 
             {
-                from_utc: chrono::offset::Utc::now().to_rfc3339(),
+                from_utc: None,
+                to_utc: None,
                 post_discord: false
             } 
         }
@@ -104,18 +107,42 @@ impl ApiRequest for StatsDigest
             }
         };
 
-        let from = match DateTime::parse_from_rfc3339(&self.payload.from_utc)
+        let from: Option<DateTime<chrono::Utc>> = match self.payload.from_utc.clone()
         {
-            Ok(date) => date,
-            Err(e) => 
+            Some(s) =>
             {
-                crate::debug(format!("Error {} parsing from_utc form StatsDigest POST payload",e,), None);
-                return (None, StatusCode::BAD_REQUEST) 
-            }
+                match DateTime::parse_from_rfc3339(&s)
+                {
+                    Ok(date) => Some(date.into()),
+                    Err(e) => 
+                    {
+                        crate::debug(format!("Error {} parsing from_utc form StatsDigest POST payload",e,), None);
+                        return (None, StatusCode::BAD_REQUEST) 
+                    }
+                }
+            },
+            None => None
         };
 
-        let digest = Stats::process_hits(config.stats.path, from.into(),config.stats.top_n_digest,stats);
-        let msg = Stats::digest_message(digest, from.into());
+        let to: Option<DateTime<chrono::Utc>> = match self.payload.to_utc.clone()
+        {
+            Some(s) =>
+            {
+                match DateTime::parse_from_rfc3339(&s)
+                {
+                    Ok(date) => Some(date.into()),
+                    Err(e) => 
+                    {
+                        crate::debug(format!("Error {} parsing to_utc form StatsDigest POST payload",e,), None);
+                        return (None, StatusCode::BAD_REQUEST) 
+                    }
+                }
+            },
+            None => None
+        };
+
+        let digest = Stats::process_hits(config.stats.path, from,to,config.stats.top_n_digest,stats);
+        let msg = Stats::digest_message(digest, from, to);
 
         if self.payload.post_discord
         {

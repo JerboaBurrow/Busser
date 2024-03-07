@@ -173,7 +173,7 @@ impl Stats
         ), Some("PERFORMANCE".to_string()));
     }
 
-    pub fn process_hits(path: String, from: DateTime<chrono::Utc>, top_n: Option<usize>, stats: Option<Stats>) -> Digest
+    pub fn process_hits(path: String, from: Option<DateTime<chrono::Utc>>, to: Option<DateTime<chrono::Utc>>, top_n: Option<usize>, stats: Option<Stats>) -> Digest
     {
 
         let n = match top_n
@@ -217,10 +217,8 @@ impl Stats
                 Err(e) => {crate::debug(format!("Error {} loading stats file {}",e,file), None); continue}
             };
 
-            if t < from
-            {
-                continue
-            }
+            if from.is_some_and(|from| t < from) { continue }
+            if to.is_some_and(|to| t > to) { continue }
 
             let data = match read_file_utf8(&file)
             {
@@ -462,11 +460,29 @@ impl Stats
         }
     }
 
-    pub fn digest_message(digest: Digest, from: DateTime<chrono::Utc>) -> String
+    pub fn digest_message(digest: Digest, from: Option<DateTime<chrono::Utc>>, to: Option<DateTime<chrono::Utc>>) -> String
     {
         let mut msg = String::new(); 
 
-        msg.push_str(format!("Hits since {}\n", from).as_str());
+        match from
+        {
+            Some(s) => 
+            {
+                match to
+                {
+                    Some(t) =>
+                    {
+                        msg.push_str(format!("Hits from {} to {}\n", s, t).as_str());
+                    },
+                    None => 
+                    {
+                        msg.push_str(format!("Hits since {}\n", s).as_str());
+                    }
+                }  
+            },
+            None => {msg.push_str("All hits\n");}
+        };
+        
         msg.push_str(format!("Total / Unique: {} / {}\n", digest.total_hits, digest.unique_hits).as_str());
 
         let mut top_resources = String::new();
@@ -519,8 +535,8 @@ impl Stats
 
                 if (t - stats.last_digest).num_seconds() > stats_config.digest_period_seconds as i64
                 {
-                    stats.summary = Self::process_hits(stats_config.path.clone(), stats.last_digest, stats_config.top_n_digest, Some(stats.to_owned()));
-                    let msg = Stats::digest_message(stats.summary.clone(), stats.last_digest);
+                    stats.summary = Self::process_hits(stats_config.path.clone(), Some(stats.last_digest), None, stats_config.top_n_digest, Some(stats.to_owned()));
+                    let msg = Stats::digest_message(stats.summary.clone(), Some(stats.last_digest), None);
                     match post(config.notification_endpoint, msg).await
                     {
                         Ok(_s) => (),
