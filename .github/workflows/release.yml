@@ -121,7 +121,7 @@ jobs:
         run: |
               mkdir linux windows macos armv7 aarch64
               ls
-              mv ubuntu-20.04 linux-x86_64
+              mv busser-ubuntu-20.04 busser-linux-x86_64
               for arch in linux-x86_64 macos-latest armv7 aarch64; do mv busser-$arch busser && chmod +x busser && tar -cvf busser-$arch.tar.gz busser LICENSE; done
               mv busser-windows-latest.exe busser.exe
               chmod +x busser.exe
