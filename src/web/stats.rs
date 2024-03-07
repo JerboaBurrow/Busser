@@ -460,13 +460,26 @@ impl Stats
         }
     }
 
-    pub fn digest_message(digest: Digest, from: Option<DateTime<chrono::Utc>>) -> String
+    pub fn digest_message(digest: Digest, from: Option<DateTime<chrono::Utc>>, to: Option<DateTime<chrono::Utc>>) -> String
     {
         let mut msg = String::new(); 
 
-        let from_string = match from
+        match from
         {
-            Some(s) => {msg.push_str(format!("Hits since {}\n", s).as_str());},
+            Some(s) => 
+            {
+                match to
+                {
+                    Some(t) =>
+                    {
+                        msg.push_str(format!("Hits from {} to {}\n", s, t).as_str());
+                    },
+                    None => 
+                    {
+                        msg.push_str(format!("Hits since {}\n", s).as_str());
+                    }
+                }  
+            },
             None => {msg.push_str("All hits\n");}
         };
         
@@ -523,7 +536,7 @@ impl Stats
                 if (t - stats.last_digest).num_seconds() > stats_config.digest_period_seconds as i64
                 {
                     stats.summary = Self::process_hits(stats_config.path.clone(), Some(stats.last_digest), None, stats_config.top_n_digest, Some(stats.to_owned()));
-                    let msg = Stats::digest_message(stats.summary.clone(), Some(stats.last_digest));
+                    let msg = Stats::digest_message(stats.summary.clone(), Some(stats.last_digest), None);
                     match post(config.notification_endpoint, msg).await
                     {
                         Ok(_s) => (),
