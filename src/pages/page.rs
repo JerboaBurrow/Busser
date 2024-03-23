@@ -6,8 +6,6 @@ use serde::{Serialize, Deserialize};
 
 use crate::util::read_file_utf8;
 
-const re_is_page: &str = r"^[^\.]+$|\.html";
-
 /// An HTML webpage with a uri and body
 /// 
 /// A Page may also be converted into an Axum HTML response via
@@ -94,9 +92,9 @@ impl IntoResponse for Page {
     }
 }
 
-pub fn is_page(uri: &str) -> bool
+pub fn is_page(uri: &str, domain: &str) -> bool
 {
-    match Regex::new(re_is_page)
+    match Regex::new(format!(r"(^|(http)(s|)://{}(/|))[^\.]+$|\.html",domain).as_str())
     {
         Ok(re) => 
         {

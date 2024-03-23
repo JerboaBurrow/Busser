@@ -6,7 +6,9 @@ use std::sync::Arc;
 use std::time::Instant;
 use axum::middleware::from_fn;
 use chrono::{DateTime, Datelike, TimeZone, Timelike};
+use openssl::conf;
 use openssl::sha::sha512;
+use regex::Regex;
 use tokio::sync::{Mutex, MutexGuard};
 
 use serde::{Deserialize, Serialize};
@@ -289,7 +291,7 @@ impl Stats
                 }
             }
 
-            if is_page(&hit.path)
+            if is_page(&hit.path, &config.domain)
             {
                 match pages.contains_key(&hit.path)
                 {
