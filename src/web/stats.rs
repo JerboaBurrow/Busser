@@ -242,7 +242,27 @@ impl Stats
         {
             for (_hash, hit) in &stats.as_ref().unwrap().hits
             {
-                hits.push(hit.clone());
+                // check the cached stats are within the time period, then add
+                let mut count = 0;
+                let mut times: Vec<String> = vec![];
+                for i in 0..hit.times.len()
+                {
+                    let t = match DateTime::parse_from_rfc3339(&hit.times[i])
+                    {
+                        Ok(date) => date,
+                        Err(e) => {crate::debug(format!("Error {}",e), None); continue}
+                    };
+                    if !from.is_some_and(|from| t < from) && !to.is_some_and(|to| t > to) 
+                    {
+                        count += 1;
+                        times.push(hit.times[i].clone());
+                    }
+                }
+                if count > 0
+                {
+                    let h = Hit {count, times, ip_hash: hit.ip_hash.clone(), path: hit.path.clone()};
+                    hits.push(h.clone());
+                }
             }
         }
 
