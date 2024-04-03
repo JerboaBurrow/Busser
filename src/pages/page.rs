@@ -94,7 +94,9 @@ impl IntoResponse for Page {
 
 pub fn is_page(uri: &str, domain: &str) -> bool
 {
-    match Regex::new(format!(r"(^|(http)(s|)://{}(/|))[^\.]+$|\.html",domain).as_str())
+
+    let domain_escaped = domain.replace("https://", "").replace("http://", "").replace(".", r"\.");
+    match Regex::new(format!(r"((^|(http)(s|)://){})(/|/[^\.]+|/[^\.]+.html|$)$",domain_escaped).as_str())
     {
         Ok(re) => 
         {
