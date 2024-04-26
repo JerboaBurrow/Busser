@@ -16,6 +16,19 @@ on:
 
 
 jobs:
+
+  coverage:
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: setup rust stable
+      run: curl https://sh.rustup.rs -sSf | sh -s -- -y && cargo install cargo-tarpaulin
+
+    - name: unit tests with coverage
+      run: cargo build --release && cargo tarpaulin --out json --coveralls ${{ secrets.COVERALLS_API_KEY }}
+
   build_test_and_bundle:
     strategy:
       matrix:
