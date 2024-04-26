@@ -52,7 +52,7 @@ jobs:
 
     - name: Generate summary
       id: summary
-      run: echo "SUMMARY=$(python3 .github/workflows/report.py)" >> $GITHUB_OUTPUT"
+      run: echo "SUMMARY=$(python3 .github/workflows/report.py)" >> $GITHUB_OUTPUT
 
     - name: Notify coverage
       uses: actions/github-script@v7
