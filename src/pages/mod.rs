@@ -1,7 +1,6 @@
 use regex::Regex;
 
-use crate::{util::{list_dir_by, list_sub_dirs, read_file_utf8}, HTML_REGEX};
-
+use crate::{filesystem::folder::{list_dir_by, list_sub_dirs}, HTML_REGEX, filesystem::file::read_file_utf8};
 use self::page::Page;
 
 pub mod page;

@@ -4,11 +4,8 @@ use std::fs::create_dir;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Arc;
 use std::time::Instant;
-use axum::middleware::from_fn;
 use chrono::{DateTime, Datelike, TimeZone, Timelike};
-use openssl::conf;
 use openssl::sha::sha512;
-use regex::Regex;
 use tokio::sync::{Mutex, MutexGuard};
 
 use serde::{Deserialize, Serialize};
@@ -23,7 +20,17 @@ use axum::
 
 use crate::config::read_config;
 use crate::pages::page::is_page;
-use crate::util::{compress, dump_bytes, list_dir_by, matches_one, read_file_utf8, write_file};
+use crate::
+{
+    filesystem::file::{read_file_utf8, write_file},
+    util::
+    {
+        compress, 
+        dump_bytes,  
+        matches_one
+    },
+    filesystem::folder::list_dir_by
+};
 
 use crate::web::discord::request::post::post;
 
@@ -330,7 +337,7 @@ impl Stats
         all_hitters.sort_by(|a: &(String, u16), b: &(String, u16)| a.1.cmp(&b.1));
         all_hitters.reverse();
 
-        digest.top_hitters = (0..n).map(|i| ("".to_string(), 0)).collect();
+        digest.top_hitters = (0..n).map(|_i| ("".to_string(), 0)).collect();
 
         for i in 0..n
         {
@@ -350,8 +357,8 @@ impl Stats
         all_resources.sort_by(|a: &(String, u16), b: &(String, u16)| a.1.cmp(&b.1));
         all_resources.reverse();
 
-        digest.top_pages = (0..n).map(|i| ("".to_string(), 0)).collect();
-        digest.top_resources = (0..n).map(|i| ("".to_string(), 0)).collect();
+        digest.top_pages = (0..n).map(|_i| ("".to_string(), 0)).collect();
+        digest.top_resources = (0..n).map(|_i| ("".to_string(), 0)).collect();
 
         for i in 0..n
         {
