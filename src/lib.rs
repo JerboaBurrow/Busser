@@ -3,8 +3,7 @@ use semver::{BuildMetadata, Prerelease, Version};
 pub mod web;
 pub mod server;
 pub mod util;
-pub mod pages;
-pub mod resources;
+pub mod content;
 pub mod config;
 pub mod filesystem;
 

@@ -3,7 +3,7 @@ mod common;
 #[cfg(test)]
 mod page_regex
 {
-    use busser::pages::page::is_page;
+    use busser::content::pages::page::is_page;
 
 
     #[test]

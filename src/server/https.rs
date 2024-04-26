@@ -1,6 +1,6 @@
 use crate::
 {
-    config::{read_config, Config}, pages::{get_pages, page::Page}, resources::get_resources, util::matches_one, web::{stats::{log_stats, Digest, Stats}, 
+    config::{read_config, Config}, content::pages::{get_pages, page::Page}, content::resources::get_resources, util::matches_one, web::{stats::{log_stats, Digest, Stats}, 
     throttle::{handle_throttle, IpThrottler}}
 };
 
@@ -105,40 +105,47 @@ impl Server
                 continue
             }           
 
-            crate::debug(format!("Adding page {:?}", page.preview(64)), None);
+            crate::debug(format!("Attempting to add page {:?}", page.preview(64)), None);
 
             let path = config.content.path.clone()+"/";
 
             let uri = parse_uri(page.get_uri(), path);
 
-            crate::debug(format!("Serving: {}", uri), None);
-
-            if tag { page.insert_tag(); }
-
-            if config.content.allow_without_extension
+            match page.load_from_file()
             {
-                let extension_regex = Regex::new(r"\.\S+$").unwrap();
-                let short_uri = extension_regex.replacen(&uri, 1, "");
+                Ok(()) =>
+                {
+                    crate::debug(format!("Serving: {}", uri), None);
 
-                crate::debug(format!("Serving as short url: {}",short_uri), None);
+                    page.set_tag_insertion(tag);
 
-                let page_short = page.clone();
+                    if config.content.allow_without_extension
+                    {
+                        let extension_regex = Regex::new(r"\.\S+$").unwrap();
+                        let short_uri = extension_regex.replacen(&uri, 1, "");
 
-                router = router.route
-                (
-                    &short_uri, 
-                    get(|| async move {page_short.clone().into_response()})
-                );
+                        crate::debug(format!("Serving as short url: {}",short_uri), None);
+
+                        let page_short = page.clone();
+
+                        router = router.route
+                        (
+                            &short_uri, 
+                            get(|| async move {page_short.clone().into_response()})
+                        );
+                    }
+
+                    router = router.route
+                    (
+                        &uri, 
+                        get(|| async move {page.into_response()})
+                    );
+                }
+                Err(e) => {crate::debug(format!("Error serving page {}\n{}", page.get_uri(), e), None);}
             }
-
-            router = router.route
-            (
-                &uri, 
-                get(|| async move {page.into_response()})
-            );
         }
 
-        for resource in resources
+        for mut resource in resources
         {
 
             if matches_one(&resource.get_uri(), &ignore_patterns)
@@ -146,30 +153,39 @@ impl Server
                 continue
             }  
 
-            crate::debug(format!("Adding resource {:?}", resource.preview(8)), None);
+            crate::debug(format!("Attempting to add resource {:?}", resource.preview(8)), None);
 
             let path = config.content.path.clone()+"/";
 
             let uri = parse_uri(resource.get_uri(), path);
 
-            crate::debug(format!("Serving: {}", uri), None);
-            
-            router = router.route
-            (
-                &uri, 
-                get(|| async move {resource.clone().into_response()})
-            )
+            match resource.load_from_file()
+            {
+                Ok(()) =>
+                {
+                    crate::debug(format!("Serving: {}", uri), None);
+                    
+                    router = router.route
+                    (
+                        &uri, 
+                        get(|| async move {resource.clone().into_response()})
+                    )
+                },
+                Err(e) => {crate::debug(format!("Error serving resource {}\n{}", resource.get_uri(), e), None);}
+            }
         }
 
-        match Page::from_file(config.content.home.clone(), config.content.cache_period_seconds)
+        let mut home = Page::new("/", &config.content.home.clone(), config.content.cache_period_seconds);
+        
+        match home.load_from_file()
         {
-            Some(mut page) => 
-            { 
-                if tag { page.insert_tag(); }
-                crate::debug(format!("Serving home page, /, {}", page.preview(64)), None);
-                router = router.route("/", get(|| async move {page.clone().into_response()}))
+            Ok(()) =>
+            {
+                home.set_tag_insertion(tag);
+                crate::debug(format!("Serving home page, /, {}", home.preview(64)), None);
+                router = router.route("/", get(|| async move {home.clone().into_response()}));
             },
-            None => {}
+            Err(e) => {crate::debug(format!("Error serving home page {}\n{}", home.get_uri(), e), None);}
         }
 
         let stats = Arc::new(Mutex::new(

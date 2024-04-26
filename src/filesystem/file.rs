@@ -1,14 +1,34 @@
-use std::{fs::File, io::{Read, Write}};
+use std::{fmt, fs, io::{Read, Write}};
 
-pub fn write_file(path: &str, data: &[u8])
+#[derive(Debug, Clone)]
+pub struct FileNotReadError
 {
-    let mut file = File::create(path).unwrap();
+    pub why: String
+}
+
+impl fmt::Display for FileNotReadError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.why)
+    }
+}
+
+/// A trait for writeable and loadable data from disk
+pub trait File
+{
+    fn write_bytes(&self);
+    fn read_bytes(&self) -> Option<Vec<u8>>;
+    fn read_utf8(&self) -> Option<String>;
+}
+
+pub fn write_file_bytes(path: &str, data: &[u8])
+{
+    let mut file = fs::File::create(path).unwrap();
     file.write_all(data).unwrap();
 }
 
 pub fn read_file_utf8(path: &str) -> Option<String>
 {
-    let mut file = match File::open(path) {
+    let mut file = match fs::File::open(path) {
         Err(why) => 
         {
             crate::debug(format!("error reading file to utf8, {}", why), None);
@@ -30,7 +50,7 @@ pub fn read_file_utf8(path: &str) -> Option<String>
 
 pub fn read_file_bytes(path: &str) -> Option<Vec<u8>>
 {
-    let mut file = match File::open(path) {
+    let mut file = match fs::File::open(path) {
         Err(why) => 
         {
             crate::debug(format!("error reading file to utf8, {}", why), None);
