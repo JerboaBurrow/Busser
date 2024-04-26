@@ -2,9 +2,9 @@ pub mod resource;
 
 use regex::Regex;
 
-use crate::{filesystem::folder::{list_dir_by, list_sub_dirs}, HTML_REGEX, RESOURCE_REGEX, filesystem::file::read_file_bytes};
+use crate::{filesystem::folder::{list_dir_by, list_sub_dirs}, HTML_REGEX, RESOURCE_REGEX};
 
-use self::resource::{content_type, Resource};
+use self::resource::Resource;
 
 /// Scan the path (if None the current dir) for non .html resources
 /// 
@@ -12,7 +12,7 @@ use self::resource::{content_type, Resource};
 /// ```rust
 /// // with files resources/index.html, resources/animation.js
 /// 
-/// use busser::resources::{get_resources, resource::Resource};
+/// use busser::content::resources::{get_resources, resource::Resource};
 /// 
 /// pub fn main()
 /// {
@@ -51,13 +51,7 @@ pub fn get_resources(path: Option<&str>, cache_period_seconds: Option<u16>) -> V
             _ => {continue}
         }
 
-        let data = match read_file_bytes(&resource_path)
-        {
-            Some(data) => data,
-            None => continue
-        };
-
-        resources.push(Resource::new(resource_path.as_str(), data, content_type(resource_path.to_string()), cache));
+        resources.push(Resource::new(&resource_path, &resource_path, cache));
     }
 
     let dirs = list_sub_dirs(scan_path.to_string());

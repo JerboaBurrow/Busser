@@ -19,10 +19,10 @@ use axum::
 };
 
 use crate::config::read_config;
-use crate::pages::page::is_page;
+use crate::content::pages::page::is_page;
 use crate::
 {
-    filesystem::file::{read_file_utf8, write_file},
+    filesystem::file::{read_file_utf8, write_file_bytes},
     util::
     {
         compress, 
@@ -413,7 +413,7 @@ impl Stats
         let hits: Vec<Hit> = stats.hits.values().cloned().collect();
         match serde_json::to_string(&hits)
         {
-            Ok(s) => {write_file(&file_name, s.as_bytes())},
+            Ok(s) => {write_file_bytes(&file_name, s.as_bytes())},
             Err(e) => {crate::debug(format!("Error saving stats {}", e), None)}
         }
 
@@ -479,7 +479,7 @@ impl Stats
             name.push_str(config.stats.path.as_str());
             name.push_str(&time_string);
             name.push_str(".zip");
-            write_file(&name, &zip);
+            write_file_bytes(&name, &zip);
 
             match std::fs::remove_file(file.clone())
             {

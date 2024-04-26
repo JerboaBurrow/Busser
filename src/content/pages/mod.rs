@@ -1,6 +1,6 @@
 use regex::Regex;
 
-use crate::{filesystem::folder::{list_dir_by, list_sub_dirs}, HTML_REGEX, filesystem::file::read_file_utf8};
+use crate::{filesystem::folder::{list_dir_by, list_sub_dirs}, HTML_REGEX};
 use self::page::Page;
 
 pub mod page;
@@ -13,7 +13,7 @@ pub mod page;
 /// ```rust
 /// // with files pages/index.html, pages/animation.js
 /// 
-/// use busser::pages::{get_pages, page::Page};
+/// use busser::content::pages::{get_pages, page::Page};
 /// 
 /// pub fn main()
 /// {
@@ -44,13 +44,7 @@ pub fn get_pages(path: Option<&str>, cache_period_seconds: Option<u16>) -> Vec<P
 
     for page_path in page_paths
     {
-        let data = match read_file_utf8(&page_path)
-        {
-            Some(data) => data,
-            None => continue
-        };
-
-        pages.push(Page::new(page_path.as_str(), data.as_str(), cache));
+        pages.push(Page::new(page_path.as_str(), &page_path, cache));
     }
 
     let dirs = list_sub_dirs(scan_path.to_string());
