@@ -27,7 +27,7 @@ jobs:
       run: curl https://sh.rustup.rs -sSf | sh -s -- -y && cargo install cargo-tarpaulin
 
     - name: unit tests with coverage
-      run: cargo build --release && cargo tarpaulin --out json --coveralls ${{ secrets.COVERALLS_API_KEY }}
+      run: cargo build --release && cargo tarpaulin --out json --coveralls ${{ secrets.COVERALLS_API_KEY }} --exclude-files tests/*
 
   build_test_and_bundle:
     strategy:
