@@ -36,7 +36,7 @@ jobs:
 
     - name: unit tests
       run: |
-        cargo build --release && cargo tarpaulin --out json --exclude-files tests/*
+        cargo build --release && cargo tarpaulin --out json --exclude-files tests/**
 
     - name: upload bundle
       uses: actions/upload-artifact@v4

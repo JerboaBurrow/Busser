@@ -65,13 +65,13 @@ if args.human:
     header = ""
     if diff is not None:
         if diff > 0:
-            header = f"Looks like you increased coverage by {diff} %, fantastic!"
+            header = f"Looks like you increased coverage by {diff} %, fantastic!\n"
         elif diff < 0:
-            header = f"Seems the coverage is below {args.main} by {diff} %, please consider adding to the tests, thanks!"
+            header = f"Seems the coverage is below {args.main} by {diff} %, please consider adding to the tests, thanks!\n"
         elif diff == 0:
-            header = f"Great, coverage is exactly the same as {args.main}!"
+            header = f"Great, coverage is exactly the same as {args.main}!\n"
 
-    header += "\nHere is the full report breakdown\n\n"
+    header += "Here is the full report breakdown\n\n"
 else:
     header = ""
 
