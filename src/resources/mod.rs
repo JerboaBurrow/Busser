@@ -2,7 +2,7 @@ pub mod resource;
 
 use regex::Regex;
 
-use crate::{util::{list_dir_by, list_sub_dirs, read_file_bytes}, HTML_REGEX, RESOURCE_REGEX};
+use crate::{filesystem::folder::{list_dir_by, list_sub_dirs}, HTML_REGEX, RESOURCE_REGEX, filesystem::file::read_file_bytes};
 
 use self::resource::{content_type, Resource};
 
