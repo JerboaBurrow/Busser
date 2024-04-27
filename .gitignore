@@ -8,3 +8,4 @@ pages/*
 stats-*
 stats_config.json
 stats/*
+tarpaulin-report.json
