@@ -1,6 +1,7 @@
 use core::fmt;
 use std::{fmt::Write, io::{Read, Write as ioWrite}};
 use libflate::deflate::{Encoder, Decoder};
+use openssl::sha::Sha256;
 use regex::Regex;
 
 pub fn dump_bytes(v: &[u8]) -> String 
@@ -86,20 +87,34 @@ pub fn compress(bytes: &[u8]) -> Result<Vec<u8>, CompressionError>
     }
 }
 
-pub fn decompress(bytes: Vec<u8>) -> Result<String, CompressionError>
+pub fn decompress(bytes: Vec<u8>) -> Result<Vec<u8>, CompressionError>
 {
     let mut decoder = Decoder::new(&bytes[..]);
     let mut decoded_data = Vec::new();
 
     match decoder.read_to_end(&mut decoded_data)
     {
-        Ok(_) => (),
+        Ok(_) => Ok(decoded_data),
         Err(e) => 
         {
-            return Err(CompressionError { why: format!("Error decoding data: {}", e) })
+            Err(CompressionError { why: format!("Error decoding data: {}", e) })
         }
     }
-    
+}
+
+pub fn compress_string(s: &String) -> Result<Vec<u8>, CompressionError>
+{
+    compress(s.as_bytes())
+}
+
+pub fn decompress_utf8_string(compressed: Vec<u8>) -> Result<String, CompressionError>
+{
+    let decoded_data = match decompress(compressed)
+    {
+        Ok(d) => d,
+        Err(e) => return Err(e)
+    };
+
     match std::str::from_utf8(&decoded_data)
     {
         Ok(s) => Ok(s.to_string()),
@@ -108,4 +123,11 @@ pub fn decompress(bytes: Vec<u8>) -> Result<String, CompressionError>
             Err(CompressionError { why: format!("Decoded data is not utf8: {}", e) })
         }
     }
+}
+
+pub fn hash(v: Vec<u8>) -> Vec<u8>
+{
+    let mut sha = Sha256::new();
+    sha.update(&v);
+    sha.finish().to_vec()
 }

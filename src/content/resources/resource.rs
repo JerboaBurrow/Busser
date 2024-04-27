@@ -1,7 +1,7 @@
 use axum::response::{Html, IntoResponse, Response};
 use serde::{Serialize, Deserialize};
 
-use crate::{content::Content, filesystem::file::FileNotReadError};
+use crate::{content::Content, filesystem::file::FileError};
 
 /// A non-HTML resource
 /// 
@@ -43,7 +43,7 @@ impl Resource
         }
     }
 
-    pub fn load_from_file(&mut self) -> Result<(), FileNotReadError>
+    pub fn load_from_file(&mut self) -> Result<(), FileError>
     {
         self.content.load_from_file()
     }

@@ -6,7 +6,7 @@ mod filesystem
 
     use std::fs::remove_file;
 
-    use busser::filesystem::{file::{read_file_bytes, read_file_utf8, write_file_bytes, FileNotReadError}, folder::list_dir_by};
+    use busser::filesystem::{file::{read_file_bytes, read_file_utf8, write_file_bytes, FileError}, folder::list_dir_by};
     use regex::Regex;
 
 
