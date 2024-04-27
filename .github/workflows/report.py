@@ -42,14 +42,19 @@ max_size = 0
 overall = 0.0
 for file in json.load(open(cov))['files']:
     coverage = round(100*float(file['covered'])/float(max(1, file['coverable'])),2)
+    lines = f"{file['covered']} / {file['coverable']}"
     overall += coverage
     path = file['path']
+    
+    if "tests" in path:
+        continue
+
     if 'src' in path:
         name = '/'.join(path[path.index('src'):len(path)])
     else:
         name = '/'.join(path)
  
-    entries.append((name, coverage))
+    entries.append((name, coverage, lines))
     max_size = max(max_size, len(name))
     
 entries = sorted(entries, key = lambda x: x[1])
@@ -58,7 +63,7 @@ this_coverage = round(overall/len(entries),2)
 
 diff = None
 if main_coverage is not None:
-    diff = this_coverage-main_coverage
+    diff = round(this_coverage-main_coverage, 2)
 
 
 if args.human:
@@ -85,11 +90,16 @@ if diff is not None:
     else:
         sign = "" 
 
-    output += " ({sign}{diff} against main)"
+    output += f" ({sign}{abs(diff)} % against main)"
 
 output += "\n"+"_"*max_size
 for entry in entries:
     pad = " "*(max_size-len(entry[0]))
-    output += "\n"+entry[0]+pad+" | "+str(entry[1]) + " %"
+    cov = str(entry[1])
+    if len(cov) < 5:
+        cov += " "*(5-len(cov))
+
+    output += "\n"+entry[0]+pad+" | "+cov + " %"
+    output += " " + entry[2]
 output += "\n"+"_"*max_size+"\n```"
 print(output)
