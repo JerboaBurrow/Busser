@@ -53,14 +53,15 @@ if main_coverage is not None:
 
 
 if args.human:
-    if diff > 0:
-        header = f"Looks like you increased coverage by {diff} %, fantastic!"
-    elif diff < 0:
-        header = f"Seems the coverage is below {main} by {diff} %, please consider adding to the tests, thanks!"
-    elif diff == 0:
-        header = f"Great, coverage is exactly the same as {main}!"
-    else:
-        header = ""
+    header = ""
+    if diff is not None:
+        if diff > 0:
+            header = f"Looks like you increased coverage by {diff} %, fantastic!"
+        elif diff < 0:
+            header = f"Seems the coverage is below {args.main} by {diff} %, please consider adding to the tests, thanks!"
+        elif diff == 0:
+            header = f"Great, coverage is exactly the same as {args.main}!"
+
     header += "\nHere is the full report breakdown\n\n"
 else:
     header = ""
