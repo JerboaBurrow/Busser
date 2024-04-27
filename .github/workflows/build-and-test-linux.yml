@@ -55,7 +55,7 @@ jobs:
       run: |
         {
           echo 'SUMMARY<<EOF'
-          python3 .github/workflows/report.py -r github/JerboaBurrow/Busser -m main -h
+          python3 .github/workflows/report.py -r github/JerboaBurrow/Busser -m main --human
           echo EOF
         } >> "$GITHUB_ENV"
 
