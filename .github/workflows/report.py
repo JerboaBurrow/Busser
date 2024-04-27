@@ -1,6 +1,7 @@
 import json
 import requests
 import argparse
+from pathlib import Path
 
 parse = argparse.ArgumentParser(
     prog = "Coveralls summariser",
@@ -9,7 +10,7 @@ parse = argparse.ArgumentParser(
 
 parse.add_argument("-m", required = True, action="store", dest = "main", help = "comparison branch name")
 parse.add_argument("-r", required = True, action="store", dest = "repo", help = "repository uri, e.g. \"github/JerboaBurrow/Busser\"")
-parse.add_argument("-h", required = False, action = "store_true", dest = "human", help = "adds additional humanised message about the result")
+parse.add_argument("--human", required = False, action = "store_true", dest = "human", help = "adds additional humanised message about the result")
 
 args = parse.parse_args()
 
@@ -28,10 +29,18 @@ if status.ok:
     finally:
         pass
 
+cov = Path('tarpaulin-report.json')
+if not cov.is_file():
+    if args.human:
+        print(f"Hmm... Tarpaulin did not seem to generate a json coverage file at {cov}")
+    else:
+        print(f"No coverage file generated")
+    exit(0)
+
 entries = []
 max_size = 0
 overall = 0.0
-for file in json.load(open('tarpaulin-report.json'))['files']:
+for file in json.load(open(cov))['files']:
     coverage = round(100*float(file['covered'])/float(max(1, file['coverable'])),2)
     overall += coverage
     path = file['path']
