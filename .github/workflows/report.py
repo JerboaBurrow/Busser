@@ -24,7 +24,7 @@ main_coverage = None
 if status.ok:
     try:
         data = status.json()
-        if 'covered_percent' in data:
+        if data is not None and 'covered_percent' in data:
             main_coverage = round(data['covered_percent'], 2)
     finally:
         pass
