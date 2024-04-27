@@ -56,7 +56,7 @@ jobs:
         python3 -m pip install requests 
         {
           echo 'SUMMARY<<EOF'
-          python3 .github/workflows/report.py -r github/JerboaBurrow/Busser -m main
+          python3 .github/workflows/report.py -r github/JerboaBurrow/Busser -m main -h
           echo EOF
         } >> "$GITHUB_ENV"
 
