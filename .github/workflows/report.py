@@ -1,4 +1,34 @@
 import json
+import requests
+import argparse
+
+parse = argparse.ArgumentParser(
+    prog = "Coveralls summariser",
+    description = "Interprets Cargo Tarpaulin coverage and main's coveralls status"
+)
+
+parse.add_argument("-m", required = True, action="store", dest = "main", help = "comparison branch name")
+parse.add_argument("-r", required = True, action="store", dest = "repo", help = "repository uri, e.g. \"github/JerboaBurrow/Busser\"")
+
+args = parse.parse_args()
+
+repo = args["repo"]
+main = args["main"]
+
+status = requests.get(
+    url = f"https://coveralls.io/{repo}.json?branch={main}",
+    headers = {'content-type': 'application/json', 'Accept-Charset': 'UTF-8'}
+)
+
+main_coverage = None
+
+if status.ok:
+    try:
+        data = status.json()
+        if 'covered_percent' in data:
+            main_coverage = round(data['covered_percent'], 2)
+    finally:
+        pass
 
 entries = []
 max_size = 0
@@ -17,9 +47,23 @@ for file in json.load(open('tarpaulin-report.json'))['files']:
     
 entries = sorted(entries, key = lambda x: x[1])
 
-print(f"```\nTotal coverage {round(overall/len(entries),2)} %")
-print("_"*max_size)
+this_coverage = round(overall/len(entries),2)
+output = "```\nTotal coverage {this_coverage} %"
+
+if main_coverage is not None:
+    diff = this_coverage-main_coverage
+    if diff < 0:
+        sign = "-"
+    elif diff > 0:
+        sign = "+"
+    else:
+        sign = "" 
+
+    output += " ({sign}{diff} against main)"
+
+output += "\n"+"_"*max_size
 for entry in entries:
     pad = " "*(max_size-len(entry[0]))
-    print(entry[0]+pad+" | "+str(entry[1]) + " %")
-print("_"*max_size+"\n```")
+    output += "\n"+entry[0]+pad+" | "+str(entry[1]) + " %"
+output += "\n"+"_"*max_size+"\n```"
+print(output)

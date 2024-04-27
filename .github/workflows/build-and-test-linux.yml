@@ -53,17 +53,21 @@ jobs:
     - name: Generate summary
       id: summary
       run: |
-        echo $GITHUB_ENV
-        cat $GITHUB_ENV
-        echo "SUMMARY=\"$(python3 .github/workflows/report.py)\"" >> $GITHUB_ENV
+        python3 -m pip install requests 
+        {
+          echo 'SUMMARY<<EOF'
+          python3 .github/workflows/report.py -r github/JerboaBurrow/Busser -m main
+          echo EOF
+        } >> "$GITHUB_ENV"
 
     - name: Notify coverage
       uses: actions/github-script@v7
       with:
         script: |
+          const { SUMMARY } = process.env
           github.rest.issues.createComment({
             issue_number: context.issue.number,
             owner: context.repo.owner,
             repo: context.repo.repo,
-            body: '$SUMMARY'
+            body: `${SUMMARY}`
           })

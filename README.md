@@ -11,6 +11,9 @@ Arm (e.g. Rhaspberry Pi, check with ```uname --machine``` on you Pi
 
 [![aarch64](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-aarch64.yml/badge.svg)](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-aarch64.yml) [![armv7](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-armv7.yml/badge.svg)](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-armv7.yml)
 ___
+
+[![Coverage Status](https://coveralls.io/repos/github/JerboaBurrow/Busser/badge.svg?branch=main)](https://coveralls.io/github/JerboaBurrow/Busser?branch=main)
+___
 ✔️ Host static HTML/css/js/text and image/video content (png, jpg, gif, webp, mp4, ...) content from a given directory
 
 ✔️ Serve with and without ```.html```, e.g. ```/x/y/z/webpage.html``` aliased as ```/x/y/z/webpage```
