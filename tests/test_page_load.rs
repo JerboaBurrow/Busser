@@ -13,7 +13,7 @@ mod test_page_load
         let pages = get_pages(Some("tests/pages"), None);
 
         assert_eq!(pages.len(), 3);
-        
+
         let paths = HashMap::from(
             [
                 ("tests/pages/a.html", "this is /a"),
@@ -31,7 +31,6 @@ mod test_page_load
             assert_eq!(actual_body, expected_body)
         }
 
-       
     }
 
 }

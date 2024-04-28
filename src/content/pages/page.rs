@@ -2,7 +2,7 @@ use axum::response::{IntoResponse, Response, Html};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
-use crate::{content::Content, filesystem::file::{File, FileNotReadError}};
+use crate::{content::Content, filesystem::file::{File, FileError}};
 
 /// An HTML webpage
 /// 
@@ -48,7 +48,7 @@ impl Page
         }
     }
 
-    pub fn load_from_file(&mut self) -> Result<(), FileNotReadError>
+    pub fn load_from_file(&mut self) -> Result<(), FileError>
     {
         self.content.load_from_file()
     }

@@ -1,10 +1,11 @@
 use std::cmp::min;
+use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
 
-use crate::filesystem::file::File;
-use crate::filesystem::file::{read_file_bytes, read_file_utf8, write_file_bytes, FileNotReadError};
-use crate::util::dump_bytes;
+use crate::filesystem::file::{file_hash, File, Observed};
+use crate::filesystem::file::{read_file_bytes, read_file_utf8, write_file_bytes, FileError};
+use crate::util::{dump_bytes, hash};
 
 use self::mime_type::infer_mime_type;
 
@@ -23,14 +24,28 @@ pub mod mime_type;
 /// 
 /// - The body is unpopulated until [Content::load_from_file] is called
 /// - The body may be converted to a utf8 string using [Content::utf8_body]
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Content
 {
     uri: String,
     body: Vec<u8>,
     content_type: String,
     disk_path: String,
-    cache_period_seconds: u16
+    cache_period_seconds: u16,
+    hash: Vec<u8>,
+    last_refreshed: SystemTime
+}
+
+impl PartialEq for Content
+{
+    fn eq(&self, other: &Content) -> bool
+    {
+        return self.uri == other.uri && self.body == other.body &&
+               self.content_type == other.content_type &&
+               self.disk_path == other.disk_path &&
+               self.cache_period_seconds == other.cache_period_seconds &&
+               self.hash == other.hash
+    }
 }
 
 impl File for Content
@@ -51,6 +66,24 @@ impl File for Content
     }
 }
 
+impl Observed for Content
+{
+    fn is_stale(&self) -> bool
+    {
+        // this is 4x slower than using the modified date
+        //  but the modified date fails when is_stale is called
+        //  very soon after creation/modification, plus may
+        //  not be guaranteed cross platform, this is.
+        //  We can check 100,000 files in 447 millis
+        return file_hash(&self.disk_path) != self.hash
+    }
+
+    fn refresh(&mut self)
+    {
+        let _ = self.load_from_file();
+    }
+}
+
 impl Content
 {
     pub fn new(uri: &str, disk_path: &str, cache: u16) -> Content
@@ -61,18 +94,26 @@ impl Content
             body: vec![], 
             disk_path: disk_path.to_string(), 
             content_type: infer_mime_type(disk_path).to_string(),
-            cache_period_seconds: cache 
+            cache_period_seconds: cache,
+            hash: vec![],
+            last_refreshed: SystemTime::now()
         }
     }
 
-    pub fn load_from_file(&mut self) -> Result<(), FileNotReadError>
+    pub fn load_from_file(&mut self) -> Result<(), FileError>
     {
         match self.read_bytes()
         {
-            Some(data) => {self.body = data; Ok(())}
+            Some(data) => 
+            {
+                self.body = data.clone();
+                self.hash = hash(data);
+                self.last_refreshed = SystemTime::now();
+                Ok(())
+            }
             None => 
             {
-                Err(FileNotReadError { why: format!("Could not read bytes from {}", self.disk_path)})
+                Err(FileError { why: format!("Could not read bytes from {}", self.disk_path)})
             }
         }
     }

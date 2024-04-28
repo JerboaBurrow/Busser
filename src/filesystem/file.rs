@@ -1,12 +1,14 @@
 use std::{fmt, fs, io::{Read, Write}};
 
+use crate::util::hash;
+
 #[derive(Debug, Clone)]
-pub struct FileNotReadError
+pub struct FileError
 {
     pub why: String
 }
 
-impl fmt::Display for FileNotReadError {
+impl fmt::Display for FileError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.why)
     }
@@ -18,6 +20,12 @@ pub trait File
     fn write_bytes(&self);
     fn read_bytes(&self) -> Option<Vec<u8>>;
     fn read_utf8(&self) -> Option<String>;
+}
+
+pub trait Observed
+{
+    fn is_stale(&self) -> bool;
+    fn refresh(&mut self);
 }
 
 pub fn write_file_bytes(path: &str, data: &[u8])
@@ -67,5 +75,14 @@ pub fn read_file_bytes(path: &str) -> Option<Vec<u8>>
             None
         },
         Ok(_) => Some(s)
+    }
+}
+
+pub fn file_hash(path: &str) -> Vec<u8>
+{
+    match read_file_bytes(path)
+    {
+        Some(d) => hash(d),
+        None => vec![]
     }
 }
