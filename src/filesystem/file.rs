@@ -1,4 +1,4 @@
-use std::{fmt, fs, io::{Read, Write}, time::SystemTime};
+use std::{fmt, fs, io::{Read, Write}};
 
 use crate::util::hash;
 
@@ -24,7 +24,7 @@ pub trait File
 
 pub trait Observed
 {
-    fn stale(&self) -> bool;
+    fn is_stale(&self) -> bool;
     fn refresh(&mut self);
 }
 
@@ -84,21 +84,5 @@ pub fn file_hash(path: &str) -> Vec<u8>
     {
         Some(d) => hash(d),
         None => vec![]
-    }
-}
-
-pub fn modified(path: &str) -> Option<SystemTime>
-{
-    match fs::metadata(path)
-    {
-        Ok(m) =>
-        {
-            match m.modified()
-            {
-                Ok(s) => Some(s),
-                Err(_e) => None
-            }
-        },
-        Err(_e) => None
     }
 }

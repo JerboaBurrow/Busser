@@ -3,7 +3,7 @@ use std::time::SystemTime;
 
 use serde::{Deserialize, Serialize};
 
-use crate::filesystem::file::{file_hash, modified, File, Observed};
+use crate::filesystem::file::{file_hash, File, Observed};
 use crate::filesystem::file::{read_file_bytes, read_file_utf8, write_file_bytes, FileError};
 use crate::util::{dump_bytes, hash};
 
@@ -68,20 +68,13 @@ impl File for Content
 
 impl Observed for Content
 {
-    fn stale(&self) -> bool
+    fn is_stale(&self) -> bool
     {
-        match modified(&self.disk_path)
-        {
-            Some(t) =>
-            {
-                if t <= self.last_refreshed
-                {
-                    return false;
-                }
-            },
-            None => ()
-        }
-
+        // this is 4x slower than using the modified date
+        //  but the modified date fails when is_stale is called
+        //  very soon after creation/modification, plus may
+        //  not be guaranteed cross platform, this is.
+        //  We can check 100,000 files in 447 millis
         return file_hash(&self.disk_path) != self.hash
     }
 

@@ -5,7 +5,7 @@ mod test_resource_load
 {
     use std::collections::HashMap;
 
-    use busser::content::resources::{get_resources, resource::{self, Resource}};
+    use busser::content::resources::{get_resources, resource::Resource};
 
     #[test]
     fn test_content_types()
@@ -22,6 +22,8 @@ mod test_resource_load
                 ("tests/pages/data/gif.gif", "image/gif"),
                 ("tests/pages/data/ico.ico", "image/x-icon"),
                 ("tests/pages/data/jpg.jpg", "image/jpeg"),
+                ("tests/pages/data/mp4.mp4", "video/mp4"),
+                ("tests/pages/data/mpeg.mpeg", "video/mpeg"),
                 ("tests/pages/data/js.js", "text/javascript"),
                 ("tests/pages/data/mp4.gif", "image/gif"),
                 ("tests/pages/data/png.jpg", "image/jpeg"),

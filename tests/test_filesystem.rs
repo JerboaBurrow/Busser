@@ -4,9 +4,9 @@ mod common;
 mod filesystem
 {
 
-    use std::fs::remove_file;
+    use std::{fs::remove_file, path::Path};
 
-    use busser::filesystem::{file::{read_file_bytes, read_file_utf8, write_file_bytes, FileError}, folder::list_dir_by};
+    use busser::filesystem::{file::{read_file_bytes, read_file_utf8, write_file_bytes}, folder::list_dir_by};
     use regex::Regex;
 
 
@@ -15,7 +15,14 @@ mod filesystem
     {
         let expected = "this is /a".as_bytes();
         let actual = read_file_bytes("tests/pages/a.html").unwrap();
-        assert_eq!(actual, expected)
+        assert_eq!(actual, expected);
+
+        let path = Path::new("test_file_error");
+        if path.exists()
+        {
+            let _ = remove_file(path);
+        }
+        assert!(read_file_bytes(path.to_str().unwrap()).is_none());
     }
 
     #[test]
@@ -23,7 +30,14 @@ mod filesystem
     {
         let expected = "this is /a";
         let actual = read_file_utf8("tests/pages/a.html").unwrap();
-        assert_eq!(actual, expected)
+        assert_eq!(actual, expected);
+
+        let path = Path::new("test_file_error");
+        if path.exists()
+        {
+            let _ = remove_file(path);
+        }
+        assert!(read_file_utf8(path.to_str().unwrap()).is_none());
     }
 
     #[test]
@@ -36,7 +50,7 @@ mod filesystem
         let actual = read_file_utf8("test_write_bytes").unwrap();
         assert_eq!(actual, expected);
 
-        remove_file("test_write_bytes");
+        let _ = remove_file("test_write_bytes");
     }
 
     #[test]
@@ -48,6 +62,5 @@ mod filesystem
         assert!(actual.contains(&"tests/pages/data/jpg.jpg".to_string()));
         assert!(actual.contains(&"tests/pages/data/png.jpg".to_string()));
         assert_eq!(actual.len(), 2);
-
     }
 }
