@@ -2,7 +2,7 @@ use axum::response::{IntoResponse, Response, Html};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
-use crate::{content::Content, filesystem::file::{File, FileError}};
+use crate::{content::Content, filesystem::file::{File, FileError}, program_version};
 
 /// An HTML webpage
 /// 
@@ -66,28 +66,13 @@ impl Page
     {
         self.content.utf8_body()
     }
+}
 
-    /// Insert a tag indicating the page was served by busser
-    /// this may be disabled by launching as busser --no-tagging
-    pub fn insert_tag(body: String) -> String
-    {   
-        let mut new_body = body.clone();
-        let head = Regex::new(r"<head>").unwrap();
-        let tag = r#"<head><meta name="hostedby" content="Busser, https://github.com/JerboaBurrow/Busser">"#;
-        let tag_no_head = r#"<html><head><meta name="hostedby" content="Busser, https://github.com/JerboaBurrow/Busser"></head>"#;
-        match head.clone().captures_iter(&body).count()
-        {
-            0 => 
-            {
-                new_body = new_body.replacen("<html>", tag_no_head, 1);
-            },
-            _ => 
-            {
-                new_body = new_body.replacen("<head>", tag, 1);
-            }
-        }
-        new_body
-    }
+/// Insert a tag indicating the page was served by busser
+/// this may be disabled by launching as busser --no-tagging
+pub fn insert_tag(body: String) -> String
+{   
+    format!("<!--Hosted by Busser {}, https://github.com/JerboaBurrow/Busser-->\n{}", program_version(), body)
 }
 
 impl IntoResponse for Page {
@@ -100,7 +85,7 @@ impl IntoResponse for Page {
 
         if self.tag_insertion
         {
-            string_body = Page::insert_tag(string_body);
+            string_body = insert_tag(string_body);
         }
 
         let mut response = Html(string_body).into_response();
