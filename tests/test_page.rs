@@ -1,11 +1,11 @@
 mod common;
 
 #[cfg(test)]
-mod test_page_load
+mod test_page
 {
     use std::collections::HashMap;
 
-    use busser::content::pages::{page::Page, get_pages};
+    use busser::content::pages::{get_pages, page::{insert_tag, Page}};
 
     #[test]
     fn test_read_pages()
@@ -31,6 +31,15 @@ mod test_page_load
             assert_eq!(actual_body, expected_body)
         }
 
+    }
+
+    #[test]
+    fn test_page_tag()
+    {
+        let content = "this is /a".to_string();
+        let expected = format!("<!--Hosted by Busser {}, https://github.com/JerboaBurrow/Busser-->\n{}", busser::program_version(), content);
+        let actual = insert_tag(content);
+        assert_eq!(actual, expected);
     }
 
 }

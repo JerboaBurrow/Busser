@@ -1,6 +1,6 @@
 use busser::server::http::ServerHttp;
 use busser::server::https::Server;
-use busser::program_version;
+use busser::{openssl_version, program_version};
 
 use tokio::task::spawn;
 
@@ -11,7 +11,7 @@ async fn main() {
  
     if args.iter().any(|x| x == "-v")
     {
-        println!("Version: {}", program_version());
+        println!("Version: {}\n{}", program_version(), openssl_version());
         std::process::exit(0);
     }
 

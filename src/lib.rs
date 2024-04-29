@@ -62,3 +62,8 @@ pub fn program_version() -> Version
         build: BuildMetadata::EMPTY
     }
 }
+
+pub fn openssl_version() -> String
+{
+    format!("{}, {}", openssl::version::version(), openssl::version::built_on())
+}
