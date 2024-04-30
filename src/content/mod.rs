@@ -123,6 +123,11 @@ impl Content
         self.uri.clone()
     }
 
+    pub fn get_last_refreshed(&self) -> SystemTime
+    {
+        self.last_refreshed.clone()
+    }
+
     pub fn utf8_body(&self) -> Result<String, std::string::FromUtf8Error>
     {
         String::from_utf8(self.body.clone())

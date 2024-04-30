@@ -3,9 +3,10 @@ mod common;
 #[cfg(test)]
 mod test_content
 {
-    use std::{fs::remove_file, path::Path};
+    use std::{fs::remove_file, path::Path, thread::sleep, time};
 
     use busser::{content::Content, filesystem::file::{file_hash, write_file_bytes, Observed}, util::read_bytes};
+    use chrono::Duration;
 
     #[test]
     fn test_load_content()
@@ -54,6 +55,19 @@ mod test_content
 
         let _ = remove_file(path);
     }
+
+    #[test]
+    fn test_last_refreshed()
+    {
+        let mut content = Content::new("tests/pages/a.html", "tests/pages/a.html", 3600);
+        assert!(content.load_from_file().is_ok());
+        let a = content.get_last_refreshed();
+        sleep(time::Duration::from_secs(2));
+        assert!(content.load_from_file().is_ok());
+        let b = content.get_last_refreshed();
+        assert!(a < b);
+    }
+
 
 }
 
