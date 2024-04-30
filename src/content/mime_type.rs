@@ -71,3 +71,18 @@ pub fn infer_mime_type(extension: &str) -> &'static str
 
     "application/octet-stream"
 }
+
+pub fn is_html(mime: String) -> bool
+{
+    mime == "text/html"
+}
+
+pub fn is_image(mime: String) -> bool
+{
+    mime.contains("image")
+}
+
+pub fn is_video(mime: String) -> bool
+{
+    mime.contains("video")
+}
