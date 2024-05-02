@@ -1,7 +1,7 @@
 use crate::
 {
     config::{read_config, Config}, content::{filter::ContentFilter, sitemap::SiteMap, Content}, web::{stats::{log_stats, Digest, Stats}, 
-    throttle::{handle_throttle, IpThrottler}}
+    throttle::{handle_throttle, IpThrottler}}, CRAB
 };
 
 use std::{collections::HashMap, net::{IpAddr, Ipv4Addr, SocketAddr}};
@@ -118,7 +118,7 @@ impl Server
             {
                 sitemap.push(home);
             },
-            Err(e) => {crate::debug(format!("Error servin home page resource {}", e), None);}
+            Err(e) => {crate::debug(format!("Error serving home page resource {}", e), None);}
         }
         
         let mut router: Router<(), axum::body::Body> = sitemap.into();
@@ -176,6 +176,21 @@ impl Server
             }
         };
 
+        let domain = if self.config.domain.contains("https://")
+        {
+            self.config.domain.clone()
+        }
+        else
+        {
+            format!("https://{}", self.config.domain)
+        };
+
+        println!("Checkout your cool site, at {} {}!", domain, String::from_utf8(CRAB.to_vec()).unwrap());
+        if domain != "https://127.0.0.1"
+        {
+            println!("(or https://127.0.0.1)");
+        }
+        
         axum_server::bind_rustls(self.addr, config)
         .serve(self.router.into_make_service_with_connect_info::<SocketAddr>())
         .await

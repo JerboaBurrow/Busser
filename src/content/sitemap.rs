@@ -1,12 +1,13 @@
 
-use std::{collections::HashMap, time::SystemTime, vec};
+use std::{collections::HashMap, time::{Duration, Instant, SystemTime}, vec};
 
 use axum::{response::IntoResponse, routing::get, Router};
 use chrono::{DateTime, Datelike, Utc};
+use indicatif::ProgressBar;
 use quick_xml::{events::{BytesText, Event}, Error, Writer};
 use regex::Regex;
 
-use crate::{content::{filter::ContentFilter, HasUir}, filesystem::file::{write_file_bytes, File}};
+use crate::{content::{filter::ContentFilter, HasUir}, filesystem::file::{write_file_bytes, File}, util::format_elapsed};
 
 use crate::server::https::parse_uri;
 
@@ -48,6 +49,12 @@ impl ContentTree
 
     pub fn push(&mut self, uri_stem: String, content: Content)
     {
+        if uri_stem == "/"
+        {
+            self.contents.push(content);
+            return;
+        }
+
         match uri_stem.find("/")
         {
             Some(loc) => 
@@ -180,6 +187,10 @@ impl SiteMap
         filter: Option<&ContentFilter>
     )
     {
+        let mut tic = Instant::now();
+        let spinner = ProgressBar::new_spinner();
+        spinner.set_message("Detecting site files");
+        spinner.enable_steady_tick(Duration::from_millis(100));
         let mut contents = get_content
         (
             &self.content_path,
@@ -187,6 +198,8 @@ impl SiteMap
             Some(cache_period),
             Some(tag)
         );
+        spinner.finish();
+        spinner.set_message(format!("Detecting site files took {}", format_elapsed(tic)));
 
         if filter.is_some()
         {
@@ -196,6 +209,9 @@ impl SiteMap
         let mut no_sitemap = true;
         let mut no_robots = true;
 
+        tic = Instant::now();
+        println!("Building sitemap");
+        let bar = ProgressBar::new(contents.len() as u64);
         for mut content in contents
         { 
             if content.get_uri().contains("sitemap.xml")
@@ -214,7 +230,7 @@ impl SiteMap
             {
                 Ok(()) =>
                 {
-                    if short_urls
+                    if short_urls && is_html(content.get_content_type())
                     {
                         let extension_regex = Regex::new(r"\.\S+$").unwrap();
                         let short_uri = extension_regex.replacen(&uri, 1, "");
@@ -230,7 +246,10 @@ impl SiteMap
             }
 
             self.contents.push(content.uri.clone(), content);
+            bar.inc(1);
         }
+        bar.finish();
+        println!("Building sitemap took {}", format_elapsed(tic));
 
         if no_robots
         {
