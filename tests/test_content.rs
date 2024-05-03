@@ -5,7 +5,7 @@ mod test_content
 {
     use std::{collections::HashMap, fs::remove_file, path::Path, thread::sleep, time};
 
-    use busser::{content::{filter::ContentFilter, get_content, insert_tag, is_page, Content, HasUir}, filesystem::file::{file_hash, write_file_bytes, Observed}, util::read_bytes};
+    use busser::{content::{filter::ContentFilter, get_content, insert_tag, is_page, mime_type::MIME, Content, HasUir}, filesystem::file::{file_hash, write_file_bytes, Observed}, util::read_bytes};
 
     #[test]
     fn test_load_content()
@@ -104,24 +104,24 @@ mod test_content
 
         let paths = HashMap::from(
             [
-                ("tests/pages/data/b.txt", ("/data/b.txt", "text/plain")),
-                ("tests/pages/data/css.css", ("/data/css.css", "text/css")),
-                ("tests/pages/data/csv.csv", ("/data/csv.csv", "text/csv")),
-                ("tests/pages/data/gif.gif", ("/data/gif.gif", "image/gif")),
-                ("tests/pages/data/ico.ico", ("/data/ico.ico", "image/x-icon")),
-                ("tests/pages/data/jpg.jpg", ("/data/jpg.jpg", "image/jpeg")),
-                ("tests/pages/data/mp4.mp4", ("/data/mp4.mp4", "video/mp4")),
-                ("tests/pages/data/mpeg.mpeg", ("/data/mpeg.mpeg", "video/mpeg")),
-                ("tests/pages/data/js.js", ("/data/js.js", "text/javascript")),
-                ("tests/pages/data/mp4.gif", ("/data/mp4.gif", "image/gif")),
-                ("tests/pages/data/png.jpg", ("/data/png.jpg", "image/jpeg")),
-                ("tests/pages/data/qt.mov", ("/data/qt.mov", "video/quicktime")),
-                ("tests/pages/data/svg.svg", ("/data/svg.svg", "image/svg+xml")),
-                ("tests/pages/data/tiff.tiff", ("/data/tiff.tiff", "image/tiff")),
-                ("tests/pages/data/vid.flv", ("/data/vid.flv", "video/x-flv")),
-                ("tests/pages/data/vid.webm", ("/data/vid.webm", "video/webm")),
-                ("tests/pages/data/vid.wmv", ("/data/vid.wmv", "video/x-ms-wmv")),
-                ("tests/pages/data/xml.xml", ("/data/xml.xml", "text/xml"))
+                ("tests/pages/data/b.txt", ("/data/b.txt", MIME::TextPlain)),
+                ("tests/pages/data/css.css", ("/data/css.css", MIME::TextCSS)),
+                ("tests/pages/data/csv.csv", ("/data/csv.csv", MIME::TextCSV)),
+                ("tests/pages/data/gif.gif", ("/data/gif.gif", MIME::ImageGIF)),
+                ("tests/pages/data/ico.ico", ("/data/ico.ico", MIME::ImageXICON)),
+                ("tests/pages/data/jpg.jpg", ("/data/jpg.jpg", MIME::ImageJPEG)),
+                ("tests/pages/data/mp4.mp4", ("/data/mp4.mp4", MIME::VideoMP4)),
+                ("tests/pages/data/mpeg.mpeg", ("/data/mpeg.mpeg", MIME::VideoMPEG)),
+                ("tests/pages/data/js.js", ("/data/js.js", MIME::TextJavascript)),
+                ("tests/pages/data/mp4.gif", ("/data/mp4.gif", MIME::ImageGIF)),
+                ("tests/pages/data/png.jpg", ("/data/png.jpg", MIME::ImageJPEG)),
+                ("tests/pages/data/qt.mov", ("/data/qt.mov", MIME::VideoQuicktime)),
+                ("tests/pages/data/svg.svg", ("/data/svg.svg", MIME::ImageSVG)),
+                ("tests/pages/data/tiff.tiff", ("/data/tiff.tiff", MIME::ImageTIFF)),
+                ("tests/pages/data/vid.flv", ("/data/vid.flv", MIME::VideoFLV)),
+                ("tests/pages/data/vid.webm", ("/data/vid.webm", MIME::VideoWEBM)),
+                ("tests/pages/data/vid.wmv", ("/data/vid.wmv", MIME::VideoWMV)),
+                ("tests/pages/data/xml.xml", ("/data/xml.xml", MIME::TextXML))
             ]
         );
 

@@ -10,7 +10,7 @@ use crate::{content::{filter::ContentFilter, HasUir}, filesystem::file::{write_f
 
 use crate::server::https::parse_uri;
 
-use super::{get_content, mime_type::{is_html, is_image, is_video}, Content};
+use super::{get_content, mime_type::Mime, Content};
 
 pub struct ContentTree
 {
@@ -112,7 +112,7 @@ impl ContentTree
                         {
                             continue;
                         }
-                        if is_image(content.get_content_type())
+                        if content.get_content_type().is_image()
                         {
                             writer.create_element("image:image").write_inner_content::<_, Error>(|writer|
                                 {
@@ -121,7 +121,7 @@ impl ContentTree
                                     Ok(())
                                 })?;
                         }
-                        else if is_video(content.get_content_type())
+                        else if content.get_content_type().is_video()
                         {
                             writer.create_element("video:video").write_inner_content::<_, Error>(|writer|
                                 {
@@ -130,7 +130,7 @@ impl ContentTree
                                     Ok(())
                                 })?;
                         }
-                        else if is_html(content.get_content_type())
+                        else if content.get_content_type().is_html()
                         {
                             writer.create_element("loc").write_text_content(BytesText::new(&format!("{}{}",domain, content.get_uri())))?;
                             writer.create_element("lastmod").write_text_content(BytesText::new(&lastmod(content.last_refreshed)))?;
@@ -230,7 +230,7 @@ impl SiteMap
             {
                 Ok(()) =>
                 {
-                    if short_urls && is_html(content.get_content_type())
+                    if short_urls && content.get_content_type().is_html()
                     {
                         let extension_regex = Regex::new(r"\.\S+$").unwrap();
                         let short_uri = extension_regex.replacen(&uri, 1, "");
