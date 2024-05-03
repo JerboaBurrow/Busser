@@ -1,19 +1,20 @@
-## Busser
+<p align="center">
+    <h3 align="center">Busser</h3>
+    <p align="center">
+        Simply host your corner of the internet in Rust
+        <br>
+    </p>
+</p>
 
-#### Simple HTTPS website hosting in Rust with [Axum](https://github.com/tokio-rs/axum).
-
-___
-Desktop
-
+<div align = "center">
+    
 [![Linux x86_64](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-linux.yml/badge.svg)](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-linux.yml) [![macOS](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-macos.yml/badge.svg)](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-macos.yml) [![Windows](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-windows.yml/badge.svg)](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-windows.yml) 
-___
-Arm (e.g. Rhaspberry Pi, check with ```uname --machine``` on you Pi
 
 [![aarch64](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-aarch64.yml/badge.svg)](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-aarch64.yml) [![armv7](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-armv7.yml/badge.svg)](https://github.com/JerboaBurrow/Busser/actions/workflows/build-and-test-armv7.yml)
-___
 
 [![Coverage Status](https://coveralls.io/repos/github/JerboaBurrow/Busser/badge.svg?branch=main)](https://coveralls.io/github/JerboaBurrow/Busser?branch=main)
-___
+</div>
+
 ✔️ Host static HTML/css/js/text and image/video content (png, jpg, gif, webp, mp4, ...) content from a given directory
 
 ✔️ Serve with and without ```.html```, e.g. ```/x/y/z/webpage.html``` aliased as ```/x/y/z/webpage```
@@ -34,7 +35,12 @@ ___
 
 ✔️ Authenticated API for status/statistics polling
 
-##### Host for free on Google Cloud
+- [Spinning up](#spinning-up)
+    - [Configuration](#configuration)
+- [Free static website hosting example with Google Cloud Free Tier](#free-static-website-hosting-example-with-google-cloud-free-tier)
+___
+
+# Spinning up
 
 1. Just create a folder with your ```.html/.css/.js``` and other resources, ```.png, .gif, ...```
 2. Point Busser to it with a config.json
@@ -42,7 +48,7 @@ ___
 
 \* you'll need certificates for https, and open ports
 
-### Configuration
+## Configuration
 
 The ```config.json``` specifies key properties of the site and its content
 
@@ -77,14 +83,14 @@ The ```config.json``` specifies key properties of the site and its content
 ```
 ____
 
-#### GDPR, Cookie Policies, and Privacy Policies
+## GDPR, Cookie Policies, and Privacy Policies
 
 - The IP throttler only stores hashes of an IP and a request path, it is likely not considered identifiable information.
 
 - The statistics collection stores the IP, hit time, path, and counts for each IP-path pair. The IP is stored as a hash value.
 ____
 
-### API
+## API
 
 Currently there is an API function to request a statistics digest, the following bash script will perform the request. It is currently limited to only returning stats based on already saved data.
 
@@ -95,7 +101,7 @@ curl -v -H 'Content-Type: application/json' -d "$2" -H 'api: StatsDigest' -H "bu
 ```
 ___
 
-### Free static website hosting example with Google Cloud Free Tier
+# Free static website hosting example with Google Cloud Free Tier
 
 The [gcloud free tier](https://cloud.google.com/free?hl=en) [allows for the following instance running 24/7:](https://cloud.google.com/free/docs/free-cloud-features#compute)
 
