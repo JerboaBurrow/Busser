@@ -1,8 +1,10 @@
 use core::fmt;
-use std::{fmt::Write, io::{Read, Write as ioWrite}};
+use std::{fmt::Write, io::{Read, Write as ioWrite}, time::Instant};
 use libflate::deflate::{Encoder, Decoder};
 use openssl::sha::Sha256;
 use regex::Regex;
+
+use crate::BLAZING;
 
 pub fn dump_bytes(v: &[u8]) -> String 
 {
@@ -130,4 +132,19 @@ pub fn hash(v: Vec<u8>) -> Vec<u8>
     let mut sha = Sha256::new();
     sha.update(&v);
     sha.finish().to_vec()
+}
+
+pub fn format_elapsed(tic: Instant) -> String
+{
+    match tic.elapsed().as_millis()
+    {
+        0..=999 => 
+        {
+            format!("{}ms {}",tic.elapsed().as_millis(), String::from_utf8(BLAZING.to_vec()).unwrap())
+        },
+        _ => 
+        {
+            format!("{}s",tic.elapsed().as_secs())
+        }
+    }
 }

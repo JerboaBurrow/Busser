@@ -1,18 +1,17 @@
 use crate::
 {
-    config::{read_config, Config}, content::pages::{get_pages, page::Page}, content::resources::get_resources, util::matches_one, web::{stats::{log_stats, Digest, Stats}, 
-    throttle::{handle_throttle, IpThrottler}}
+    config::{read_config, Config}, content::{filter::ContentFilter, sitemap::SiteMap, Content}, web::{stats::{log_stats, Digest, Stats}, 
+    throttle::{handle_throttle, IpThrottler}}, CRAB
 };
 
 use std::{collections::HashMap, net::{IpAddr, Ipv4Addr, SocketAddr}};
 use std::path::PathBuf;
 use std::sync::Arc;
-use regex::Regex;
 use tokio::{spawn, sync::Mutex};
 
 use axum::
 {
-    middleware, response::IntoResponse, routing::get, 
+    middleware, 
     Router
 };
 use axum_server::tls_rustls::RustlsConfig;
@@ -86,107 +85,43 @@ impl Server
 
         let throttle_state = Arc::new(Mutex::new(requests));
 
-        let pages = get_pages(Some(&config.content.path), Some(config.content.cache_period_seconds));
-        let resources = get_resources(Some(&config.content.path), Some(config.content.cache_period_seconds));
+        let mut sitemap = SiteMap::new(config.domain.clone(), config.content.path.clone());
 
-        let mut router: Router<(), axum::body::Body> = Router::new();
-        
-        let ignore_patterns = match config.content.ignore_regexes.clone()
+        match config.content.ignore_regexes.clone()
         {
-            Some(p) => p,
-            None => vec![]
+            Some(p) => 
+            {
+                sitemap.build
+                (
+                    config.content.cache_period_seconds, 
+                    tag, 
+                    config.content.allow_without_extension, 
+                    Some(&ContentFilter::new(p))
+                );
+            },
+            None => 
+            {
+                sitemap.build
+                (
+                    config.content.cache_period_seconds, 
+                    tag, 
+                    config.content.allow_without_extension, 
+                    None
+                );
+            }
         };
 
-        for mut page in pages
-        {
-
-            if matches_one(&page.get_uri(), &ignore_patterns)
-            {
-                continue
-            }           
-
-            crate::debug(format!("Attempting to add page {:?}", page.preview(64)), None);
-
-            let path = config.content.path.clone()+"/";
-
-            let uri = parse_uri(page.get_uri(), path);
-
-            match page.load_from_file()
-            {
-                Ok(()) =>
-                {
-                    crate::debug(format!("Serving: {}", uri), None);
-
-                    page.set_tag_insertion(tag);
-
-                    if config.content.allow_without_extension
-                    {
-                        let extension_regex = Regex::new(r"\.\S+$").unwrap();
-                        let short_uri = extension_regex.replacen(&uri, 1, "");
-
-                        crate::debug(format!("Serving as short url: {}",short_uri), None);
-
-                        let page_short = page.clone();
-
-                        router = router.route
-                        (
-                            &short_uri, 
-                            get(|| async move {page_short.clone().into_response()})
-                        );
-                    }
-
-                    router = router.route
-                    (
-                        &uri, 
-                        get(|| async move {page.into_response()})
-                    );
-                }
-                Err(e) => {crate::debug(format!("Error serving page {}\n{}", page.get_uri(), e), None);}
-            }
-        }
-
-        for mut resource in resources
-        {
-
-            if matches_one(&resource.get_uri(), &ignore_patterns)
-            {
-                continue
-            }  
-
-            crate::debug(format!("Attempting to add resource {:?}", resource.preview(8)), None);
-
-            let path = config.content.path.clone()+"/";
-
-            let uri = parse_uri(resource.get_uri(), path);
-
-            match resource.load_from_file()
-            {
-                Ok(()) =>
-                {
-                    crate::debug(format!("Serving: {}", uri), None);
-                    
-                    router = router.route
-                    (
-                        &uri, 
-                        get(|| async move {resource.clone().into_response()})
-                    )
-                },
-                Err(e) => {crate::debug(format!("Error serving resource {}\n{}", resource.get_uri(), e), None);}
-            }
-        }
-
-        let mut home = Page::new("/", &config.content.home.clone(), config.content.cache_period_seconds);
-        
+        let mut home = Content::new("/", &config.content.home.clone(), config.content.cache_period_seconds, tag);
         match home.load_from_file()
         {
             Ok(()) =>
             {
-                home.set_tag_insertion(tag);
-                crate::debug(format!("Serving home page, /, {}", home.preview(64)), None);
-                router = router.route("/", get(|| async move {home.clone().into_response()}));
+                sitemap.push(home);
             },
-            Err(e) => {crate::debug(format!("Error serving home page {}\n{}", home.get_uri(), e), None);}
+            Err(e) => {crate::debug(format!("Error serving home page resource {}", e), None);}
         }
+        
+        let mut router: Router<(), axum::body::Body> = sitemap.into();
 
         let stats = Arc::new(Mutex::new(
             Stats 
@@ -241,6 +176,21 @@ impl Server
             }
         };
 
+        let domain = if self.config.domain.contains("https://")
+        {
+            self.config.domain.clone()
+        }
+        else
+        {
+            format!("https://{}", self.config.domain)
+        };
+
+        println!("Checkout your cool site, at {} {}!", domain, String::from_utf8(CRAB.to_vec()).unwrap());
+        if domain != "https://127.0.0.1"
+        {
+            println!("(or https://127.0.0.1)");
+        }
+        
         axum_server::bind_rustls(self.addr, config)
         .serve(self.router.into_make_service_with_connect_info::<SocketAddr>())
         .await

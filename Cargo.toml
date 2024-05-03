@@ -23,6 +23,8 @@ reqwest = { version = "0.11", features = ["json"] }
 regex = "1.10.2"
 semver = "1.0.20"
 libflate = "2"
+quick-xml = "0.31.0"
+indicatif = "0.17.8"
 
 [profile.dev]
 opt-level = 0

@@ -19,7 +19,7 @@ use axum::
 };
 
 use crate::config::read_config;
-use crate::content::pages::page::is_page;
+use crate::content::is_page;
 use crate::
 {
     filesystem::file::{read_file_utf8, write_file_bytes},

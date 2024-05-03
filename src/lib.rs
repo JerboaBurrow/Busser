@@ -15,6 +15,9 @@ const RESOURCE_REGEX: &str = r"(\.\S+)";
 const HTML_REGEX: &str = r"(\.html)$";
 const NO_EXTENSION_REGEX: &str = r"^(?!.*\.).*";
 
+const CRAB: [u8; 4] = [0xF0, 0x9F, 0xA6, 0x80];
+const BLAZING: [u8; 4] = [0xF0, 0x9F, 0x94, 0xA5];
+
 // only modified in main.rs on launch
 pub struct RuntimeOptions
 {

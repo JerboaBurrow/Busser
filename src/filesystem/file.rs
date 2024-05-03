@@ -1,4 +1,4 @@
-use std::{fmt, fs, io::{Read, Write}};
+use std::{alloc::System, fmt, fs, io::{Read, Write}, time::SystemTime};
 
 use crate::util::hash;
 
@@ -20,12 +20,14 @@ pub trait File
     fn write_bytes(&self);
     fn read_bytes(&self) -> Option<Vec<u8>>;
     fn read_utf8(&self) -> Option<String>;
+    fn path(&self) -> String;
 }
 
 pub trait Observed
 {
     fn is_stale(&self) -> bool;
     fn refresh(&mut self);
+    fn last_refreshed(&self) -> SystemTime;
 }
 
 pub fn write_file_bytes(path: &str, data: &[u8])
