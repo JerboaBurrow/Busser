@@ -48,6 +48,8 @@ mod sitemap
         }
 
         let mut expected_sitemap = read_file_utf8("tests/common/sitemap.xml").unwrap();
+        // for windows...
+        expected_sitemap = expected_sitemap.replace("\r", "");
 
         let date: DateTime<Utc> = SystemTime::now().into();
         let today = format!("{}-{:0>2}-{:0>2}",date.year(), date.month(), date.day());
