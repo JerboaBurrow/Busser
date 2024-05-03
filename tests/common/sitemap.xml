@@ -1,76 +1,76 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
             <loc>https://test.domain/a</loc>
-            <lastmod>TODAY</lastmod>
+            <lastmod>2024-05-03</lastmod>
             <loc>https://test.domain/a.html</loc>
-            <lastmod>TODAY</lastmod>
+            <lastmod>2024-05-03</lastmod>
             <loc>https://test.domain/b</loc>
-            <lastmod>TODAY</lastmod>
+            <lastmod>2024-05-03</lastmod>
             <loc>https://test.domain/b.html</loc>
-            <lastmod>TODAY</lastmod>
+            <lastmod>2024-05-03</lastmod>
     </url>
     <url>
             <loc>https://test.domain/c/d</loc>
-            <lastmod>TODAY</lastmod>
+            <lastmod>2024-05-03</lastmod>
             <loc>https://test.domain/c/d.html</loc>
-            <lastmod>TODAY</lastmod>
+            <lastmod>2024-05-03</lastmod>
     </url>
     <url>
-            <video:video>
-                    <video:content_loc>https://test.domain/data/vid.wmv</video:content_loc>
-                    <video:publication_date>TODAY</video:publication_date>
-            </video:video>
-            <video:video>
-                    <video:content_loc>https://test.domain/data/vid.webm</video:content_loc>
-                    <video:publication_date>TODAY</video:publication_date>
-            </video:video>
-            <image:image>
-                    <image:loc>https://test.domain/data/png.png</image:loc>
-                    <lastmod>TODAY</lastmod>
-            </image:image>
-            <image:image>
-                    <image:loc>https://test.domain/data/png.jpg</image:loc>
-                    <lastmod>TODAY</lastmod>
-            </image:image>
             <image:image>
                     <image:loc>https://test.domain/data/gif.gif</image:loc>
-                    <lastmod>TODAY</lastmod>
-            </image:image>
-            <image:image>
-                    <image:loc>https://test.domain/data/svg.svg</image:loc>
-                    <lastmod>TODAY</lastmod>
-            </image:image>
-            <video:video>
-                    <video:content_loc>https://test.domain/data/mpeg.mpeg</video:content_loc>
-                    <video:publication_date>TODAY</video:publication_date>
-            </video:video>
-            <video:video>
-                    <video:content_loc>https://test.domain/data/qt.mov</video:content_loc>
-                    <video:publication_date>TODAY</video:publication_date>
-            </video:video>
-            <video:video>
-                    <video:content_loc>https://test.domain/data/mp4.mp4</video:content_loc>
-                    <video:publication_date>TODAY</video:publication_date>
-            </video:video>
-            <image:image>
-                    <image:loc>https://test.domain/data/tiff.tiff</image:loc>
-                    <lastmod>TODAY</lastmod>
-            </image:image>
-            <video:video>
-                    <video:content_loc>https://test.domain/data/vid.flv</video:content_loc>
-                    <video:publication_date>TODAY</video:publication_date>
-            </video:video>
-            <image:image>
-                    <image:loc>https://test.domain/data/jpg.jpg</image:loc>
-                    <lastmod>TODAY</lastmod>
+                    <lastmod>2024-05-03</lastmod>
             </image:image>
             <image:image>
                     <image:loc>https://test.domain/data/ico.ico</image:loc>
-                    <lastmod>TODAY</lastmod>
+                    <lastmod>2024-05-03</lastmod>
+            </image:image>
+            <image:image>
+                    <image:loc>https://test.domain/data/jpg.jpg</image:loc>
+                    <lastmod>2024-05-03</lastmod>
             </image:image>
             <image:image>
                     <image:loc>https://test.domain/data/mp4.gif</image:loc>
-                    <lastmod>TODAY</lastmod>
+                    <lastmod>2024-05-03</lastmod>
             </image:image>
+            <video:video>
+                    <video:content_loc>https://test.domain/data/mp4.mp4</video:content_loc>
+                    <video:publication_date>2024-05-03</video:publication_date>
+            </video:video>
+            <video:video>
+                    <video:content_loc>https://test.domain/data/mpeg.mpeg</video:content_loc>
+                    <video:publication_date>2024-05-03</video:publication_date>
+            </video:video>
+            <image:image>
+                    <image:loc>https://test.domain/data/png.jpg</image:loc>
+                    <lastmod>2024-05-03</lastmod>
+            </image:image>
+            <image:image>
+                    <image:loc>https://test.domain/data/png.png</image:loc>
+                    <lastmod>2024-05-03</lastmod>
+            </image:image>
+            <video:video>
+                    <video:content_loc>https://test.domain/data/qt.mov</video:content_loc>
+                    <video:publication_date>2024-05-03</video:publication_date>
+            </video:video>
+            <image:image>
+                    <image:loc>https://test.domain/data/svg.svg</image:loc>
+                    <lastmod>2024-05-03</lastmod>
+            </image:image>
+            <image:image>
+                    <image:loc>https://test.domain/data/tiff.tiff</image:loc>
+                    <lastmod>2024-05-03</lastmod>
+            </image:image>
+            <video:video>
+                    <video:content_loc>https://test.domain/data/vid.flv</video:content_loc>
+                    <video:publication_date>2024-05-03</video:publication_date>
+            </video:video>
+            <video:video>
+                    <video:content_loc>https://test.domain/data/vid.webm</video:content_loc>
+                    <video:publication_date>2024-05-03</video:publication_date>
+            </video:video>
+            <video:video>
+                    <video:content_loc>https://test.domain/data/vid.wmv</video:content_loc>
+                    <video:publication_date>2024-05-03</video:publication_date>
+            </video:video>
     </url>
 </urlset>

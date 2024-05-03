@@ -204,6 +204,7 @@ impl SiteMap
         {
             contents = filter.unwrap().filter::<Content>(contents);
         }
+        contents.sort_by_key(|x|x.get_uri());
 
         let mut no_sitemap = true;
         let mut no_robots = true;
