@@ -35,6 +35,7 @@ mod sitemap
         assert!(Path::new("tests/pages/robots.txt").exists());
         assert!(Path::new("tests/pages/sitemap.xml").exists());
 
+        let sitemap_disk = read_file_utf8("tests/pages/sitemap.xml").unwrap();
         let robots_disk = read_file_utf8("tests/pages/robots.txt").unwrap();
 
         for file in vec!["tests/pages/robots.txt", "tests/pages/sitemap.xml"]
@@ -46,6 +47,14 @@ mod sitemap
             }
         }
 
+        let mut expected_sitemap = read_file_utf8("tests/common/sitemap.xml").unwrap();
+
+        let date: DateTime<Utc> = SystemTime::now().into();
+        let today = format!("{}-{:0>2}-{:0>2}",date.year(), date.month(), date.day());
+        expected_sitemap = expected_sitemap.replace("TODAY", &today);
+
+        assert_eq!(sitemap_disk, expected_sitemap);
         assert_eq!("Sitemap: https://test.domain/sitemap.xml", robots_disk);
     }
+
 }

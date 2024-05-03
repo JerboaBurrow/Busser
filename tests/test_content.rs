@@ -5,7 +5,7 @@ mod test_content
 {
     use std::{collections::HashMap, fs::remove_file, path::Path, thread::sleep, time};
 
-    use busser::{content::{filter::ContentFilter, get_content, insert_tag, Content, HasUir}, filesystem::file::{file_hash, write_file_bytes, Observed}, util::read_bytes};
+    use busser::{content::{filter::ContentFilter, get_content, insert_tag, is_page, Content, HasUir}, filesystem::file::{file_hash, write_file_bytes, Observed}, util::read_bytes};
 
     #[test]
     fn test_load_content()
@@ -166,6 +166,31 @@ mod test_content
         let expected = format!("<!--Hosted by Busser {}, https://github.com/JerboaBurrow/Busser-->\n{}", busser::program_version(), content);
         let actual = insert_tag(content);
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_is_page()
+    {
+        let domain_a = "https://test.domain.one".to_string();
+        let domain_b = "test.domain".to_string();
+
+        let content = vec!
+        [
+            ("a.html".to_string(), false, false),
+            (domain_a.clone(), true, false),
+            (domain_b.clone(), false, true),
+            (format!("{}/{}", domain_a, "a.html"), true, false),
+            (format!("{}/{}", domain_b, "b.html"), false, true),
+            (format!("{}/{}", domain_a, "a.js"), false, false),
+            (format!("{}/{}", domain_b, "a.csv"), false, false)
+        ];
+
+        for (uri, a, b) in content
+        {
+            println!("{}, {}, {}", uri, a, b);
+            assert_eq!(is_page(&uri, &domain_a), a);
+            assert_eq!(is_page(&uri, &domain_b), b);
+        }
     }
 
 }

@@ -1,12 +1,11 @@
 
-use std::{collections::HashMap, time::{Duration, Instant, SystemTime}, vec};
+use std::{collections::BTreeMap, time::{Duration, Instant, SystemTime}, vec};
 
 use axum::{response::IntoResponse, routing::get, Router};
 use chrono::{DateTime, Datelike, Utc};
 use indicatif::ProgressBar;
 use quick_xml::{events::{BytesText, Event}, Error, Writer};
 use regex::Regex;
-
 use crate::{content::{filter::ContentFilter, HasUir}, filesystem::file::{write_file_bytes, File}, util::format_elapsed};
 
 use crate::server::https::parse_uri;
@@ -17,14 +16,14 @@ pub struct ContentTree
 {
     uri_stem: String,
     contents: Vec<Content>,
-    children: HashMap<String, ContentTree>
+    children: BTreeMap<String, ContentTree>
 }
 
 impl ContentTree
 {
     pub fn new(uri_stem: &str) -> ContentTree
     {
-        ContentTree { uri_stem: uri_stem.to_string(), contents: vec![], children: HashMap::new() }
+        ContentTree { uri_stem: uri_stem.to_string(), contents: vec![], children: BTreeMap::new() }
     }
 
     fn route(&self) -> Router
