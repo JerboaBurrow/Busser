@@ -11,7 +11,7 @@ use crate::filesystem::folder::{list_dir_by, list_sub_dirs};
 use crate::program_version;
 use crate::util::{dump_bytes, hash};
 
-use self::mime_type::infer_mime_type;
+use self::mime_type::{Mime, MIME};
 
 pub mod mime_type;
 pub mod filter;
@@ -33,7 +33,7 @@ pub struct Content
 {
     uri: String,
     body: Vec<u8>,
-    content_type: String,
+    content_type: MIME,
     disk_path: String,
     cache_period_seconds: u16,
     hash: Vec<u8>,
@@ -118,7 +118,7 @@ impl Content
             uri: uri.to_string(), 
             body: vec![], 
             disk_path: disk_path.to_string(), 
-            content_type: infer_mime_type(disk_path).to_string(),
+            content_type: <MIME as Mime>::infer_mime_type(disk_path),
             cache_period_seconds: cache,
             hash: vec![],
             last_refreshed: SystemTime::now(),
@@ -149,7 +149,7 @@ impl Content
         String::from_utf8(self.body.clone())
     }
 
-    pub fn get_content_type(&self) -> String
+    pub fn get_content_type(&self) -> MIME
     {
         self.content_type.clone()
     }
@@ -179,7 +179,7 @@ pub fn insert_tag(body: String)
 impl IntoResponse for Content {
     fn into_response(self) -> Response {
         
-        let mut response = if self.content_type == "text/html"
+        let mut response = if self.content_type == MIME::TextHtml
         {
             let mut string_body = match self.utf8_body()
             {
@@ -200,7 +200,7 @@ impl IntoResponse for Content {
         };
 
         response.headers_mut()
-            .insert("content-type", self.content_type.parse().unwrap());
+            .insert("content-type", self.content_type.as_str().parse().unwrap());
 
         let time_stamp = chrono::offset::Utc::now().to_rfc3339();
         response.headers_mut()

@@ -39,15 +39,17 @@ if not cov.is_file():
 
 entries = []
 max_size = 0
-overall = 0.0
+covered = 0
+coverable = 0
 for file in json.load(open(cov))['files']:
+    path = file['path']
+    if file['coverable'] == 0 or 'tests' in path:
+        continue
+    
     coverage = round(100*float(file['covered'])/float(max(1, file['coverable'])),2)
     lines = f"{file['covered']} / {file['coverable']}"
-    overall += coverage
-    path = file['path']
-    
-    if "tests" in path:
-        continue
+    covered += file['covered']
+    coverable += file['coverable']
 
     if 'src' in path:
         name = '/'.join(path[path.index('src'):len(path)])
@@ -59,7 +61,8 @@ for file in json.load(open(cov))['files']:
     
 entries = sorted(entries, key = lambda x: x[1])
 
-this_coverage = round(overall/len(entries),2)
+print(covered, coverable)
+this_coverage = round(100.0*covered/coverable, 2)
 
 diff = None
 if main_coverage is not None:
