@@ -146,7 +146,7 @@ impl ApiRequest for StatsDigest
 
         if self.payload.post_discord
         {
-            match post(config.notification_endpoint, msg.clone()).await
+            match post(&config.notification_endpoint, msg.clone()).await
             {
                 Ok(_s) => (),
                 Err(e) => {crate::debug(format!("Error posting to discord\n{}", e), None);}

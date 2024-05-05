@@ -14,8 +14,8 @@ impl Webhook
         Webhook { addr: url }
     }
 
-    pub fn get_addr(self: Webhook) -> String 
+    pub fn get_addr(&self) -> String 
     {
-        self.addr
+        self.addr.clone()
     }
 }

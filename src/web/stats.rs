@@ -566,7 +566,7 @@ impl Stats
                 {
                     stats.summary = Self::process_hits(stats_config.path.clone(), Some(stats.last_digest), None, stats_config.top_n_digest, Some(stats.to_owned()));
                     let msg = Stats::digest_message(stats.summary.clone(), Some(stats.last_digest), None);
-                    match post(config.notification_endpoint, msg).await
+                    match post(&config.notification_endpoint, msg).await
                     {
                         Ok(_s) => (),
                         Err(e) => {crate::debug(format!("Error posting to discord\n{}", e), None);}

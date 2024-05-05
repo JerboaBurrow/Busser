@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::net::{SocketAddr, Ipv4Addr, IpAddr};
 use std::time::{Instant, Duration};
 use std::sync::Arc;
-use openssl::sha::{self, sha512};
+use openssl::sha::sha512;
 use tokio::sync::Mutex;
 
 use axum::

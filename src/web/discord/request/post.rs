@@ -19,7 +19,7 @@ use crate::web::discord::request::model::Webhook;
 /// 
 /// pub async fn post_to_discord(){
 ///     let w = Webhook::new("https://discord.com/api/webhooks/xxx/yyy".to_string());
-///     post(w, "this is some plaintext".to_string());
+///     post(&w, "this is some plaintext".to_string());
 /// }
 /// ```
 /// 
@@ -34,7 +34,7 @@ use crate::web::discord::request::model::Webhook;
 ///  {"content": "this is some plaintext"}
 /// ``` 
 
-pub async fn post(w: Webhook, msg: String) -> Result<String, reqwest::Error>
+pub async fn post(w: &Webhook, msg: String) -> Result<String, reqwest::Error>
 {
 
     crate::debug(format!("Posting to Discord {:?}", msg), None);
@@ -43,7 +43,7 @@ pub async fn post(w: Webhook, msg: String) -> Result<String, reqwest::Error>
     let mut map = HashMap::new();
     map.insert("content", &msg);
     
-    match client.post(&w.get_addr())
+    match client.post(w.clone().get_addr())
         .json(&map)
         .send()
         .await

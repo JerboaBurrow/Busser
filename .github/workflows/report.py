@@ -61,7 +61,6 @@ for file in json.load(open(cov))['files']:
     
 entries = sorted(entries, key = lambda x: x[1])
 
-print(covered, coverable)
 this_coverage = round(100.0*covered/coverable, 2)
 
 diff = None
