@@ -35,7 +35,8 @@ pub struct Content
     body: Vec<u8>,
     content_type: MIME,
     disk_path: String,
-    cache_period_seconds: u16,
+    browser_cache_period_seconds: u16,
+    server_cache_period_seconds: u16,
     hash: Vec<u8>,
     last_refreshed: SystemTime,
     tag_insertion: bool
@@ -53,7 +54,7 @@ impl PartialEq for Content
         return self.uri == other.uri && self.body == other.body &&
                self.content_type == other.content_type &&
                self.disk_path == other.disk_path &&
-               self.cache_period_seconds == other.cache_period_seconds &&
+               self.browser_cache_period_seconds == other.browser_cache_period_seconds &&
                self.hash == other.hash
     }
 }
@@ -92,7 +93,11 @@ impl Observed for Content
 
     fn refresh(&mut self)
     {
-        let _ = self.load_from_file();
+        match self.load_from_file()
+        {
+            Ok(()) => (),
+            Err(e) => {crate::debug(format!("Could not refresh file {}, data not updated", e), None);}
+        }
     }
 
     fn last_refreshed(&self) -> SystemTime 
@@ -111,7 +116,7 @@ impl HasUir for Content
 
 impl Content
 {
-    pub fn new(uri: &str, disk_path: &str, cache: u16, tag_insertion: bool) -> Content
+    pub fn new(uri: &str, disk_path: &str, server_cache: u16, browser_cache: u16, tag_insertion: bool) -> Content
     {
         Content 
         { 
@@ -119,10 +124,24 @@ impl Content
             body: vec![], 
             disk_path: disk_path.to_string(), 
             content_type: <MIME as Mime>::infer_mime_type(disk_path),
-            cache_period_seconds: cache,
+            server_cache_period_seconds: server_cache,
+            browser_cache_period_seconds: browser_cache,
             hash: vec![],
             last_refreshed: SystemTime::now(),
             tag_insertion
+        }
+    }
+
+    pub fn server_cache_expired(&self) -> bool
+    {
+        match self.last_refreshed.elapsed()
+        {
+            Ok(duration) => {duration.as_secs() > self.browser_cache_period_seconds as u64},
+            Err(e) =>
+            {
+                crate::debug(format!("Time error checking cache is expired {}", e), None);
+                true
+            }
         }
     }
 
@@ -139,6 +158,7 @@ impl Content
             }
             None => 
             {
+                self.last_refreshed = SystemTime::now();
                 Err(FileError { why: format!("Could not read bytes from {}", self.disk_path)})
             }
         }
@@ -207,7 +227,7 @@ impl IntoResponse for Content {
             .insert("date", time_stamp.parse().unwrap());
 
         response.headers_mut()
-            .insert("cache-control", format!("public, max-age={}", self.cache_period_seconds).parse().unwrap());
+            .insert("cache-control", format!("public, max-age={}", self.browser_cache_period_seconds).parse().unwrap());
         
         response
     }
@@ -226,7 +246,7 @@ pub fn is_page(uri: &str, domain: &str) -> bool
     }
 }
 
-pub fn get_content(root: &str, path: &str, cache_period_seconds: Option<u16>, tagging: Option<bool>) -> Vec<Content>
+pub fn get_content(root: &str, path: &str, server_cache_period_seconds: Option<u16>, browser_cache_period_seconds: Option<u16>, tagging: Option<bool>) -> Vec<Content>
 {
 
     let content_paths = list_dir_by(None, path.to_string());
@@ -237,16 +257,22 @@ pub fn get_content(root: &str, path: &str, cache_period_seconds: Option<u16>, ta
         None => false
     };
 
-    let cache = match cache_period_seconds
+    let browser_cache = match browser_cache_period_seconds
     {
         Some(p) => p,
         None => 3600
     };
 
+    let server_cache = match server_cache_period_seconds
+    {
+        Some(p) => p,
+        None => 60
+    };
+
     for content_path in content_paths
     {
         let uri = content_path.clone().replace(root,"");
-        contents.push(Content::new(&uri, &content_path, cache, tag));
+        contents.push(Content::new(&uri, &content_path, server_cache, browser_cache, tag));
     }
 
     let dirs = list_sub_dirs(path.to_string());
@@ -255,7 +281,7 @@ pub fn get_content(root: &str, path: &str, cache_period_seconds: Option<u16>, ta
     {
         for dir in dirs
         {
-            for resource in get_content(root, &dir, cache_period_seconds, tagging)
+            for resource in get_content(root, &dir, server_cache_period_seconds, browser_cache_period_seconds, tagging)
             {
                 contents.push(resource);
             }

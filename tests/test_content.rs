@@ -10,7 +10,7 @@ mod test_content
     #[test]
     fn test_load_content()
     {
-        let mut content = Content::new("tests/pages/a.html", "tests/pages/a.html", 3600, false);
+        let mut content = Content::new("tests/pages/a.html", "tests/pages/a.html", 60, 3600, false);
 
         assert_eq!(content.get_uri(), "tests/pages/a.html".to_string());
         assert!(content.utf8_body().is_ok_and(|b| b == "".to_string()));
@@ -24,7 +24,7 @@ mod test_content
         {
             let _ = remove_file(file);
         }
-        let mut content_missing = Content::new(file, file, 3600, false);
+        let mut content_missing = Content::new(file, file, 60, 3600, false);
         assert!(content_missing.load_from_file().is_err());
     }
 
@@ -39,7 +39,7 @@ mod test_content
 
         write_file_bytes(path, test_content.as_bytes());
 
-        let mut content = Content::new(path, path, 3600, false);
+        let mut content = Content::new(path, path, 60, 3600, false);
 
         assert!(content.load_from_file().is_ok());
         assert!(!content.is_stale());
@@ -58,13 +58,14 @@ mod test_content
     #[test]
     fn test_last_refreshed()
     {
-        let mut content = Content::new("tests/pages/a.html", "tests/pages/a.html", 3600, false);
+        let mut content = Content::new("tests/pages/a.html", "tests/pages/a.html", 60, 3600, false);
         assert!(content.load_from_file().is_ok());
         let a = content.last_refreshed();
         sleep(time::Duration::from_secs(2));
         assert!(content.load_from_file().is_ok());
         let b = content.last_refreshed();
         assert!(a < b);
+        assert!(!content.server_cache_expired())
     }
 
     #[test]
@@ -73,12 +74,12 @@ mod test_content
         let ignore_patterns = vec![".gif".to_string(), ".ico".to_string()];
 
         let content = vec![
-            Content::new("tests/pages/a.html", "tests/pages/a.html", 3600, false),
-            Content::new("tests/pages/data/b.txt", "tests/pages/data/b.txt", 3600, false),
-            Content::new("tests/pages/data/ico.ico", "tests/pages/data/ico.ico", 3600, false),
-            Content::new("tests/pages/data/gif.gif", "tests/pages/data/gif.gif", 3600, false),
-            Content::new("tests/pages/data/mp4.gif", "tests/pages/data/mp4.gif", 3600, false),
-            Content::new("tests/pages/data/png.jpg", "tests/pages/data/png.jpg", 3600, false),
+            Content::new("tests/pages/a.html", "tests/pages/a.html", 60, 3600, false),
+            Content::new("tests/pages/data/b.txt", "tests/pages/data/b.txt", 60, 3600, false),
+            Content::new("tests/pages/data/ico.ico", "tests/pages/data/ico.ico", 60, 3600, false),
+            Content::new("tests/pages/data/gif.gif", "tests/pages/data/gif.gif", 60, 3600, false),
+            Content::new("tests/pages/data/mp4.gif", "tests/pages/data/mp4.gif", 60, 3600, false),
+            Content::new("tests/pages/data/png.jpg", "tests/pages/data/png.jpg", 60, 3600, false),
         ];
 
         let filter = ContentFilter::new(ignore_patterns);
@@ -98,7 +99,7 @@ mod test_content
     #[test]
     fn test_content_types()
     {
-        let contents = get_content("tests/pages", "tests/pages/data", None, None);
+        let contents = get_content("tests/pages", "tests/pages/data", None, None, None);
 
         assert_eq!(contents.len(), 19);
 
@@ -127,8 +128,8 @@ mod test_content
 
         for (path, (expected_uri, expected_mime_type)) in paths
         {
-            assert!(contents.contains(&Content::new(expected_uri, path, 3600, false)));
-            let res = Content::new(path, &path, 3600, false);
+            assert!(contents.contains(&Content::new(expected_uri, path, 60, 3600, false)));
+            let res = Content::new(path, &path, 60, 3600, false);
             assert_eq!(res.get_content_type(), expected_mime_type)
         }
     }
@@ -136,7 +137,7 @@ mod test_content
     #[test]
     fn test_read_contents()
     {
-        let contents = get_content("tests/pages", "tests/pages", None, None);
+        let contents = get_content("tests/pages", "tests/pages", None, None, None);
 
         assert_eq!(contents.len(), 24);
 
@@ -150,7 +151,7 @@ mod test_content
 
         for (path, (expected_uri, expected_body)) in paths
         {
-            let mut content = Content::new(&expected_uri, path, 3600, false);
+            let mut content = Content::new(&expected_uri, path, 60, 3600, false);
             assert!(contents.contains(&content));
             content.load_from_file().unwrap();
             let actual_body = content.utf8_body().unwrap();

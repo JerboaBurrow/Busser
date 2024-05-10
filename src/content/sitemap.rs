@@ -6,7 +6,7 @@ use chrono::{DateTime, Datelike, Utc};
 use indicatif::ProgressBar;
 use quick_xml::{events::{BytesText, Event}, Error, Writer};
 use regex::Regex;
-use crate::{content::{filter::ContentFilter, HasUir}, filesystem::file::{write_file_bytes, File}, util::format_elapsed};
+use crate::{config::read_config, content::{filter::ContentFilter, HasUir}, filesystem::file::{write_file_bytes, File, Observed}, util::format_elapsed};
 
 use crate::server::https::parse_uri;
 
@@ -26,21 +26,28 @@ impl ContentTree
         ContentTree { uri_stem: uri_stem.to_string(), contents: vec![], children: BTreeMap::new() }
     }
 
-    fn route(&self) -> Router
+    fn route(&self, static_router: bool) -> Router
     {
         let mut router: Router<(), axum::body::Body> = Router::new();
-        for content in self.contents.clone()
+        for mut content in self.contents.clone()
         {
             router = router.route
             (
                 &content.get_uri(), 
-                get(|| async move {content.into_response()})
+                get(move || async move 
+                    {
+                        if !static_router && content.server_cache_expired() && content.is_stale()
+                        {
+                            content.refresh()
+                        }
+                        content.into_response()
+                    })
             );
         }
 
         for (_uri, child) in &self.children
         {
-            router = router.merge(child.route());
+            router = router.merge(child.route(static_router));
         }
 
         router
@@ -180,7 +187,8 @@ impl SiteMap
     pub fn build
     (
         &mut self, 
-        cache_period: u16, 
+        browser_cache_period: u16,
+        server_cache_period: u16, 
         tag: bool,
         short_urls: bool,
         filter: Option<&ContentFilter>
@@ -194,7 +202,8 @@ impl SiteMap
         (
             &self.content_path,
             &self.content_path,
-            Some(cache_period),
+            Some(server_cache_period),
+            Some(browser_cache_period),
             Some(tag)
         );
         spinner.finish();
@@ -237,7 +246,7 @@ impl SiteMap
 
                         crate::debug(format!("Adding content as short url: {}", short_uri), None);
 
-                        let content_short = Content::new(&short_uri, &content.path(), cache_period, tag);
+                        let content_short = Content::new(&short_uri, &content.path(), server_cache_period, browser_cache_period, tag);
 
                         self.contents.push(content_short.uri.clone(), content_short);
                     }
@@ -256,7 +265,7 @@ impl SiteMap
             let robots = format!("Sitemap: {}/sitemap.xml", self.domain);
             let path = format!("{}/{}",self.content_path,"robots.txt");
             write_file_bytes(&path, robots.as_bytes());
-            let robots = Content::new("/robots.txt",&path, cache_period, tag);
+            let robots = Content::new("/robots.txt",&path, server_cache_period, browser_cache_period, tag);
             self.contents.push(robots.uri.clone(), robots);
             crate::debug(format!("No robots.txt specified, generating robots.txt"), None);
         }
@@ -265,7 +274,7 @@ impl SiteMap
         {
             let path = format!("{}/{}",self.content_path,"sitemap.xml");
             write_file_bytes(&path, &self.to_xml());
-            let sitemap = Content::new("/sitemap.xml", &path, cache_period, tag);
+            let sitemap = Content::new("/sitemap.xml", &path, server_cache_period, browser_cache_period, tag);
             self.contents.push(sitemap.uri.clone(), sitemap);
             crate::debug(format!("No sitemap.xml specified, generating sitemap.xml"), None);
         }
@@ -312,9 +321,22 @@ impl SiteMap
 
 impl Into<Router> for SiteMap
 {
-    fn into(self) -> Router 
+    fn into(self) -> Router
     {
-        self.contents.route()
+        let static_router = match read_config()
+        {
+            Some(config) =>
+            {
+                match config.content.static_content
+                {
+                    Some(b) => b,
+                    None => false
+                }
+            },
+            None => false
+        };
+
+        self.contents.route(static_router)
     }
 }
 

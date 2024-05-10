@@ -43,7 +43,9 @@ pub struct ThrottleConfig
 /// - ```path```: path to site data
 /// - ```home```: path to home page served on /
 /// - ```allow_without_extension```: allow serving without .html
-/// - ```cache_period_seconds: u16```: page/resource max cache age
+/// - ```browser_cache_period_seconds: u16```: content max cache age in cache-control for users
+/// - ```server_cache_period_seconds: u16```: internal cache period if content is not static
+/// - ```static_content: Option<bool>```: all content is immutably cached at launch
 /// - ```ignore_regexes: Option<Vec<String>>```: do not serve content matching any of these patterns
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ContentConfig
@@ -52,7 +54,9 @@ pub struct ContentConfig
     pub home: String,
     pub allow_without_extension: bool,
     pub ignore_regexes: Option<Vec<String>>,
-    pub cache_period_seconds: u16
+    pub browser_cache_period_seconds: u16,
+    pub server_cache_period_seconds: u16,
+    pub static_content: Option<bool>
 }
 
 /// Configure the server
