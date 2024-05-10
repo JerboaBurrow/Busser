@@ -93,7 +93,8 @@ impl Server
             {
                 sitemap.build
                 (
-                    config.content.cache_period_seconds, 
+                    config.content.browser_cache_period_seconds,
+                    config.content.server_cache_period_seconds,
                     tag, 
                     config.content.allow_without_extension, 
                     Some(&ContentFilter::new(p))
@@ -103,7 +104,8 @@ impl Server
             {
                 sitemap.build
                 (
-                    config.content.cache_period_seconds, 
+                    config.content.browser_cache_period_seconds,
+                    config.content.server_cache_period_seconds,
                     tag, 
                     config.content.allow_without_extension, 
                     None
@@ -111,7 +113,7 @@ impl Server
             }
         };
 
-        let mut home = Content::new("/", &config.content.home.clone(), config.content.cache_period_seconds, tag);
+        let mut home = Content::new("/", &config.content.home.clone(), config.content.server_cache_period_seconds, config.content.browser_cache_period_seconds, tag);
         match home.load_from_file()
         {
             Ok(()) =>
