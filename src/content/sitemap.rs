@@ -233,7 +233,6 @@ impl SiteMap
         { 
             if content.get_uri().contains("sitemap.xml")
             {
-                println!("{}", content.get_uri());
                 no_sitemap = false;
             }
             if content.get_uri().contains("robots.txt")
