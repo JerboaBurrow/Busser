@@ -19,19 +19,15 @@
     <url>
             <image:image>
                     <image:loc>https://test.domain/data/gif.gif</image:loc>
-                    <lastmod>TODAY</lastmod>
             </image:image>
             <image:image>
                     <image:loc>https://test.domain/data/ico.ico</image:loc>
-                    <lastmod>TODAY</lastmod>
             </image:image>
             <image:image>
                     <image:loc>https://test.domain/data/jpg.jpg</image:loc>
-                    <lastmod>TODAY</lastmod>
             </image:image>
             <image:image>
                     <image:loc>https://test.domain/data/mp4.gif</image:loc>
-                    <lastmod>TODAY</lastmod>
             </image:image>
             <video:video>
                     <video:content_loc>https://test.domain/data/mp4.mp4</video:content_loc>
@@ -43,11 +39,9 @@
             </video:video>
             <image:image>
                     <image:loc>https://test.domain/data/png.jpg</image:loc>
-                    <lastmod>TODAY</lastmod>
             </image:image>
             <image:image>
                     <image:loc>https://test.domain/data/png.png</image:loc>
-                    <lastmod>TODAY</lastmod>
             </image:image>
             <video:video>
                     <video:content_loc>https://test.domain/data/qt.mov</video:content_loc>
@@ -55,11 +49,9 @@
             </video:video>
             <image:image>
                     <image:loc>https://test.domain/data/svg.svg</image:loc>
-                    <lastmod>TODAY</lastmod>
             </image:image>
             <image:image>
                     <image:loc>https://test.domain/data/tiff.tiff</image:loc>
-                    <lastmod>TODAY</lastmod>
             </image:image>
             <video:video>
                     <video:content_loc>https://test.domain/data/vid.flv</video:content_loc>

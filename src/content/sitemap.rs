@@ -132,7 +132,6 @@ impl ContentTree
                             writer.create_element("image:image").write_inner_content::<_, Error>(|writer|
                                 {
                                     writer.create_element("image:loc").write_text_content(BytesText::new(&format!("{}{}",domain, content.get_uri())))?;
-                                    writer.create_element("lastmod").write_text_content(BytesText::new(&lastmod(content.last_refreshed)))?;
                                     Ok(())
                                 })?;
                         }
