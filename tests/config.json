@@ -13,18 +13,21 @@
         "path": "stats",
         "hit_cooloff_seconds": 60,
         "digest_period_seconds": 86400,
-        "log_files_clear_period_seconds": 2419200
+        "log_files_clear_period_seconds": 2419200,
+        "ignore_regexes": ["/favicon.ico"]
     },
     "content": 
     {
-        "path": "tests/pages",
+        "path": "/home/jerboa/Website/",
         "home": "/home/jerboa/Website/jerboa.html",
         "allow_without_extension": true,
-        "cache_period_seconds": 3600
+        "browser_cache_period_seconds": 3600,
+        "server_cache_period_seconds": 1,
+        "ignore_regexes": ["/.git", "workspace"]
     },
-    "domain": "jerboa.app",
-    "api_token": "a_secret_token",
-    "notification_endpoint": { "addr": "https://discord.com/api/webhooks/xxx/yyy" },
+    "domain": "127.0.0.1",
+    "api_token": "some_secure_secret_token",
+    "notification_endpoint": { "addr": "https://discord.com/api/webhooks/abc/xyz" },
     "cert_path": "certs/cert.pem",
     "key_path": "certs/key.pem"
 }

@@ -1,5 +1,6 @@
 
-use std::{collections::BTreeMap, time::{Duration, Instant, SystemTime}, vec};
+use std::{collections::BTreeMap, sync::Arc, time::{Duration, Instant, SystemTime}, vec};
+use tokio::sync::Mutex;
 
 use axum::{response::IntoResponse, routing::get, Router};
 use chrono::{DateTime, Datelike, Utc};
@@ -15,7 +16,7 @@ use super::{get_content, mime_type::Mime, Content};
 pub struct ContentTree
 {
     uri_stem: String,
-    contents: Vec<Content>,
+    contents: Vec<(Content, Arc<Mutex<bool>>)>,
     children: BTreeMap<String, ContentTree>
 }
 
@@ -29,16 +30,23 @@ impl ContentTree
     fn route(&self, static_router: bool) -> Router
     {
         let mut router: Router<(), axum::body::Body> = Router::new();
-        for mut content in self.contents.clone()
+        for (mut content, mutex) in self.contents.clone()
         {
             router = router.route
             (
                 &content.get_uri(), 
                 get(move || async move 
                     {
+                        // check if we should attempt a lock
                         if !static_router && content.server_cache_expired() && content.is_stale()
                         {
-                            content.refresh()
+                            let _ = mutex.lock().await;
+                            if content.server_cache_expired() && content.is_stale()
+                            {
+                                // got the lock, and still stale
+                                content.refresh();
+                                crate::debug(format!("Refresh called on Content {}", content.get_uri()), None);
+                            }
                         }
                         content.into_response()
                     })
@@ -57,7 +65,7 @@ impl ContentTree
     {
         if uri_stem == "/"
         {
-            self.contents.push(content);
+            self.contents.push((content, Arc::new(Mutex::new(false))));
             return;
         }
 
@@ -91,7 +99,7 @@ impl ContentTree
             }
             None =>
             {
-                self.contents.push(content)
+                self.contents.push((content, Arc::new(Mutex::new(false))))
             }
         }
     }
@@ -113,7 +121,7 @@ impl ContentTree
                 .write_inner_content::<_, Error>
                 (|writer|
                 {
-                    for content in &self.contents
+                    for (content, _) in &self.contents
                     {
                         if content.get_uri().contains("sitemap.xml")
                         {
