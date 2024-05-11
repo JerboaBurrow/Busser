@@ -233,6 +233,7 @@ impl SiteMap
         { 
             if content.get_uri().contains("sitemap.xml")
             {
+                println!("{}", content.get_uri());
                 no_sitemap = false;
             }
             if content.get_uri().contains("robots.txt")
@@ -294,8 +295,22 @@ impl SiteMap
         let mut buffer = Vec::new();
         let mut writer = Writer::new_with_indent(&mut buffer, b' ', 4);
 
+        match writer.write_event(Event::Text(BytesText::from_escaped("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n")))
+        {
+            Ok(_) => (),
+            Err(e) => {crate::debug(format!("Error {} writing content of sitemap to xml", e), None)}
+        }
+
         match writer.create_element("urlset")
-            .with_attributes(vec![("xmlns", "http://www.sitemaps.org/schemas/sitemap/0.9")].into_iter())
+            .with_attributes
+            (
+                vec!
+                [
+                    ("xmlns", "http://www.sitemaps.org/schemas/sitemap/0.9"),
+                    ("xmlns:image", "http://www.google.com/schemas/sitemap-image/1.1"),
+                    ("xmlns:video", "http://www.google.com/schemas/sitemap-video/1.1")
+                ].into_iter()
+            )
             .write_inner_content::<_, Error>
             (|writer|
             {

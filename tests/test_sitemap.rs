@@ -27,7 +27,8 @@ mod sitemap
             }
         }
 
-        let empty_sitemap = r#"<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>"#;
+        let empty_sitemap = r#"<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1"></urlset>"#;
         let mut sitemap = SiteMap::new("https://test.domain".to_owned(), "tests/pages".to_owned());
         assert_eq!(empty_sitemap, String::from_utf8(sitemap.to_xml()).unwrap());
         sitemap.build(60, 3600, true, true, None);
