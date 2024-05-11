@@ -136,7 +136,7 @@ impl Content
     {
         match self.last_refreshed.elapsed()
         {
-            Ok(duration) => {duration.as_secs() > self.browser_cache_period_seconds as u64},
+            Ok(duration) => {duration.as_secs() > self.server_cache_period_seconds as u64},
             Err(e) =>
             {
                 crate::debug(format!("Time error checking cache is expired {}", e), None);
