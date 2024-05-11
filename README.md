@@ -15,25 +15,19 @@
 [![Coverage Status](https://coveralls.io/repos/github/JerboaBurrow/Busser/badge.svg?branch=main)](https://coveralls.io/github/JerboaBurrow/Busser?branch=main)
 </div>
 
-✔️ Host static HTML/css/js/text and image/video content (png, jpg, gif, webp, mp4, ...) content from a given directory
+✔️ Host static (but automatically refreshable) website content from a given directory
 
-✔️ Serve with and without ```.html```, e.g. ```/x/y/z/webpage.html``` aliased as ```/x/y/z/webpage```
+✔️ URL shortening, e.g. ```/x/y/z/webpage.html``` aliased as ```/x/y/z/webpage```
 
-✔️ Http redirect to https
+✔️ Http redirect to https and Https certificates
 
-✔️ Https certificates
+✔️ IP throttling, and anonymised hit statistics 
 
-✔️ IP throttling
-
-✔️ Hit statistics and statistics digest (Discord webhook integration)
+✔️ Authenticated API for status/statistics polling, with Discord webhook integration
 
 ✔️ Hot :fire: loadable configuration
 
-✔️ Host via **free tier** cloud services!
-
-✔️ Discord webhook integration for status messages
-
-✔️ Authenticated API for status/statistics polling
+✔️ Host via **free tier** cloud services or a Raspberry Pi!
 
 - [Spinning up](#spinning-up)
     - [Configuration](#configuration)
@@ -64,21 +58,27 @@ The ```config.json``` specifies key properties of the site and its content
     },
     "stats": 
     {
-        "save_period_seconds": 86400,
+        "save_period_seconds": 10,
         "path": "stats",
-        "hit_cooloff_seconds": 3600,
-        "digest_period_seconds": 604800,
-        "log_files_clear_period_seconds": 2419200
+        "hit_cooloff_seconds": 60,
+        "digest_period_seconds": 86400,
+        "log_files_clear_period_seconds": 2419200,
+        "ignore_regexes": ["/favicon.ico"]
     },
-    "path": "/path/to/your/Website/files",
-    "home": "/path/to/your/Website/homepage.html",
-    "domain": "your.domain.name",
-    "api_token": "create_your_own_api_token_here",
-    "allow_without_extension": true,
-    "notification_endpoint": { "addr": "https://discord.com/api/webhooks/xxx/yyy" },
-    "cache_period_seconds": 3600,
-    "cert_path": "path/to/your/ssl/cert.pem",
-    "key_path": "path/to/your/ssl/key.pem"
+    "content": 
+    {
+        "path": "/home/jerboa/Website/",
+        "home": "/home/jerboa/Website/jerboa.html",
+        "allow_without_extension": true,
+        "browser_cache_period_seconds": 3600,
+        "server_cache_period_seconds": 1,
+        "ignore_regexes": ["/.git", "workspace"]
+    },
+    "domain": "127.0.0.1",
+    "api_token": "some_secure_secret_token",
+    "notification_endpoint": { "addr": "https://discord.com/api/webhooks/abc/xyz" },
+    "cert_path": "certs/cert.pem",
+    "key_path": "certs/key.pem"
 }
 ```
 ____
