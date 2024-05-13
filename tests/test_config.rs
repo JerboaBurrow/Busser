@@ -40,4 +40,16 @@ mod config
         assert_eq!(config.content.server_cache_period_seconds, 1);
         assert_eq!(config.content.ignore_regexes.unwrap(), vec!["/.git", "workspace"]);
     }
+
+    #[test]
+    fn test_config_error()
+    {
+        let missing_config = read_config("not_a_config");
+
+        assert!(missing_config.is_none());
+
+        let not_a_config = read_config("test/pages/b.html");
+
+        assert!(not_a_config.is_none());
+    }
 }

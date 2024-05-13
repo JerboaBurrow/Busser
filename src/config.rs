@@ -94,7 +94,7 @@ pub fn read_config(path: &str) -> Option<Config>
             Some(d) => d,
             None =>
             {
-                println!("Error reading configuration file {} no data", path);
+                crate::debug(format!("Error reading configuration file {} no data", path), None);
                 return None
             }
         };
@@ -104,7 +104,7 @@ pub fn read_config(path: &str) -> Option<Config>
             Ok(data) => {data},
             Err(why) => 
             {
-                println!("Error reading configuration file {}\n{}", path, why);
+                crate::debug(format!("Error reading configuration file {}\n{}", path, why), None);
                 return None
             }
         };
@@ -113,7 +113,7 @@ pub fn read_config(path: &str) -> Option<Config>
     }
     else 
     {
-        println!("Error configuration file {} does not exist", path);
+        crate::debug(format!("Error configuration file {} does not exist", path), None);
         None
     }
 }
