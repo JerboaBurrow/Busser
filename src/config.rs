@@ -99,16 +99,16 @@ impl AppState
     } 
 }
 
-pub fn read_config() -> Option<Config>
+pub fn read_config(path: &str) -> Option<Config>
 {
-    if Path::new(CONFIG_PATH).exists()
+    if Path::new(&path).exists()
     {
-        let data = match read_file_utf8(CONFIG_PATH)
+        let data = match read_file_utf8(&path)
         {
             Some(d) => d,
             None =>
             {
-                println!("Error reading configuration file {} no data", CONFIG_PATH);
+                println!("Error reading configuration file {} no data", path);
                 return None
             }
         };
@@ -118,7 +118,7 @@ pub fn read_config() -> Option<Config>
             Ok(data) => {data},
             Err(why) => 
             {
-                println!("Error reading configuration file {}\n{}", CONFIG_PATH, why);
+                println!("Error reading configuration file {}\n{}", path, why);
                 return None
             }
         };
@@ -127,7 +127,7 @@ pub fn read_config() -> Option<Config>
     }
     else 
     {
-        println!("Error configuration file {} does not exist", CONFIG_PATH);
+        println!("Error configuration file {} does not exist", path);
         None
     }
 }
