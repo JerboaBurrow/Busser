@@ -204,13 +204,11 @@ impl Stats
                 None => {continue}
             };
 
-            let mut file_hits: Vec<Hit> = match serde_json::from_str(&data)
+            match serde_json::from_str(&data)
             {
-                Ok(s) => s,
+                Ok(mut file_hits) => hits_to_filter.append(&mut file_hits),
                 Err(e) => {crate::debug(format!("Error {} loading stats file {}",e,file), None); continue}
             };
-
-            hits_to_filter.append(&mut file_hits);
         }
 
         if stats.is_some()
@@ -329,8 +327,11 @@ impl Stats
         let mut all_pages: Vec<(String, u16)> = pages.into_iter().collect();
         let mut all_resources: Vec<(String, u16)> = resources.into_iter().collect();
 
-        all_hitters.sort_by(|a: &(String, u16), b: &(String, u16)| a.1.cmp(&b.1));
-        all_hitters.reverse();
+        for data in vec![&mut all_hitters, &mut all_pages, &mut all_resources]
+        {
+            data.sort_by(|a: &(String, u16), b: &(String, u16)| a.1.cmp(&b.1));
+            data.reverse();
+        }
 
         digest.top_hitters = (0..n).map(|_i| ("".to_string(), 0)).collect();
 
@@ -345,12 +346,6 @@ impl Stats
                 digest.top_hitters[i] = ("".to_string(), 0);
             }
         }
-
-        all_pages.sort_by(|a: &(String, u16), b: &(String, u16)| a.1.cmp(&b.1));
-        all_pages.reverse();
-
-        all_resources.sort_by(|a: &(String, u16), b: &(String, u16)| a.1.cmp(&b.1));
-        all_resources.reverse();
 
         digest.top_pages = (0..n).map(|_i| ("".to_string(), 0)).collect();
         digest.top_resources = (0..n).map(|_i| ("".to_string(), 0)).collect();
