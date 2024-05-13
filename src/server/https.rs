@@ -1,6 +1,6 @@
 use crate::
 {
-    config::{read_config, Config}, content::{filter::ContentFilter, sitemap::SiteMap, Content}, web::{stats::{log_stats, Digest, Stats}, 
+    config::{read_config, Config, CONFIG_PATH}, content::{filter::ContentFilter, sitemap::SiteMap, Content}, web::{stats::{log_stats, Digest, Stats}, 
     throttle::{handle_throttle, IpThrottler}}, CRAB
 };
 
@@ -67,7 +67,7 @@ impl Server
     -> Server
     {
 
-        let config = match read_config()
+        let config = match read_config(CONFIG_PATH)
         {
             Some(c) => c,
             None =>

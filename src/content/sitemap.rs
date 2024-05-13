@@ -7,7 +7,7 @@ use chrono::{DateTime, Datelike, Utc};
 use indicatif::ProgressBar;
 use quick_xml::{events::{BytesText, Event}, Error, Writer};
 use regex::Regex;
-use crate::{config::read_config, content::{filter::ContentFilter, HasUir}, filesystem::file::{write_file_bytes, File, Observed}, util::format_elapsed};
+use crate::{config::{read_config, CONFIG_PATH}, content::{filter::ContentFilter, HasUir}, filesystem::file::{write_file_bytes, File, Observed}, util::format_elapsed};
 
 use crate::server::https::parse_uri;
 
@@ -344,7 +344,7 @@ impl Into<Router> for SiteMap
 {
     fn into(self) -> Router
     {
-        let static_router = match read_config()
+        let static_router = match read_config(CONFIG_PATH)
         {
             Some(config) =>
             {

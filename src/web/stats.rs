@@ -18,7 +18,7 @@ use axum::
     middleware::Next
 };
 
-use crate::config::read_config;
+use crate::config::{read_config, CONFIG_PATH};
 use crate::content::is_page;
 use crate::
 {
@@ -91,7 +91,7 @@ impl Stats
     {
         let start_time = Instant::now();
 
-        let config = match read_config()
+        let config = match read_config(CONFIG_PATH)
         {
             Some(c) => c,
             None =>
@@ -191,7 +191,7 @@ impl Stats
             None => 3
         };
 
-        let config = match read_config()
+        let config = match read_config(CONFIG_PATH)
         {
             Some(c) => c,
             None =>
@@ -387,7 +387,7 @@ impl Stats
 
     pub fn save(stats: &mut MutexGuard<'_, Stats>)
     {
-        let config = match read_config()
+        let config = match read_config(CONFIG_PATH)
         {
             Some(c) => c,
             None =>
@@ -432,7 +432,7 @@ impl Stats
 
     pub fn archive()
     {
-        let config = match read_config()
+        let config = match read_config(CONFIG_PATH)
         {
             Some(c) => c,
             None =>
@@ -546,7 +546,7 @@ impl Stats
             {
                 let mut stats = state.lock().await;
 
-                let config = match read_config()
+                let config = match read_config(CONFIG_PATH)
                 {
                     Some(c) => c,
                     None =>

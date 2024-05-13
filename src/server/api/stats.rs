@@ -6,7 +6,7 @@ use reqwest::StatusCode;
 use serde::Deserialize;
 use tokio::sync::Mutex;
 
-use crate::{config::read_config, web::{discord::request::post::post, is_authentic, stats::{self, Stats}}};
+use crate::{config::{read_config, CONFIG_PATH}, web::{discord::request::post::post, is_authentic, stats::{self, Stats}}};
 
 use super::ApiRequest;
 
@@ -51,7 +51,7 @@ impl ApiRequest for StatsDigest
     fn is_authentic(headers: HeaderMap, body: Bytes) -> StatusCode
     {
 
-        let config = match read_config()
+        let config = match read_config(CONFIG_PATH)
         {
             Some(c) => c,
             None =>
@@ -98,7 +98,7 @@ impl ApiRequest for StatsDigest
 
     async fn into_response(&self, stats: Option<Stats>) -> (Option<String>, StatusCode)
     {
-        let config = match read_config()
+        let config = match read_config(CONFIG_PATH)
         {
             Some(c) => c,
             None =>
