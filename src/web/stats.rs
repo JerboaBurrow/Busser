@@ -37,10 +37,10 @@ use crate::web::discord::request::post::post;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Hit
 {
-    count: u16,
-    times: Vec<String>,
-    path: String,
-    ip_hash: String
+    pub count: u16,
+    pub times: Vec<String>,
+    pub path: String,
+    pub ip_hash: String
 }
 
 #[derive(Debug, Clone)]
@@ -182,31 +182,9 @@ impl Stats
         ), Some("PERFORMANCE".to_string()));
     }
 
-    pub fn process_hits(path: String, from: Option<DateTime<chrono::Utc>>, to: Option<DateTime<chrono::Utc>>, top_n: Option<usize>, stats: Option<Stats>) -> Digest
+    pub fn collect_hits(path: String, stats: Option<Stats>, from: Option<DateTime<chrono::Utc>>, to: Option<DateTime<chrono::Utc>>) -> Vec<Hit>
     {
-
-        let n = match top_n
-        {
-            Some(n) => n,
-            None => 3
-        };
-
-        let config = match read_config(CONFIG_PATH)
-        {
-            Some(c) => c,
-            None =>
-            {
-                std::process::exit(1)
-            }
-        };
-
-        let mut digest = Digest::new();
-
         let stats_files = list_dir_by(None, path);
-
-        let mut hitters: HashMap<String, u16> = HashMap::new();
-        let mut pages: HashMap<String, u16> = HashMap::new();
-        let mut resources: HashMap<String, u16> = HashMap::new();
 
         let mut hits: Vec<Hit> = vec![];
 
@@ -275,13 +253,40 @@ impl Stats
             }
         }
 
+        hits
+    }
+
+    pub fn process_hits(path: String, from: Option<DateTime<chrono::Utc>>, to: Option<DateTime<chrono::Utc>>, top_n: Option<usize>, stats: Option<Stats>) -> Digest
+    {
+
+        let n = match top_n
+        {
+            Some(n) => n,
+            None => 3
+        };
+
+        let mut digest = Digest::new();
+
+        let config = match read_config(CONFIG_PATH)
+        {
+            Some(c) => c,
+            None =>
+            {
+                std::process::exit(1)
+            }
+        };
+
         let ignore_patterns = match config.content.ignore_regexes.clone()
         {
             Some(p) => p,
             None => vec![]
         };
 
-        for hit in hits
+        let mut hitters: HashMap<String, u16> = HashMap::new();
+        let mut pages: HashMap<String, u16> = HashMap::new();
+        let mut resources: HashMap<String, u16> = HashMap::new();
+
+        for hit in Self::collect_hits(path, stats, from, to)
         {
             if matches_one(&hit.path, &ignore_patterns)
             {
