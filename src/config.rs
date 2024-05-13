@@ -85,20 +85,6 @@ pub struct Config
     pub api_token: String
 }
 
-#[derive(Clone)]
-pub struct AppState
-{
-
-}
-
-impl AppState
-{
-    pub fn new() -> AppState
-    {
-        AppState {}
-    } 
-}
-
 pub fn read_config(path: &str) -> Option<Config>
 {
     if Path::new(&path).exists()
