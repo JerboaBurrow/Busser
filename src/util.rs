@@ -153,10 +153,11 @@ pub fn format_elapsed(tic: Instant) -> String
 pub fn date_now() -> String
 {
     let date = chrono::offset::Utc::now();
-    format!("{}-{}-{}", date.year(), date.month(), date.day())
+    format!("{:0>4}-{:0>2}-{:0>2}", date.year(), date.month(), date.day())
 }
 
-pub fn date_to_rfc3339(date: &str) -> DateTime<FixedOffset>
+pub fn date_to_rfc3339(date: &str) -> Result<DateTime<FixedOffset>, chrono::ParseError>
 {
-    DateTime::parse_from_rfc3339(format!("{}T00:00:00.000000000+00:00", date).as_str()).unwrap()
+    println!("{}",format!("{}T00:00:00+00:00", date).as_str());
+    DateTime::parse_from_rfc3339(format!("{}T00:00:00+00:00", date).as_str())
 }

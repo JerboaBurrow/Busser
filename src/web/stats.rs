@@ -203,7 +203,11 @@ impl Stats
                 None => {crate::debug(format!("Could not parse time from stats file name {}",file), None); continue}
             };
 
-            let t = date_to_rfc3339(time_string).to_utc();
+            let t = match date_to_rfc3339(time_string)
+            {
+                Ok(date) => date,
+                Err(e) => {crate::debug(format!("Error {} loading stats file {}",e,file), None); continue}
+            };
 
             if from.is_some_and(|from| t < from) { continue }
             if to.is_some_and(|to| t > to) { continue }
@@ -483,7 +487,7 @@ impl Stats
                 None => {crate::debug(format!("Could not parse time from stats file name {}",file), None); continue}
             };
 
-            let _t = match DateTime::parse_from_rfc3339(&time_string)
+            let _t = match date_to_rfc3339(time_string)
             {
                 Ok(date) => date,
                 Err(e) => {crate::debug(format!("Error {} loading stats file {}",e,file), None); continue}
