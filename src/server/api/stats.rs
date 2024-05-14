@@ -6,7 +6,7 @@ use reqwest::StatusCode;
 use serde::Deserialize;
 use tokio::sync::Mutex;
 
-use crate::{config::{read_config, CONFIG_PATH}, web::{discord::request::post::post, is_authentic, stats::{self, Stats}}};
+use crate::{config::{read_config, CONFIG_PATH}, server::stats::{digest::{digest_message, process_hits}, hits::HitStats}, web::{discord::request::post::post, is_authentic}};
 
 use super::ApiRequest;
 
@@ -96,7 +96,7 @@ impl ApiRequest for StatsDigest
         StatusCode::OK
     }
 
-    async fn into_response(&self, stats: Option<Stats>) -> (Option<String>, StatusCode)
+    async fn into_response(&self, stats: Option<HitStats>) -> (Option<String>, StatusCode)
     {
         let config = match read_config(CONFIG_PATH)
         {
@@ -141,8 +141,8 @@ impl ApiRequest for StatsDigest
             None => None
         };
 
-        let digest = Stats::process_hits(config.stats.path, from,to,config.stats.top_n_digest,stats);
-        let msg = Stats::digest_message(digest, from, to);
+        let digest = process_hits(config.stats.path, from,to,config.stats.top_n_digest,stats);
+        let msg = digest_message(digest, from, to);
 
         if self.payload.post_discord
         {
@@ -158,7 +158,7 @@ impl ApiRequest for StatsDigest
 
     async fn filter<B>
     (
-        State(stats): State<Option<Arc<Mutex<Stats>>>>,
+        State(stats): State<Option<Arc<Mutex<HitStats>>>>,
         headers: HeaderMap,
         request: Request<B>,
         next: Next<B>

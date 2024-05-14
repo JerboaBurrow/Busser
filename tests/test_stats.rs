@@ -3,9 +3,7 @@ mod common;
 #[cfg(test)]
 mod test_stats_graph
 {
-    use std::str::FromStr;
-
-    use busser::web::stats::{hits_by_hour_text_graph, Hit, Stats};
+    use busser::server::stats::{digest::{hits_by_hour_text_graph, process_hits}, hits::{collect_hits, Hit}};
     use chrono::DateTime;
 
     const GRAPH: &str = r#"00:00
@@ -46,7 +44,7 @@ mod test_stats_graph
     #[test]
     fn test_collect_hits()
     {
-        let mut hits = Stats::collect_hits("tests/stats".to_owned(), None, None, None);
+        let mut hits = collect_hits("tests/stats".to_owned(), None, None, None);
         assert_eq!(hits.len(), 17);
 
         let mut hit = Hit 
@@ -59,13 +57,13 @@ mod test_stats_graph
 
         assert!(hits.contains(&hit));
 
-        hits = Stats::collect_hits("tests/stats".to_owned(), None, Some(DateTime::parse_from_rfc3339("2024-03-25T00:00:00.000000000+00:00").unwrap().to_utc()), None);
+        hits = collect_hits("tests/stats".to_owned(), None, Some(DateTime::parse_from_rfc3339("2024-03-25T00:00:00.000000000+00:00").unwrap().to_utc()), None);
         
         assert_eq!(hits.len(), 1);
 
         assert!(hits.contains(&hit));
 
-        hits = Stats::collect_hits("tests/stats".to_owned(), None, None, Some(DateTime::parse_from_rfc3339("2024-03-24T23:12:44.736120969+00:00").unwrap().to_utc()));
+        hits = collect_hits("tests/stats".to_owned(), None, None, Some(DateTime::parse_from_rfc3339("2024-03-24T23:12:44.736120969+00:00").unwrap().to_utc()));
         
         assert_eq!(hits.len(), 16);
 
@@ -84,7 +82,7 @@ mod test_stats_graph
     #[test]
     fn test_stats_digest()
     {
-        let digest = Stats::process_hits("tests/stats".to_owned(), None, None, None, None);
+        let digest = process_hits("tests/stats".to_owned(), None, None, None, None);
         
         assert_eq!(digest.unique_hits, 9);
         assert_eq!(digest.total_hits, 21);

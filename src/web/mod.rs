@@ -8,9 +8,7 @@ use regex::Regex;
 
 use crate::util::{read_bytes, dump_bytes};
 
-pub mod throttle;
 pub mod discord;
-pub mod stats;
 
 /// Uses openssl to verify the request body via the given hmac_token
 ///   - hmac_header_key is the location in the https header for the digest
