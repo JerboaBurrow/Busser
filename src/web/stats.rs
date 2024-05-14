@@ -109,14 +109,11 @@ impl Stats
 
         let stats_config = config.stats;
 
-        let ip = addr.ip();
-        let ipv4: Ipv4Addr;
-    
-        match ip 
+        let ipv4: Ipv4Addr = match addr.ip()
         {
-            IpAddr::V4(ip4) => {ipv4 = ip4}
+            IpAddr::V4(ip4) => {ip4}
             IpAddr::V6(_ip6) => {return}
-        }
+        };
         
         let ip_hash = sha512(&ipv4.octets());
         let hash = sha512(&[uri.as_bytes(), &ipv4.octets()].concat());
@@ -126,29 +123,23 @@ impl Stats
             true =>
             {
                 let mut hit = stats.hits[&hash].clone();
-                let last_hit = stats.hits[&hash].times.last();
 
-                match last_hit 
+                match stats.hits[&hash].times.last()
                 {
                     None => {hit},
                     Some(s) => 
                     {
-                        let t = DateTime::parse_from_rfc3339(&s);
-                        match t 
+                        match DateTime::parse_from_rfc3339(&s)
                         {
                             Ok(t) => 
                             {
-                                let delta = (chrono::offset::Utc::now()-t.to_utc()).num_seconds();
-                                if delta < (stats_config.hit_cooloff_seconds as i64)
+                                if (chrono::offset::Utc::now()-t.to_utc()).num_seconds() < (stats_config.hit_cooloff_seconds as i64)
                                 {
-                                    let total_time = start_time.elapsed().as_secs_f64();
-                                    let compute_time = compute_start_time.elapsed().as_secs_f64();
-
                                     crate::debug(format!
                                     (
                                         "\nTotal stats time:         {} s (Passthrough)\nCompute stats time:       {} s (Passthrough)", 
-                                        total_time,
-                                        compute_time
+                                        start_time.elapsed().as_secs_f64(),
+                                        compute_start_time.elapsed().as_secs_f64()
                                     ), Some("PERFORMANCE".to_string()));
 
                                     return
@@ -164,7 +155,6 @@ impl Stats
             },
             false => 
             {
-
                 Hit {path: uri, count: 1, times: vec![chrono::offset::Utc::now().to_rfc3339()], ip_hash: dump_bytes(&ip_hash)}
             }
         };
@@ -173,15 +163,11 @@ impl Stats
 
         stats.hits.insert(hash, hit);
 
-        let compute_time = compute_start_time.elapsed().as_secs_f64();
-
-        let total_time = start_time.elapsed().as_secs_f64();
-
         crate::debug(format!
         (
             "\nTotal stats time:         {} s\nCompute stats time:       {} s", 
-            total_time,
-            compute_time
+            start_time.elapsed().as_secs_f64(),
+            compute_start_time.elapsed().as_secs_f64()
         ), Some("PERFORMANCE".to_string()));
     }
 
@@ -218,13 +204,11 @@ impl Stats
                 None => {continue}
             };
 
-            let mut file_hits: Vec<Hit> = match serde_json::from_str(&data)
+            match serde_json::from_str(&data)
             {
-                Ok(s) => s,
+                Ok(mut file_hits) => hits_to_filter.append(&mut file_hits),
                 Err(e) => {crate::debug(format!("Error {} loading stats file {}",e,file), None); continue}
             };
-
-            hits_to_filter.append(&mut file_hits);
         }
 
         if stats.is_some()
@@ -343,8 +327,11 @@ impl Stats
         let mut all_pages: Vec<(String, u16)> = pages.into_iter().collect();
         let mut all_resources: Vec<(String, u16)> = resources.into_iter().collect();
 
-        all_hitters.sort_by(|a: &(String, u16), b: &(String, u16)| a.1.cmp(&b.1));
-        all_hitters.reverse();
+        for data in vec![&mut all_hitters, &mut all_pages, &mut all_resources]
+        {
+            data.sort_by(|a: &(String, u16), b: &(String, u16)| a.1.cmp(&b.1));
+            data.reverse();
+        }
 
         digest.top_hitters = (0..n).map(|_i| ("".to_string(), 0)).collect();
 
@@ -359,12 +346,6 @@ impl Stats
                 digest.top_hitters[i] = ("".to_string(), 0);
             }
         }
-
-        all_pages.sort_by(|a: &(String, u16), b: &(String, u16)| a.1.cmp(&b.1));
-        all_pages.reverse();
-
-        all_resources.sort_by(|a: &(String, u16), b: &(String, u16)| a.1.cmp(&b.1));
-        all_resources.reverse();
 
         digest.top_pages = (0..n).map(|_i| ("".to_string(), 0)).collect();
         digest.top_resources = (0..n).map(|_i| ("".to_string(), 0)).collect();
