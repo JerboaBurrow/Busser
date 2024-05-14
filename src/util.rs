@@ -158,6 +158,5 @@ pub fn date_now() -> String
 
 pub fn date_to_rfc3339(date: &str) -> Result<DateTime<FixedOffset>, chrono::ParseError>
 {
-    println!("{}",format!("{}T00:00:00+00:00", date).as_str());
     DateTime::parse_from_rfc3339(format!("{}T00:00:00+00:00", date).as_str())
 }

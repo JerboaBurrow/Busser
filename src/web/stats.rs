@@ -37,7 +37,7 @@ use crate::
 
 use crate::web::discord::request::post::post;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Hit
 {
     pub count: u16,

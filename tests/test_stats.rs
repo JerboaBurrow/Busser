@@ -5,7 +5,7 @@ mod test_stats_graph
 {
     use std::str::FromStr;
 
-    use busser::web::stats::{hits_by_hour_text_graph, Stats};
+    use busser::web::stats::{hits_by_hour_text_graph, Hit, Stats};
     use chrono::DateTime;
 
     const GRAPH: &str = r#"00:00
@@ -49,36 +49,42 @@ mod test_stats_graph
         let mut hits = Stats::collect_hits("tests/stats".to_owned(), None, None, None);
         assert_eq!(hits.len(), 17);
 
-        assert_eq!(hits[0].count, 1);
-        assert_eq!(hits[0].times, vec!["2024-03-25T04:12:44.736120969+00:00"]);
-        assert_eq!(hits[0].path, "/login.php/'%3E%3Csvg/onload=confirm%60xss%60%3E");
-        assert_eq!(hits[0].ip_hash, "75A05052881EA1D68995532845978B4090012883F99354EFF67AD4E1ED5FF1833F4A2EC893181EAA00B94B9CD35E1E1DD581B7F80FEF2EFF45B75D529A080BD8");
-    
+        let mut hit = Hit 
+        {
+            count: 1,
+            times: vec!["2024-03-25T04:12:44.736120969+00:00".to_string()],
+            path: "/login.php/'%3E%3Csvg/onload=confirm%60xss%60%3E".to_owned(),
+            ip_hash: "75A05052881EA1D68995532845978B4090012883F99354EFF67AD4E1ED5FF1833F4A2EC893181EAA00B94B9CD35E1E1DD581B7F80FEF2EFF45B75D529A080BD8".to_owned()
+        };
+
+        assert!(hits.contains(&hit));
+
         hits = Stats::collect_hits("tests/stats".to_owned(), None, Some(DateTime::parse_from_rfc3339("2024-03-25T00:00:00.000000000+00:00").unwrap().to_utc()), None);
         
         assert_eq!(hits.len(), 1);
 
-        assert_eq!(hits[0].count, 1);
-        assert_eq!(hits[0].times, vec!["2024-03-25T04:12:44.736120969+00:00"]);
-        assert_eq!(hits[0].path, "/login.php/'%3E%3Csvg/onload=confirm%60xss%60%3E");
-        assert_eq!(hits[0].ip_hash, "75A05052881EA1D68995532845978B4090012883F99354EFF67AD4E1ED5FF1833F4A2EC893181EAA00B94B9CD35E1E1DD581B7F80FEF2EFF45B75D529A080BD8");
+        assert!(hits.contains(&hit));
 
         hits = Stats::collect_hits("tests/stats".to_owned(), None, None, Some(DateTime::parse_from_rfc3339("2024-03-24T23:12:44.736120969+00:00").unwrap().to_utc()));
         
         assert_eq!(hits.len(), 16);
 
-        assert_eq!(hits[0].count, 1);
-        assert_eq!(hits[0].times, vec!["2024-03-24T04:12:44.736120969+00:00"]);
-        assert_eq!(hits[0].path, "/login.php/'%3E%3Csvg/onload=confirm%60xss%60%3E");
-        assert_eq!(hits[0].ip_hash, "75A05052881EA1D68995532845978B4090012883F99354EFF67AD4E1ED5FF1833F4A2EC893181EAA00B94B9CD35E1E1DD581B7F80FEF2EFF45B75D529A080BD8");
-        
+        hit = Hit 
+        {
+            count: 1,
+            times: vec!["2024-03-24T04:12:44.736120969+00:00".to_string()],
+            path: "/login.php/'%3E%3Csvg/onload=confirm%60xss%60%3E".to_owned(),
+            ip_hash: "75A05052881EA1D68995532845978B4090012883F99354EFF67AD4E1ED5FF1833F4A2EC893181EAA00B94B9CD35E1E1DD581B7F80FEF2EFF45B75D529A080BD8".to_owned()
+        };
+
+        assert!(hits.contains(&hit));
+
     }
 
     #[test]
     fn test_stats_digest()
     {
         let digest = Stats::process_hits("tests/stats".to_owned(), None, None, None, None);
-        println!("{:?}", digest);
         
         assert_eq!(digest.unique_hits, 9);
         assert_eq!(digest.total_hits, 21);
