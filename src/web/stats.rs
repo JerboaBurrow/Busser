@@ -1,7 +1,9 @@
+use std::clone;
 use std::cmp::{max, min};
 use std::collections::HashMap;
 use std::fs::create_dir;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::os::linux::raw::stat;
 use std::sync::Arc;
 use std::time::Instant;
 use chrono::{DateTime, Datelike, TimeZone, Timelike};
@@ -20,6 +22,7 @@ use axum::
 
 use crate::config::{read_config, CONFIG_PATH};
 use crate::content::is_page;
+use crate::util::{date_now, date_to_rfc3339};
 use crate::
 {
     filesystem::file::{read_file_utf8, write_file_bytes},
@@ -188,6 +191,8 @@ impl Stats
 
         let mut hits: Vec<Hit> = vec![];
 
+        let mut hits_to_filter: Vec<Hit> = vec![];
+
         for file in stats_files
         {
             crate::debug(format!("Processing stats files: {}", file), None);
@@ -198,11 +203,7 @@ impl Stats
                 None => {crate::debug(format!("Could not parse time from stats file name {}",file), None); continue}
             };
 
-            let t = match DateTime::parse_from_rfc3339(&time_string)
-            {
-                Ok(date) => date,
-                Err(e) => {crate::debug(format!("Error {} loading stats file {}",e,file), None); continue}
-            };
+            let t = date_to_rfc3339(time_string).to_utc();
 
             if from.is_some_and(|from| t < from) { continue }
             if to.is_some_and(|to| t > to) { continue }
@@ -213,43 +214,45 @@ impl Stats
                 None => {continue}
             };
 
-            let file_hits: Vec<Hit> = match serde_json::from_str(&data)
+            let mut file_hits: Vec<Hit> = match serde_json::from_str(&data)
             {
                 Ok(s) => s,
                 Err(e) => {crate::debug(format!("Error {} loading stats file {}",e,file), None); continue}
             };
 
-            for hit in file_hits
-            {
-                hits.push(hit);
-            }
+            hits_to_filter.append(&mut file_hits);
         }
 
         if stats.is_some()
         {
             for (_hash, hit) in &stats.as_ref().unwrap().hits
             {
-                // check the cached stats are within the time period, then add
-                let mut count = 0;
-                let mut times: Vec<String> = vec![];
-                for i in 0..hit.times.len()
+                hits_to_filter.push(hit.clone());
+            }
+        }
+
+        for hit in hits_to_filter
+        {
+            // check the cached stats are within the time period, then add
+            let mut count = 0;
+            let mut times: Vec<String> = vec![];
+            for i in 0..hit.times.len()
+            {
+                let t = match DateTime::parse_from_rfc3339(&hit.times[i])
                 {
-                    let t = match DateTime::parse_from_rfc3339(&hit.times[i])
-                    {
-                        Ok(date) => date,
-                        Err(e) => {crate::debug(format!("Error {}",e), None); continue}
-                    };
-                    if !from.is_some_and(|from| t < from) && !to.is_some_and(|to| t > to) 
-                    {
-                        count += 1;
-                        times.push(hit.times[i].clone());
-                    }
-                }
-                if count > 0
+                    Ok(date) => date,
+                    Err(e) => {crate::debug(format!("Error {}",e), None); continue}
+                };
+                if !from.is_some_and(|from| t < from) && !to.is_some_and(|to| t > to) 
                 {
-                    let h = Hit {count, times, ip_hash: hit.ip_hash.clone(), path: hit.path.clone()};
-                    hits.push(h.clone());
+                    count += 1;
+                    times.push(hit.times[i].clone());
                 }
+            }
+            if count > 0
+            {
+                let h = Hit {count, times, ip_hash: hit.ip_hash.clone(), path: hit.path.clone()};
+                hits.push(h.clone());
             }
         }
 
@@ -414,8 +417,32 @@ impl Stats
             }
         }
 
-        let file_name = stats_config.path.to_string()+"/"+&chrono::offset::Utc::now().to_rfc3339();
-        let hits: Vec<Hit> = stats.hits.values().cloned().collect();
+        let file_name = stats_config.path.to_string()+"/"+&date_now();
+
+        let mut old_hits: Vec<Hit> = if std::path::Path::new(&file_name).exists()
+        {
+            match read_file_utf8(&file_name)
+            {
+                Some(d) => 
+                {
+                    match serde_json::from_str(&d)
+                    {
+                        Ok(s) => s,
+                        Err(_e) => vec![]
+                    }
+                },
+                None => vec![]
+            }
+        }
+        else
+        {
+            vec![]
+        };
+
+        let mut hits: Vec<Hit> = stats.hits.values().cloned().collect();
+
+        hits.append(&mut old_hits);
+
         match serde_json::to_string(&hits)
         {
             Ok(s) => {write_file_bytes(&file_name, s.as_bytes())},

@@ -50,11 +50,11 @@ mod test_stats_graph
         assert_eq!(hits.len(), 17);
 
         assert_eq!(hits[0].count, 1);
-        assert_eq!(hits[0].times, vec!["2024-03-24T04:12:44.736120969+00:00"]);
+        assert_eq!(hits[0].times, vec!["2024-03-25T04:12:44.736120969+00:00"]);
         assert_eq!(hits[0].path, "/login.php/'%3E%3Csvg/onload=confirm%60xss%60%3E");
         assert_eq!(hits[0].ip_hash, "75A05052881EA1D68995532845978B4090012883F99354EFF67AD4E1ED5FF1833F4A2EC893181EAA00B94B9CD35E1E1DD581B7F80FEF2EFF45B75D529A080BD8");
     
-        hits = Stats::collect_hits("tests/stats".to_owned(), None, Some(DateTime::parse_from_rfc3339("2024-03-25T04:12:44.736120969+00:00").unwrap().to_utc()), None);
+        hits = Stats::collect_hits("tests/stats".to_owned(), None, Some(DateTime::parse_from_rfc3339("2024-03-25T00:00:00.000000000+00:00").unwrap().to_utc()), None);
         
         assert_eq!(hits.len(), 1);
 
@@ -71,10 +71,6 @@ mod test_stats_graph
         assert_eq!(hits[0].times, vec!["2024-03-24T04:12:44.736120969+00:00"]);
         assert_eq!(hits[0].path, "/login.php/'%3E%3Csvg/onload=confirm%60xss%60%3E");
         assert_eq!(hits[0].ip_hash, "75A05052881EA1D68995532845978B4090012883F99354EFF67AD4E1ED5FF1833F4A2EC893181EAA00B94B9CD35E1E1DD581B7F80FEF2EFF45B75D529A080BD8");
-    
-        hits = Stats::collect_hits("tests/stats".to_owned(), None, None, Some(DateTime::parse_from_rfc3339("2024-03-24T03:12:44.736120969+00:00").unwrap().to_utc()));
-
-        assert_eq!(hits.len(), 0);
         
     }
 

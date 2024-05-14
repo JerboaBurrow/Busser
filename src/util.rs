@@ -1,5 +1,6 @@
 use core::fmt;
 use std::{fmt::Write, io::{Read, Write as ioWrite}, time::Instant};
+use chrono::{DateTime, Datelike, FixedOffset};
 use libflate::deflate::{Encoder, Decoder};
 use openssl::sha::Sha256;
 use regex::Regex;
@@ -147,4 +148,15 @@ pub fn format_elapsed(tic: Instant) -> String
             format!("{}s",tic.elapsed().as_secs())
         }
     }
+}
+
+pub fn date_now() -> String
+{
+    let date = chrono::offset::Utc::now();
+    format!("{}-{}-{}", date.year(), date.month(), date.day())
+}
+
+pub fn date_to_rfc3339(date: &str) -> DateTime<FixedOffset>
+{
+    DateTime::parse_from_rfc3339(format!("{}T00:00:00.000000000+00:00", date).as_str()).unwrap()
 }
