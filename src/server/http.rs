@@ -1,6 +1,6 @@
 use crate::
 {
-    config::{read_config, CONFIG_PATH}, web::throttle::{handle_throttle, IpThrottler}
+    config::{read_config, CONFIG_PATH}, server::throttle::{handle_throttle, IpThrottler}
 };
 
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};

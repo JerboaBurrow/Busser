@@ -1,7 +1,8 @@
 use crate::
 {
-    config::{read_config, Config, CONFIG_PATH}, content::{filter::ContentFilter, sitemap::SiteMap, Content}, web::{stats::{log_stats, Digest, Stats}, 
-    throttle::{handle_throttle, IpThrottler}}, CRAB
+    config::{read_config, Config, CONFIG_PATH}, content::{filter::ContentFilter, sitemap::SiteMap, Content}, 
+    server::throttle::{handle_throttle, IpThrottler}, 
+    CRAB
 };
 
 use std::{collections::HashMap, net::{IpAddr, Ipv4Addr, SocketAddr}};
@@ -16,7 +17,7 @@ use axum::
 };
 use axum_server::tls_rustls::RustlsConfig;
 
-use super::api::{stats::StatsDigest, ApiRequest};
+use super::{api::{stats::StatsDigest, ApiRequest}, stats::{digest::Digest, hits::{log_stats, HitStats}, stats_thread}};
 
 /// An https server that reads a directory configured with [Config]
 /// ```.html``` pages and resources, then serves them.
@@ -126,7 +127,7 @@ impl Server
         let mut router: Router<(), axum::body::Body> = sitemap.into();
 
         let stats = Arc::new(Mutex::new(
-            Stats 
+            HitStats 
             {
                 hits: HashMap::new(), 
                 last_save: chrono::offset::Utc::now(),
@@ -136,7 +137,7 @@ impl Server
             }
         ));
 
-        let _stats_thread = spawn(Stats::stats_thread(stats.clone()));
+        let _stats_thread = spawn(stats_thread(stats.clone()));
 
         router = router.layer(middleware::from_fn_with_state(stats.clone(), log_stats));
         router = router.layer(middleware::from_fn_with_state(throttle_state.clone(), handle_throttle));

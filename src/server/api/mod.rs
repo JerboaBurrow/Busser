@@ -8,7 +8,7 @@ use axum::{
 use reqwest::StatusCode;
 use tokio::sync::Mutex;
 
-use crate::web::stats::Stats;
+use super::stats::hits::HitStats;
 
 /// A trait representing an API request to the server
 ///  - For example [crate::server::api::stats::StatsDigest]
@@ -21,7 +21,7 @@ pub trait ApiRequest
     fn deserialise_payload(&mut self, headers: HeaderMap, body: Bytes) -> StatusCode;
     /// Formulate a response form the server returned as a String
     ///   - Also perform any actions inherent to this Api call
-    async fn into_response(&self, stats: Option<Stats>) -> (Option<String>, StatusCode);
+    async fn into_response(&self, stats: Option<HitStats>) -> (Option<String>, StatusCode);
     /// Axum middleware to 
     ///     1. check headers for an api request type
     ///     2. authenticate the request (HMAC)
@@ -29,7 +29,7 @@ pub trait ApiRequest
     ///     4. continue on to the next reqeust
     async fn filter<B>
     (
-        stats: State<Option<Arc<Mutex<Stats>>>>,
+        stats: State<Option<Arc<Mutex<HitStats>>>>,
         headers: HeaderMap,
         request: Request<B>,
         next: Next<B>
