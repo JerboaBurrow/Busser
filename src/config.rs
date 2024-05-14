@@ -25,6 +25,23 @@ pub struct StatsConfig
     pub top_n_digest: Option<usize>
 }
 
+impl StatsConfig
+{
+    pub fn default() -> StatsConfig
+    {
+        StatsConfig
+        {
+            save_period_seconds: 86400,
+            path: "stats".to_string(),
+            hit_cooloff_seconds: 60,
+            digest_period_seconds: 86400,
+            log_files_clear_period_seconds: 2419200,
+            ignore_regexes: None,
+            top_n_digest: None
+        }
+    }
+}
+
 pub const CONFIG_PATH: &str = "config.json";
 
 /// Configure the IP throttler
@@ -37,6 +54,19 @@ pub struct ThrottleConfig
     pub max_requests_per_second: f64,
     pub timeout_millis: u128,
     pub clear_period_seconds: u64
+}
+
+impl ThrottleConfig
+{
+    pub fn default() -> ThrottleConfig
+    {
+        ThrottleConfig
+        {
+            max_requests_per_second: 64.0,
+            timeout_millis: 5000,
+            clear_period_seconds: 3600
+        }
+    }
 }
 
 /// Configure content settings
@@ -59,6 +89,23 @@ pub struct ContentConfig
     pub static_content: Option<bool>
 }
 
+impl ContentConfig
+{
+    pub fn default() -> ContentConfig
+    {
+        ContentConfig
+        {
+            path: "./".to_string(),
+            home: "index.html".to_string(),
+            allow_without_extension: true,
+            ignore_regexes: None,
+            browser_cache_period_seconds: 3600,
+            server_cache_period_seconds: 3600,
+            static_content: Some(false)
+        }
+    }
+}
+
 /// Configure the server
 /// - ```port_https```: https port to serve on
 /// - ```port_http```: http port to serve on
@@ -75,14 +122,34 @@ pub struct Config
 {
     pub port_https: u16,
     pub port_http: u16,
-    pub notification_endpoint: Webhook,
+    pub notification_endpoint: Option<Webhook>,
     pub cert_path: String,
     pub key_path: String,
     pub domain: String,
     pub throttle: ThrottleConfig,
     pub stats: StatsConfig,
     pub content: ContentConfig,
-    pub api_token: String
+    pub api_token: Option<String>
+}
+
+impl Config 
+{
+    pub fn default() -> Config
+    {
+        Config
+        {
+            port_http: 80,
+            port_https: 443,
+            notification_endpoint: None,
+            cert_path: "certs/cert.pem".to_string(),
+            key_path: "certs/key.pem".to_string(),
+            domain: "127.0.0.1".to_string(),
+            throttle: ThrottleConfig::default(),
+            stats: StatsConfig::default(),
+            content: ContentConfig::default(),
+            api_token: None
+        }
+    }
 }
 
 pub fn read_config(path: &str) -> Option<Config>
