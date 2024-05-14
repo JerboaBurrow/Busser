@@ -1,0 +1,10 @@
+[
+    {
+        "count": 1,
+        "times": [
+            "2024-03-25T04:12:44.736120969+00:00"
+        ],
+        "path": "/login.php/'%3E%3Csvg/onload=confirm%60xss%60%3E",
+        "ip_hash": "75A05052881EA1D68995532845978B4090012883F99354EFF67AD4E1ED5FF1833F4A2EC893181EAA00B94B9CD35E1E1DD581B7F80FEF2EFF45B75D529A080BD8"
+    }
+]

@@ -1,3 +1,4 @@
+use std::vec;
 use std::cmp::{max, min};
 use std::collections::HashMap;
 use std::fs::create_dir;
@@ -6,6 +7,7 @@ use std::sync::Arc;
 use std::time::Instant;
 use chrono::{DateTime, Datelike, TimeZone, Timelike};
 use openssl::sha::sha512;
+use serde_json::to_string;
 use tokio::sync::{Mutex, MutexGuard};
 
 use serde::{Deserialize, Serialize};
@@ -20,6 +22,7 @@ use axum::
 
 use crate::config::{read_config, CONFIG_PATH};
 use crate::content::is_page;
+use crate::util::{date_now, date_to_rfc3339};
 use crate::
 {
     filesystem::file::{read_file_utf8, write_file_bytes},
@@ -34,13 +37,13 @@ use crate::
 
 use crate::web::discord::request::post::post;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Hit
 {
-    count: u16,
-    times: Vec<String>,
-    path: String,
-    ip_hash: String
+    pub count: u16,
+    pub times: Vec<String>,
+    pub path: String,
+    pub ip_hash: String
 }
 
 #[derive(Debug, Clone)]
@@ -182,33 +185,13 @@ impl Stats
         ), Some("PERFORMANCE".to_string()));
     }
 
-    pub fn process_hits(path: String, from: Option<DateTime<chrono::Utc>>, to: Option<DateTime<chrono::Utc>>, top_n: Option<usize>, stats: Option<Stats>) -> Digest
+    pub fn collect_hits(path: String, stats: Option<Stats>, from: Option<DateTime<chrono::Utc>>, to: Option<DateTime<chrono::Utc>>) -> Vec<Hit>
     {
-
-        let n = match top_n
-        {
-            Some(n) => n,
-            None => 3
-        };
-
-        let config = match read_config(CONFIG_PATH)
-        {
-            Some(c) => c,
-            None =>
-            {
-                std::process::exit(1)
-            }
-        };
-
-        let mut digest = Digest::new();
-
         let stats_files = list_dir_by(None, path);
 
-        let mut hitters: HashMap<String, u16> = HashMap::new();
-        let mut pages: HashMap<String, u16> = HashMap::new();
-        let mut resources: HashMap<String, u16> = HashMap::new();
-
         let mut hits: Vec<Hit> = vec![];
+
+        let mut hits_to_filter: Vec<Hit> = vec![];
 
         for file in stats_files
         {
@@ -220,7 +203,7 @@ impl Stats
                 None => {crate::debug(format!("Could not parse time from stats file name {}",file), None); continue}
             };
 
-            let t = match DateTime::parse_from_rfc3339(&time_string)
+            let t = match date_to_rfc3339(time_string)
             {
                 Ok(date) => date,
                 Err(e) => {crate::debug(format!("Error {} loading stats file {}",e,file), None); continue}
@@ -235,53 +218,79 @@ impl Stats
                 None => {continue}
             };
 
-            let file_hits: Vec<Hit> = match serde_json::from_str(&data)
+            let mut file_hits: Vec<Hit> = match serde_json::from_str(&data)
             {
                 Ok(s) => s,
                 Err(e) => {crate::debug(format!("Error {} loading stats file {}",e,file), None); continue}
             };
 
-            for hit in file_hits
-            {
-                hits.push(hit);
-            }
+            hits_to_filter.append(&mut file_hits);
         }
 
         if stats.is_some()
         {
             for (_hash, hit) in &stats.as_ref().unwrap().hits
             {
-                // check the cached stats are within the time period, then add
-                let mut count = 0;
-                let mut times: Vec<String> = vec![];
-                for i in 0..hit.times.len()
-                {
-                    let t = match DateTime::parse_from_rfc3339(&hit.times[i])
-                    {
-                        Ok(date) => date,
-                        Err(e) => {crate::debug(format!("Error {}",e), None); continue}
-                    };
-                    if !from.is_some_and(|from| t < from) && !to.is_some_and(|to| t > to) 
-                    {
-                        count += 1;
-                        times.push(hit.times[i].clone());
-                    }
-                }
-                if count > 0
-                {
-                    let h = Hit {count, times, ip_hash: hit.ip_hash.clone(), path: hit.path.clone()};
-                    hits.push(h.clone());
-                }
+                hits_to_filter.push(hit.clone());
             }
         }
 
-        let ignore_patterns = match config.content.ignore_regexes.clone()
+        for hit in hits_to_filter
         {
-            Some(p) => p,
-            None => vec![]
+            // check the cached stats are within the time period, then add
+            let mut count = 0;
+            let mut times: Vec<String> = vec![];
+            for i in 0..hit.times.len()
+            {
+                let t = match DateTime::parse_from_rfc3339(&hit.times[i])
+                {
+                    Ok(date) => date,
+                    Err(e) => {crate::debug(format!("Error {}",e), None); continue}
+                };
+                if !from.is_some_and(|from| t < from) && !to.is_some_and(|to| t > to) 
+                {
+                    count += 1;
+                    times.push(hit.times[i].clone());
+                }
+            }
+            if count > 0
+            {
+                let h = Hit {count, times, ip_hash: hit.ip_hash.clone(), path: hit.path.clone()};
+                hits.push(h.clone());
+            }
+        }
+
+        hits
+    }
+
+    pub fn process_hits(path: String, from: Option<DateTime<chrono::Utc>>, to: Option<DateTime<chrono::Utc>>, top_n: Option<usize>, stats: Option<Stats>) -> Digest
+    {
+
+        let n = match top_n
+        {
+            Some(n) => n,
+            None => 3
         };
 
-        for hit in hits
+        let mut digest = Digest::new();
+
+        let (ignore_patterns, domain) = match read_config(CONFIG_PATH)
+        {
+            Some(c) => 
+            {
+                match c.stats.ignore_regexes
+                {
+                    Some(i) => (i, c.domain),
+                    None => (vec![], c.domain)
+                }
+            },
+            None => (vec![], "127.0.0.1".to_string())
+        };
+        let mut hitters: HashMap<String, u16> = HashMap::new();
+        let mut pages: HashMap<String, u16> = HashMap::new();
+        let mut resources: HashMap<String, u16> = HashMap::new();
+
+        for hit in Self::collect_hits(path, stats, from, to)
         {
             if matches_one(&hit.path, &ignore_patterns)
             {
@@ -298,7 +307,7 @@ impl Stats
                 }
             }
 
-            if is_page(&hit.path, &config.domain)
+            if is_page(&hit.path, &domain)
             {
                 match pages.contains_key(&hit.path)
                 {
@@ -409,8 +418,32 @@ impl Stats
             }
         }
 
-        let file_name = stats_config.path.to_string()+"/"+&chrono::offset::Utc::now().to_rfc3339();
-        let hits: Vec<Hit> = stats.hits.values().cloned().collect();
+        let file_name = stats_config.path.to_string()+"/"+&date_now();
+
+        let mut old_hits: Vec<Hit> = if std::path::Path::new(&file_name).exists()
+        {
+            match read_file_utf8(&file_name)
+            {
+                Some(d) => 
+                {
+                    match serde_json::from_str(&d)
+                    {
+                        Ok(s) => s,
+                        Err(_e) => vec![]
+                    }
+                },
+                None => vec![]
+            }
+        }
+        else
+        {
+            vec![]
+        };
+
+        let mut hits: Vec<Hit> = stats.hits.values().cloned().collect();
+
+        hits.append(&mut old_hits);
+
         match serde_json::to_string(&hits)
         {
             Ok(s) => {write_file_bytes(&file_name, s.as_bytes())},
@@ -451,7 +484,7 @@ impl Stats
                 None => {crate::debug(format!("Could not parse time from stats file name {}",file), None); continue}
             };
 
-            let _t = match DateTime::parse_from_rfc3339(&time_string)
+            let _t = match date_to_rfc3339(time_string)
             {
                 Ok(date) => date,
                 Err(e) => {crate::debug(format!("Error {} loading stats file {}",e,file), None); continue}

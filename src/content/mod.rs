@@ -235,6 +235,11 @@ impl IntoResponse for Content {
 
 pub fn is_page(uri: &str, domain: &str) -> bool
 {
+    if uri == "/" 
+    {
+        return true
+    }
+    
     let domain_escaped = domain.replace("https://", "").replace("http://", "").replace(".", r"\.");
     match Regex::new(format!(r"((^|(http)(s|)://){})(/|/[^\.]+|/[^\.]+.html|$)$",domain_escaped).as_str())
     {

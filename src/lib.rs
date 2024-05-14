@@ -25,7 +25,7 @@ pub struct RuntimeOptions
     pub debug_timestamp: bool
 }
 
-pub static mut OPTIONS: RuntimeOptions = RuntimeOptions { debug: false, debug_timestamp: false };
+pub static mut OPTIONS: RuntimeOptions = RuntimeOptions { debug: true, debug_timestamp: false };
 
 pub fn debug(msg: String, context: Option<String>)
 {

@@ -3,9 +3,10 @@ mod common;
 #[cfg(test)]
 mod util
 {
-    use busser::util::{hash, matches_one, read_bytes};
+    use busser::util::{date_now, date_to_rfc3339, hash, matches_one, read_bytes};
 
     use busser::util::{compress, compress_string, decompress, decompress_utf8_string};
+    use chrono::{DateTime, Datelike};
 
     #[test]
     fn test_compress_decompress()
@@ -61,5 +62,17 @@ mod util
         let expected = vec![36, 48, 61, 185, 111, 196, 129, 155, 155, 187, 39, 255, 34, 84, 74, 189, 132, 168, 13, 60, 207, 212, 76, 98, 219, 209, 139, 83, 132, 78, 50, 115];
         let actual = read_bytes("24303db96fc4819b9bbb27ff22544abd84a80d3ccfd44c62dbd18b53844e3273".to_string());
         assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn test_date_utils()
+    {
+        let date = date_now();
+        println!("{}", date);
+        let date_rfc3339 = date_to_rfc3339(&date).unwrap();
+        let now = chrono::offset::Utc::now();
+
+        assert_eq!(date, format!("{:0>4}-{:0>2}-{:0>2}", now.year(), now.month(), now.day()));
+        assert_eq!(date_rfc3339, DateTime::parse_from_rfc3339(&format!("{}T00:00:00.000000000+00:00", date)).unwrap());
     }
 }
