@@ -40,10 +40,14 @@ pub async fn stats_thread(state: Arc<Mutex<HitStats>>)
             {
                 stats.summary = process_hits(stats_config.path.clone(), Some(stats.last_digest), None, stats_config.top_n_digest, Some(stats.to_owned()));
                 let msg = digest_message(stats.summary.clone(), Some(stats.last_digest), None);
-                match post(&config.notification_endpoint, msg).await
+                match config.notification_endpoint 
                 {
-                    Ok(_s) => (),
-                    Err(e) => {crate::debug(format!("Error posting to discord\n{}", e), None);}
+                    Some(endpoint) => match post(&endpoint, msg).await
+                        {
+                            Ok(_s) => (),
+                            Err(e) => {crate::debug(format!("Error posting to discord\n{}", e), None);}
+                        },
+                    None => ()
                 }
                 stats.last_digest = t;
             }
