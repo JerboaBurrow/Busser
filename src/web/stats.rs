@@ -1,13 +1,13 @@
-use std::clone;
+use std::vec;
 use std::cmp::{max, min};
 use std::collections::HashMap;
 use std::fs::create_dir;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-use std::os::linux::raw::stat;
 use std::sync::Arc;
 use std::time::Instant;
 use chrono::{DateTime, Datelike, TimeZone, Timelike};
 use openssl::sha::sha512;
+use serde_json::to_string;
 use tokio::sync::{Mutex, MutexGuard};
 
 use serde::{Deserialize, Serialize};
@@ -274,21 +274,18 @@ impl Stats
 
         let mut digest = Digest::new();
 
-        let config = match read_config(CONFIG_PATH)
+        let (ignore_patterns, domain) = match read_config(CONFIG_PATH)
         {
-            Some(c) => c,
-            None =>
+            Some(c) => 
             {
-                std::process::exit(1)
-            }
+                match c.stats.ignore_regexes
+                {
+                    Some(i) => (i, c.domain),
+                    None => (vec![], c.domain)
+                }
+            },
+            None => (vec![], "127.0.0.1".to_string())
         };
-
-        let ignore_patterns = match config.content.ignore_regexes.clone()
-        {
-            Some(p) => p,
-            None => vec![]
-        };
-
         let mut hitters: HashMap<String, u16> = HashMap::new();
         let mut pages: HashMap<String, u16> = HashMap::new();
         let mut resources: HashMap<String, u16> = HashMap::new();
@@ -310,7 +307,7 @@ impl Stats
                 }
             }
 
-            if is_page(&hit.path, &config.domain)
+            if is_page(&hit.path, &domain)
             {
                 match pages.contains_key(&hit.path)
                 {
