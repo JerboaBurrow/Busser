@@ -3,7 +3,7 @@ mod common;
 #[cfg(test)]
 mod config
 {
-    use busser::config::read_config;
+    use busser::config::{read_config, Config, ContentConfig, StatsConfig, ThrottleConfig};
 
     #[test]
     fn test_read_config()
@@ -17,8 +17,8 @@ mod config
         assert_eq!(config.port_https, 443);
         assert_eq!(config.port_http, 80);
         assert_eq!(config.domain, "127.0.0.1");
-        assert_eq!(config.api_token, "some_secure_secret_token");
-        assert_eq!(config.notification_endpoint.get_addr(), "https://discord.com/api/webhooks/abc/xyz");
+        assert_eq!(config.api_token, Some("some_secure_secret_token".to_string()));
+        assert_eq!(config.notification_endpoint.unwrap().get_addr(), "https://discord.com/api/webhooks/abc/xyz");
         assert_eq!(config.cert_path, "certs/cert.pem");
         assert_eq!(config.key_path, "certs/key.pem");
 
@@ -51,5 +51,45 @@ mod config
         let not_a_config = read_config("test/pages/b.html");
 
         assert!(not_a_config.is_none());
+    }
+
+    #[test]
+    fn test_defaults()
+    {
+        let stats = StatsConfig::default();
+
+        assert_eq!(stats.save_period_seconds, 86400);
+        assert_eq!(stats.path, "stats");
+        assert_eq!(stats.hit_cooloff_seconds, 60);
+        assert_eq!(stats.digest_period_seconds, 86400);
+        assert_eq!(stats.log_files_clear_period_seconds, 2419200);
+        assert_eq!(stats.ignore_regexes, None);
+        assert_eq!(stats.top_n_digest, None);
+
+        let throttle = ThrottleConfig::default();
+
+        assert_eq!(throttle.max_requests_per_second, 64.0);
+        assert_eq!(throttle.timeout_millis, 5000);
+        assert_eq!(throttle.clear_period_seconds, 3600);
+
+        let content = ContentConfig::default();
+
+        assert_eq!(content.path, "./");
+        assert_eq!(content.home, "index.html");
+        assert_eq!(content.allow_without_extension, true);
+        assert_eq!(content.ignore_regexes, None);
+        assert_eq!(content.browser_cache_period_seconds, 3600);
+        assert_eq!(content.server_cache_period_seconds, 3600);
+        assert_eq!(content.static_content, Some(false));
+
+        let config = Config::default();
+
+        assert_eq!(config.port_https, 443);
+        assert_eq!(config.port_http, 80);
+        assert!(config.notification_endpoint.is_none());
+        assert_eq!(config.cert_path, "certs/cert.pem");
+        assert_eq!(config.key_path, "certs/key.pem");
+        assert_eq!(config.domain, "127.0.0.1");
+
     }
 }

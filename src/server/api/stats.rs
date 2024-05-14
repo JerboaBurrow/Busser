@@ -60,13 +60,17 @@ impl ApiRequest for StatsDigest
             }
         };
 
-        is_authentic
-        (
-            headers, 
-            "busser-token", 
-            config.api_token, 
-            body
-        )
+        match config.api_token
+        {
+            Some(token) => is_authentic
+                (
+                    headers, 
+                    "busser-token", 
+                    token, 
+                    body
+                ),
+            None => StatusCode::ACCEPTED
+        }
     }
 
     fn deserialise_payload(&mut self, _headers: HeaderMap, body: Bytes) -> StatusCode
@@ -146,10 +150,14 @@ impl ApiRequest for StatsDigest
 
         if self.payload.post_discord
         {
-            match post(&config.notification_endpoint, msg.clone()).await
+            match config.notification_endpoint
             {
-                Ok(_s) => (),
-                Err(e) => {crate::debug(format!("Error posting to discord\n{}", e), None);}
+                Some(endpoint) => match post(&endpoint, msg.clone()).await
+                    {
+                        Ok(_s) => (),
+                        Err(e) => {crate::debug(format!("Error posting to discord\n{}", e), None);}
+                    },
+                None => ()
             }
         }
 
