@@ -64,10 +64,10 @@ impl ApiRequest for StatsDigest
         {
             Some(token) => is_authentic
                 (
-                    headers, 
+                    &headers, 
                     "busser-token", 
                     token, 
-                    body
+                    &body
                 ),
             None => StatusCode::ACCEPTED
         }

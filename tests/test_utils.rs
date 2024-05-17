@@ -3,7 +3,7 @@ mod common;
 #[cfg(test)]
 mod util
 {
-    use busser::util::{date_now, date_to_rfc3339, hash, matches_one, read_bytes};
+    use busser::util::{date_now, date_to_rfc3339, hash, matches_one, read_bytes, strip_control_characters};
 
     use busser::util::{compress, compress_string, decompress, decompress_utf8_string};
     use chrono::{DateTime, Datelike};
@@ -74,5 +74,16 @@ mod util
 
         assert_eq!(date, format!("{:0>4}-{:0>2}-{:0>2}", now.year(), now.month(), now.day()));
         assert_eq!(date_rfc3339, DateTime::parse_from_rfc3339(&format!("{}T00:00:00.000000000+00:00", date)).unwrap());
+    }
+
+    #[test]
+    fn test_strip_control()
+    {
+        for character in 0..0x1F
+        {
+            let ch = char::from_u32(character).unwrap();
+            let test_string = format!("{}a_test_string", ch);
+            assert_eq!(strip_control_characters(test_string), "a_test_string");
+        }
     }
 }
