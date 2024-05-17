@@ -15,10 +15,10 @@ pub mod webhook;
 ///   - hmac_header_key is the location in the https header for the digest
 pub fn is_authentic
 (
-    headers: HeaderMap,
+    headers: &HeaderMap,
     hmac_header_key: &str,
     hmac_token: String, 
-    body: Bytes
+    body: &Bytes
 ) -> StatusCode
 {
     match headers.contains_key(hmac_header_key)
@@ -42,6 +42,13 @@ pub fn is_authentic
     };
 
     let post_digest = Regex::new(r"sha256=").unwrap().replace_all(&sender_hmac, "").into_owned().to_uppercase();
+    let hmac_bytes = read_bytes(post_digest.clone());
+
+    if hmac_bytes.len() != 32
+    {
+        crate::debug(format!("HMAC, {}, not 64 bytes",sender_hmac), None);
+        return StatusCode::BAD_REQUEST
+    }
 
     let key = match PKey::hmac(hmac_token.as_bytes())
     {
@@ -85,7 +92,7 @@ pub fn is_authentic
 
     crate::debug(format!("post_digtest: {}, len: {}\nlocal hmac: {}, len: {}", post_digest, post_digest.len(), dump_bytes(&hmac), dump_bytes(&hmac).len()), None);
 
-    match memcmp::eq(&hmac, &read_bytes(post_digest.clone()))
+    match memcmp::eq(&hmac, &hmac_bytes)
     {
         true => {},
         false => 

@@ -7,6 +7,7 @@ use regex::Regex;
 
 use crate::BLAZING;
 
+/// Dump a byte array to hex representation
 pub fn dump_bytes(v: &[u8]) -> String 
 {
     let mut byte_string = String::new();
@@ -17,8 +18,13 @@ pub fn dump_bytes(v: &[u8]) -> String
     byte_string
 }
 
+/// Read a byte array represented in hex
 pub fn read_bytes(v: String) -> Vec<u8>
 {
+    if v.len() < 2
+    {
+        return vec![]
+    }
     (0..v.len()).step_by(2)
     .map
     (
@@ -27,12 +33,15 @@ pub fn read_bytes(v: String) -> Vec<u8>
     .collect()
 }
 
+/// Remove unicode control characters from a string
 pub fn strip_control_characters(s: String) -> String
 {
     let re = Regex::new(r"[\u0000-\u001F]").unwrap().replace_all(&s, "");
     return re.to_string()
 }
 
+/// If the string uri matches any pattern (interpreted as regexes)
+/// return true
 pub fn matches_one(uri: &str, patterns: &Vec<String>) -> bool
 {
     let mut ignore = false;  
