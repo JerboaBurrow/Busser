@@ -3,7 +3,7 @@ use std::{cmp::min, sync::Arc};
 use chrono::{Datelike, TimeZone};
 use tokio::sync::Mutex;
 
-use crate::{config::{read_config, CONFIG_PATH}, web::discord::request::post::post};
+use crate::{config::{read_config, CONFIG_PATH}, integrations::discord::post::post};
 
 use self::{digest::{digest_message, process_hits}, hits::{archive, save, HitStats}};
 

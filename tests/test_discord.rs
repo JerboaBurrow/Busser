@@ -3,8 +3,7 @@ mod common;
 #[cfg(test)]
 mod discord
 {
-    use busser::web::discord::request::{model::Webhook, post::post};
-
+    use busser::integrations::{discord::post::post, webhook::Webhook};
 
     #[tokio::test]
     async fn test_webhook()

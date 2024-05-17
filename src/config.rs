@@ -2,7 +2,7 @@ use std::path::Path;
 
 use serde::{Serialize, Deserialize};
 
-use crate::{filesystem::file::read_file_utf8, web::discord::request::model::Webhook};
+use crate::{filesystem::file::read_file_utf8, integrations::webhook::Webhook};
 
 /// Configure the stats collection
 /// - ```save_period_seconds```: periodically save to disc
