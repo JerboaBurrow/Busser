@@ -1,6 +1,6 @@
 use semver::{BuildMetadata, Prerelease, Version};
 
-pub mod web;
+pub mod integrations;
 pub mod server;
 pub mod util;
 pub mod content;

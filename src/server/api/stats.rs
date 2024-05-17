@@ -6,7 +6,7 @@ use reqwest::StatusCode;
 use serde::Deserialize;
 use tokio::sync::Mutex;
 
-use crate::{config::{read_config, CONFIG_PATH}, server::stats::{digest::{digest_message, process_hits}, hits::HitStats}, web::{discord::request::post::post, is_authentic}};
+use crate::{config::{read_config, CONFIG_PATH}, server::stats::{digest::{digest_message, process_hits}, hits::HitStats}, integrations::{discord::post::post, is_authentic}};
 
 use super::ApiRequest;
 
