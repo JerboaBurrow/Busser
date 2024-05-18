@@ -2,7 +2,7 @@ use core::fmt;
 use std::{cmp::min, collections::HashMap, sync::Arc};
 
 use axum::async_trait;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local, Utc};
 use tokio::{spawn, sync::Mutex};
 use uuid::Uuid;
 
@@ -99,7 +99,8 @@ impl TaskPool
                     {
                         if (dt as u64) < wait
                         {
-                            info = format!("Task {}, {}. At {}", id, task.info(), d);
+                            let local_time: DateTime<Local> = DateTime::from(d);
+                            info = format!("Task {}, {}. At {}", id, task.info(), local_time);
                             wait = min(wait, dt as u64);
                         }
                     }
