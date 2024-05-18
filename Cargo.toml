@@ -25,6 +25,7 @@ semver = "1.0.20"
 libflate = "2"
 quick-xml = "0.31.0"
 indicatif = "0.17.8"
+uuid = { version = "1.8.0", features = ["v4", "fast-rng", "macro-diagnostics"]}
 
 [profile.dev]
 opt-level = 0

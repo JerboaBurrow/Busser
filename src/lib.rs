@@ -6,6 +6,7 @@ pub mod util;
 pub mod content;
 pub mod config;
 pub mod filesystem;
+pub mod task;
 
 const MAJOR: &str = env!("CARGO_PKG_VERSION_MAJOR");
 const MINOR: &str = env!("CARGO_PKG_VERSION_MINOR");

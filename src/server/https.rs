@@ -1,14 +1,12 @@
 use crate::
 {
-    config::{read_config, Config, CONFIG_PATH}, content::{filter::ContentFilter, sitemap::SiteMap, Content}, 
-    server::throttle::{handle_throttle, IpThrottler}, 
-    CRAB
+    config::{read_config, Config, CONFIG_PATH}, content::{filter::ContentFilter, sitemap::SiteMap, Content}, server::throttle::{handle_throttle, IpThrottler}, task::TaskPool, CRAB
 };
 
 use std::{collections::HashMap, net::{IpAddr, Ipv4Addr, SocketAddr}};
 use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::{spawn, sync::Mutex};
+use tokio::sync::Mutex;
 
 use axum::
 {
@@ -17,7 +15,7 @@ use axum::
 };
 use axum_server::tls_rustls::RustlsConfig;
 
-use super::{api::{stats::StatsDigest, ApiRequest}, stats::{digest::Digest, hits::{log_stats, HitStats}, stats_thread}};
+use super::{api::{stats::StatsDigest, ApiRequest}, stats::{digest::Digest, hits::{log_stats, HitStats}, StatsSaveTask, StatsDigestTask}};
 
 /// An https server that reads a directory configured with [Config]
 /// ```.html``` pages and resources, then serves them.
@@ -35,7 +33,8 @@ pub struct Server
 {
     addr: SocketAddr,
     router: Router,
-    config: Config
+    config: Config,
+    pub tasks: TaskPool
 }
 
 /// Checks a uri has a leading /, adds it if not
@@ -127,29 +126,33 @@ impl Server
         let mut router: Router<(), axum::body::Body> = sitemap.into();
 
         let stats = Arc::new(Mutex::new(
-            HitStats 
-            {
-                hits: HashMap::new(), 
-                last_save: chrono::offset::Utc::now(),
-                last_digest: chrono::offset::Utc::now(),
-                last_clear: chrono::offset::Utc::now(),
-                summary: Digest::new()
-            }
+            HitStats::new()
         ));
-
-        let _stats_thread = spawn(stats_thread(stats.clone()));
 
         router = router.layer(middleware::from_fn_with_state(stats.clone(), log_stats));
         router = router.layer(middleware::from_fn_with_state(throttle_state.clone(), handle_throttle));
 
-        router = router.layer(middleware::from_fn_with_state(Some(stats), StatsDigest::filter));
+        router = router.layer(middleware::from_fn_with_state(Some(stats.clone()), StatsDigest::filter));
 
-        Server
+        let mut server = Server
         {
             addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(a,b,c,d)), config.port_https),
             router,
-            config
-        }
+            config,
+            tasks: TaskPool::new()
+        };
+
+        server.tasks.add
+        (
+            Box::new(StatsSaveTask { state: stats.clone(), last_run: chrono::offset::Utc::now() })
+        );
+
+        server.tasks.add
+        (
+            Box::new(StatsDigestTask { state: stats.clone(), last_run: chrono::offset::Utc::now() })
+        );
+
+        server
     }
 
     pub fn get_addr(self: Server) -> SocketAddr
@@ -193,6 +196,8 @@ impl Server
         {
             println!("(or https://127.0.0.1)");
         }
+        
+        self.tasks.run();
         
         axum_server::bind_rustls(self.addr, config)
         .serve(self.router.into_make_service_with_connect_info::<SocketAddr>())
