@@ -1,4 +1,4 @@
-use std::{alloc::System, fmt, fs, io::{Read, Write}, time::SystemTime};
+use std::{fmt, fs, io::{Read, Write}, time::SystemTime};
 
 use crate::util::hash;
 

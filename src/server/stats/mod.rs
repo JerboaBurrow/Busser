@@ -1,23 +1,35 @@
-use std::{cmp::min, sync::Arc};
+use std::sync::Arc;
 
+use axum::async_trait;
+use chrono::{DateTime, Duration, Utc};
 use tokio::sync::Mutex;
 
-use crate::{config::{read_config, CONFIG_PATH}, integrations::discord::post::post};
+use crate::{config::{read_config, CONFIG_PATH}, integrations::discord::post::post, task::Task};
 
 use self::{digest::{digest_message, process_hits}, hits::{save, HitStats}};
 
 pub mod hits;
 pub mod digest;
 
-pub async fn stats_thread(state: Arc<Mutex<HitStats>>)
+pub struct StatsSaveTask
 {
-    loop
+    pub state: Arc<Mutex<HitStats>>,
+    pub last_run: DateTime<Utc>
+}
+
+#[async_trait]
+impl Task for StatsSaveTask
+{
+    async fn run(&mut self) -> Result<(), crate::task::TaskError> 
     {
+        let mut stats = self.state.lock().await;
+        save(&mut stats);
+        self.last_run = chrono::offset::Utc::now();
+        Ok(())
+    }
 
-        let time: chrono::prelude::DateTime<chrono::prelude::Utc> = chrono::offset::Utc::now();
-
-        let mut stats = state.lock().await;
-
+    fn next(&self) -> Option<chrono::prelude::DateTime<chrono::prelude::Utc>> 
+    {
         let config = match read_config(CONFIG_PATH)
         {
             Some(c) => c,
@@ -27,41 +39,107 @@ pub async fn stats_thread(state: Arc<Mutex<HitStats>>)
             }
         };
 
-        let stats_config = config.stats;
+        let time: chrono::prelude::DateTime<chrono::prelude::Utc> = chrono::offset::Utc::now();
+        let time_until_save = config.stats.save_period_seconds as i64 - (time - self.last_run).num_seconds();
 
-        let time_until_save = (time - stats.last_save).num_seconds() - stats_config.save_period_seconds as i64;
-        let time_until_digest = (time - stats.last_digest).num_seconds() - stats_config.digest_period_seconds as i64;
-
-        if time_until_save <= 0
+        if time_until_save < 0
         {
-            save(&mut stats);
+            Some(time)
         }
-
-        if time_until_digest <= 0
+        else
         {
-            stats.summary = process_hits(stats_config.path.clone(), Some(stats.last_digest), None, stats_config.top_n_digest, Some(stats.to_owned()));
-            let msg = digest_message(stats.summary.clone(), Some(stats.last_digest), None);
-            match config.notification_endpoint 
+            Some(self.last_run + Duration::seconds(time_until_save))
+        }
+    }
+
+    fn runnable(&self) -> bool 
+    {
+        chrono::offset::Utc::now() > self.next().unwrap()
+    }
+
+    fn info(&self) -> String 
+    {
+        "Statistics saveing".to_string()
+    }
+}
+
+pub struct StatsDigestTask
+{
+    pub state: Arc<Mutex<HitStats>>,
+    pub last_run: DateTime<Utc>
+}
+
+#[async_trait]
+impl Task for StatsDigestTask
+{
+    async fn run(&mut self) -> Result<(), crate::task::TaskError> 
+    {
+        let mut stats = self.state.lock().await;
+
+        let config = match read_config(CONFIG_PATH)
+        {
+            Some(c) => c,
+            None =>
             {
-                Some(endpoint) => match post(&endpoint, msg).await
-                    {
-                        Ok(_s) => (),
-                        Err(e) => {crate::debug(format!("Error posting to discord\n{}", e), None);}
-                    },
-                None => ()
+                std::process::exit(1)
             }
-            stats.last_digest = time;
-        }
+        };
+        
+        stats.summary = process_hits
+        (
+            config.stats.path.clone(), 
+            Some(stats.last_digest), 
+            None, 
+            config.stats.top_n_digest, 
+            Some(stats.to_owned())
+        );
 
-        let time_left = min(time_until_digest, time_until_save);
+        let msg = digest_message(stats.summary.clone(), Some(stats.last_digest), None);
+        // match config.notification_endpoint 
+        // {
+        //     Some(endpoint) => match post(&endpoint, msg).await
+        //         {
+        //             Ok(_s) => (),
+        //             Err(e) => {crate::debug(format!("Error posting to discord\n{}", e), None);}
+        //         },
+        //     None => ()
+        // }
 
-        let wait_seconds = match time_left > 0
+        self.last_run = chrono::offset::Utc::now();
+        Ok(())
+    }
+
+    fn next(&self) -> Option<chrono::prelude::DateTime<chrono::prelude::Utc>> 
+    {
+        let config = match read_config(CONFIG_PATH)
         {
-            true => time_left as u64,
-            false => min(stats_config.save_period_seconds, stats_config.digest_period_seconds)
+            Some(c) => c,
+            None =>
+            {
+                std::process::exit(1)
+            }
         };
 
-        crate::debug(format!("Sleeping for {}", wait_seconds), Some("Statistics".to_string()));
-        tokio::time::sleep(std::time::Duration::from_secs(wait_seconds)).await;
+        let time: chrono::prelude::DateTime<chrono::prelude::Utc> = chrono::offset::Utc::now();
+        let time_until_digest = config.stats.digest_period_seconds as i64 - (time - self.last_run).num_seconds();
+
+        if time_until_digest < 0
+        {
+            Some(time)
+        }
+        else
+        {
+            Some(self.last_run + Duration::seconds(time_until_digest))
+        }
+    }
+
+    fn runnable(&self) -> bool 
+    {
+        chrono::offset::Utc::now() > self.next().unwrap()
+    }
+
+    fn info(&self) -> String 
+    {
+        "Statistics digest".to_string()
     }
 }
