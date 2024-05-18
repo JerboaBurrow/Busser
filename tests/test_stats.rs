@@ -3,7 +3,9 @@ mod common;
 #[cfg(test)]
 mod test_stats_graph
 {
-    use busser::server::stats::{digest::{hits_by_hour_text_graph, process_hits}, hits::{collect_hits, Hit}};
+    use std::collections::HashMap;
+
+    use busser::server::stats::{digest::{hits_by_hour_text_graph, process_hits, Digest}, hits::{collect_hits, Hit, HitStats}};
     use chrono::DateTime;
 
     const GRAPH: &str = r#"00:00
@@ -93,6 +95,15 @@ mod test_stats_graph
         assert!(digest.top_resources.contains(&("/login.php/'%3E%3Csvg/onload=confirm%60xss%60%3E".to_string(), 2 as u16))); 
         assert!(digest.top_resources.contains(&("https://jerboa.app/console.js".to_string(), 2 as u16))); 
         assert!(digest.top_resources.contains(&("/admin/.env".to_string(), 2 as u16)));
+    }
+
+    #[test]
+    fn test_new()
+    {
+        let stats = HitStats::new();
+
+        assert_eq!(stats.hits, HashMap::new());
+        assert_eq!(stats.summary, Digest::new());        
     }
 
 }

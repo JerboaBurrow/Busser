@@ -6,6 +6,8 @@ use chrono::{DateTime, Utc};
 use tokio::{spawn, sync::Mutex};
 use uuid::Uuid;
 
+pub const DEFAULT_WAIT: tokio::time::Duration = tokio::time::Duration::from_secs(1);
+
 #[derive(Debug, Clone)]
 pub struct TaskError
 {
@@ -18,6 +20,8 @@ impl fmt::Display for TaskError {
     }
 }
 
+/// A trait for running asynchronous tasks
+/// See usage in [crate::task::TaskPool]
 #[async_trait]
 pub trait Task
 {
@@ -27,6 +31,9 @@ pub trait Task
     fn info(&self) -> String;
 }
 
+/// A pool of tasks to be executed 
+/// - [Task]s are added to the pool using [TaskPool::add] 
+/// - [TaskPool::run] loops continuously (with sleeps) running tasks when they are available
 pub struct TaskPool
 {
     tasks: HashMap<Uuid, Arc<Mutex<Box<dyn Task + Send>>>>,
@@ -39,6 +46,8 @@ impl TaskPool
     {
         TaskPool { tasks: HashMap::new(), closing: Arc::new(Mutex::new(false)) }
     }
+
+    pub fn ntasks(&self) -> usize { self.tasks.len() }
 
     pub fn add(&mut self, task: Box<dyn Task + Send>) -> Uuid
     {
@@ -59,19 +68,17 @@ impl TaskPool
     {
         *self.closing.lock().await = true; 
     }
-
-    pub async fn info(&self) -> String
-    {
-        let mut status = String::new();
-        for (id, task) in &self.tasks
-        {
-            status = format!("{}: {}\n", id, task.lock().await.info());
-        }
-        status
-    }
     
+    /// Returns a duration to wait for the next runnable process
+    ///  and an information string about that process including
+    ///  a [DateTime<Utc>] when it will be run
     pub async fn waiting_for(&self) -> (tokio::time::Duration, String) 
     {
+        if self.tasks.len() == 0
+        {
+            return (DEFAULT_WAIT, "None".to_string())
+        }
+
         let now = chrono::offset::Utc::now();
         let mut wait = u64::MAX;
         let mut info = String::new();
@@ -86,7 +93,7 @@ impl TaskPool
                     let dt = (d-now).num_seconds();
                     if dt <= 0
                     {
-                        return (tokio::time::Duration::from_secs(0), format!("Task {}, {}. Now", id, task.info()));
+                        return (tokio::time::Duration::ZERO, format!("Task {}, {}. Now", id, task.info()));
                     }
                     else
                     {

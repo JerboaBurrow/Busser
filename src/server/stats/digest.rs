@@ -6,7 +6,7 @@ use crate::{config::{read_config, CONFIG_PATH}, content::is_page, util::matches_
 
 use super::hits::{collect_hits, HitStats};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Digest
 {
     pub top_hitters: Vec<(String, u16)>,

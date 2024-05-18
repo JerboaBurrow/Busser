@@ -30,6 +30,21 @@ pub struct HitStats
     pub summary: Digest
 }
 
+impl HitStats
+{
+    pub fn new() -> HitStats
+    {
+        HitStats
+        {
+            hits: HashMap::new(), 
+            last_save: chrono::offset::Utc::now(),
+            last_digest: chrono::offset::Utc::now(),
+            last_clear: chrono::offset::Utc::now(),
+            summary: Digest::new()
+        }
+    }
+}
+
 pub async fn log_stats<B>
 (
     ConnectInfo(addr): ConnectInfo<SocketAddr>,

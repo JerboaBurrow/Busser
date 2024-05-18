@@ -126,14 +126,7 @@ impl Server
         let mut router: Router<(), axum::body::Body> = sitemap.into();
 
         let stats = Arc::new(Mutex::new(
-            HitStats 
-            {
-                hits: HashMap::new(), 
-                last_save: chrono::offset::Utc::now(),
-                last_digest: chrono::offset::Utc::now(),
-                last_clear: chrono::offset::Utc::now(),
-                summary: Digest::new()
-            }
+            HitStats::new()
         ));
 
         router = router.layer(middleware::from_fn_with_state(stats.clone(), log_stats));

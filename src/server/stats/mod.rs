@@ -4,13 +4,15 @@ use axum::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use tokio::sync::Mutex;
 
-use crate::{config::{read_config, CONFIG_PATH}, integrations::discord::post::post, task::Task};
+use crate::{config::{read_config, Config, CONFIG_PATH}, integrations::discord::post::post, task::Task};
 
 use self::{digest::{digest_message, process_hits}, hits::{save, HitStats}};
 
 pub mod hits;
 pub mod digest;
 
+/// A task to periodically save HitStats to disk
+/// See [crate::task::Task] and [crate::task::TaskPool]
 pub struct StatsSaveTask
 {
     pub state: Arc<Mutex<HitStats>>,
@@ -35,7 +37,7 @@ impl Task for StatsSaveTask
             Some(c) => c,
             None =>
             {
-                std::process::exit(1)
+                Config::default()
             }
         };
 
@@ -63,6 +65,8 @@ impl Task for StatsSaveTask
     }
 }
 
+/// A task to periodically send HitStats digests discord
+/// See [crate::task::Task] and [crate::task::TaskPool]
 pub struct StatsDigestTask
 {
     pub state: Arc<Mutex<HitStats>>,
@@ -81,7 +85,7 @@ impl Task for StatsDigestTask
             Some(c) => c,
             None =>
             {
-                std::process::exit(1)
+                Config::default()
             }
         };
         
@@ -95,15 +99,15 @@ impl Task for StatsDigestTask
         );
 
         let msg = digest_message(stats.summary.clone(), Some(stats.last_digest), None);
-        // match config.notification_endpoint 
-        // {
-        //     Some(endpoint) => match post(&endpoint, msg).await
-        //         {
-        //             Ok(_s) => (),
-        //             Err(e) => {crate::debug(format!("Error posting to discord\n{}", e), None);}
-        //         },
-        //     None => ()
-        // }
+        match config.notification_endpoint 
+        {
+            Some(endpoint) => match post(&endpoint, msg).await
+                {
+                    Ok(_s) => (),
+                    Err(e) => {crate::debug(format!("Error posting to discord\n{}", e), None);}
+                },
+            None => ()
+        }
 
         self.last_run = chrono::offset::Utc::now();
         Ok(())
@@ -116,7 +120,7 @@ impl Task for StatsDigestTask
             Some(c) => c,
             None =>
             {
-                std::process::exit(1)
+                Config::default()
             }
         };
 
