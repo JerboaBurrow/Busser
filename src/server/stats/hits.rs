@@ -24,9 +24,6 @@ pub struct Hit
 pub struct HitStats
 {
     pub hits: HashMap<[u8; 64], Hit>,
-    pub last_save: DateTime<chrono::Utc>,
-    pub last_digest: DateTime<chrono::Utc>,
-    pub last_clear: DateTime<chrono::Utc>,
     pub summary: Digest
 }
 
@@ -37,9 +34,6 @@ impl HitStats
         HitStats
         {
             hits: HashMap::new(), 
-            last_save: chrono::offset::Utc::now(),
-            last_digest: chrono::offset::Utc::now(),
-            last_clear: chrono::offset::Utc::now(),
             summary: Digest::new()
         }
     }

@@ -30,7 +30,6 @@ mod config
         assert_eq!(config.stats.path, "stats");
         assert_eq!(config.stats.hit_cooloff_seconds, 60);
         assert_eq!(config.stats.digest_period_seconds, 86400);
-        assert_eq!(config.stats.log_files_clear_period_seconds, 2419200);
         assert_eq!(config.stats.ignore_regexes.unwrap(), vec!["/favicon.ico".to_string()]);
 
         assert_eq!(config.content.path, "/home/jerboa/Website/");
@@ -62,7 +61,6 @@ mod config
         assert_eq!(stats.path, "stats");
         assert_eq!(stats.hit_cooloff_seconds, 60);
         assert_eq!(stats.digest_period_seconds, 86400);
-        assert_eq!(stats.log_files_clear_period_seconds, 2419200);
         assert_eq!(stats.ignore_regexes, None);
         assert_eq!(stats.top_n_digest, None);
 
@@ -105,7 +103,6 @@ mod config
         assert_eq!(stats.path, "stats");
         assert_eq!(stats.hit_cooloff_seconds, 60);
         assert_eq!(stats.digest_period_seconds, 86400);
-        assert_eq!(stats.log_files_clear_period_seconds, 2419200);
         assert_eq!(stats.ignore_regexes, None);
         assert_eq!(stats.top_n_digest, None);
 
@@ -150,7 +147,6 @@ mod config
         assert_eq!(config.stats.path, "stats");
         assert_eq!(config.stats.hit_cooloff_seconds, 60);
         assert_eq!(config.stats.digest_period_seconds, 86400);
-        assert_eq!(config.stats.log_files_clear_period_seconds, 2419200);
         assert_eq!(config.stats.ignore_regexes.unwrap(), vec!["/favicon.ico".to_string()]);
 
         assert_eq!(config.content.path, "/home/jerboa/Website/");

@@ -20,7 +20,6 @@ pub struct StatsConfig
     pub path: String,
     pub hit_cooloff_seconds: u64,
     pub digest_period_seconds: u64,
-    pub log_files_clear_period_seconds: u64,
     pub ignore_regexes: Option<Vec<String>>,
     pub top_n_digest: Option<usize>
 }
@@ -35,7 +34,6 @@ impl StatsConfig
             path: "stats".to_string(),
             hit_cooloff_seconds: 60,
             digest_period_seconds: 86400,
-            log_files_clear_period_seconds: 2419200,
             ignore_regexes: None,
             top_n_digest: None
         }
