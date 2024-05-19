@@ -8,6 +8,11 @@ pub struct StatsFile
     pub path: Option<String>
 }
 
+/// Save hits to disk.
+///  Each stats files takes the current date YYYY-MM-DD as
+///  its file name, if multiple saves occur on the same date
+///  the file is appended to
+/// See [crate::server::stats::HitStats]
 impl StatsFile
 {
     pub fn new() -> StatsFile
