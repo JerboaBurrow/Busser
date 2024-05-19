@@ -7,7 +7,7 @@ use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use tokio::sync::{Mutex, MutexGuard};
 
-use crate::{config::{read_config, CONFIG_PATH}, filesystem::{file::{read_file_utf8, write_file_bytes}, folder::list_dir_by}, util::{compress, date_to_rfc3339, dump_bytes}};
+use crate::{config::{Config, CONFIG_PATH}, filesystem::{file::{read_file_utf8, write_file_bytes}, folder::list_dir_by}, util::{compress, date_to_rfc3339, dump_bytes}};
 
 use super::digest::Digest;
 
@@ -74,14 +74,7 @@ pub async fn process_hit
 {
     let start_time = Instant::now();
 
-    let config = match read_config(CONFIG_PATH)
-    {
-        Some(c) => c,
-        None =>
-        {
-            std::process::exit(1)
-        }
-    };
+    let config = Config::load_or_default(CONFIG_PATH);
 
     let mut stats = state.lock().await;
 
@@ -225,132 +218,4 @@ pub fn collect_hits(path: String, stats: Option<HitStats>, from: Option<DateTime
     }
 
     hits
-}
-
-pub fn save(stats: &mut MutexGuard<'_, HitStats>)
-{
-    let config = match read_config(CONFIG_PATH)
-    {
-        Some(c) => c,
-        None =>
-        {
-            std::process::exit(1)
-        }
-    };
-
-    let stats_config = config.stats;
-
-    let write_start_time = Instant::now();
-
-    if !std::path::Path::new(&stats_config.path).exists()
-    {
-        match create_dir(stats_config.path.to_string())
-        {
-            Ok(_s) => {},
-            Err(e) => {crate::debug(format!("Error creating stats dir {}",e), None)}
-        }
-    }
-
-    let file_name = stats_config.path.to_string()+"/"+&crate::util::date_now();
-
-    let mut old_hits: Vec<Hit> = if std::path::Path::new(&file_name).exists()
-    {
-        match read_file_utf8(&file_name)
-        {
-            Some(d) => 
-            {
-                match serde_json::from_str(&d)
-                {
-                    Ok(s) => s,
-                    Err(_e) => vec![]
-                }
-            },
-            None => vec![]
-        }
-    }
-    else
-    {
-        vec![]
-    };
-
-    let mut hits: Vec<Hit> = stats.hits.values().cloned().collect();
-
-    hits.append(&mut old_hits);
-
-    match serde_json::to_string(&hits)
-    {
-        Ok(s) => {write_file_bytes(&file_name, s.as_bytes())},
-        Err(e) => {crate::debug(format!("Error saving stats {}", e), None)}
-    }
-
-    let write_time = write_start_time.elapsed().as_secs_f64();
-
-    stats.last_save = chrono::offset::Utc::now();
-    stats.hits.clear();
-
-    crate::debug(format!
-    (
-        "Write stats time:       {} s", 
-        write_time
-    ), Some("PERFORMANCE".to_string()));
-
-}
-
-pub fn archive()
-{
-    let config = match read_config(CONFIG_PATH)
-    {
-        Some(c) => c,
-        None =>
-        {
-            std::process::exit(1)
-        }
-    };
-
-    let stats_files = list_dir_by(None, config.stats.path.clone());
-
-    for file in stats_files
-    {
-        let time_string = match file.split("/").last()
-        {
-            Some(s) => s,
-            None => {crate::debug(format!("Could not parse time from stats file name {}",file), None); continue}
-        };
-
-        let _t = match date_to_rfc3339(time_string)
-        {
-            Ok(date) => date,
-            Err(e) => {crate::debug(format!("Error {} loading stats file {}",e,file), None); continue}
-        };
-
-        let data = match read_file_utf8(&file)
-        {
-            Some(d) => d,
-            None => {continue}
-        };
-
-        let _file_hits: Vec<Hit> = match serde_json::from_str(&data)
-        {
-            Ok(s) => s,
-            Err(e) => {crate::debug(format!("Error {} loading stats file {}",e,file), None); continue}
-        };
-
-        let zip = match compress(data.as_bytes())
-        {
-            Ok(z) => z,
-            Err(e) => {crate::debug(format!("{e}, compressing stats file {}", file), None); continue}
-        };
-
-        let mut name = String::new();
-        name.push_str(config.stats.path.as_str());
-        name.push_str(&time_string);
-        name.push_str(".zip");
-        write_file_bytes(&name, &zip);
-
-        match std::fs::remove_file(file.clone())
-        {
-            Ok(_) => {},
-            Err(e) => {crate::debug(format!("{e}, while deleting stats file {}", file), None);}
-        }
-    }
 }

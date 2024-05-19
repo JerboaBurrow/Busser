@@ -92,4 +92,72 @@ mod config
         assert_eq!(config.domain, "127.0.0.1");
 
     }
+
+    #[test]
+    fn test_load_or_default()
+    {
+
+        let mut config = Config::load_or_default("not_a_config");
+
+        let stats = config.stats;
+
+        assert_eq!(stats.save_period_seconds, 86400);
+        assert_eq!(stats.path, "stats");
+        assert_eq!(stats.hit_cooloff_seconds, 60);
+        assert_eq!(stats.digest_period_seconds, 86400);
+        assert_eq!(stats.log_files_clear_period_seconds, 2419200);
+        assert_eq!(stats.ignore_regexes, None);
+        assert_eq!(stats.top_n_digest, None);
+
+        let throttle = config.throttle;
+
+        assert_eq!(throttle.max_requests_per_second, 64.0);
+        assert_eq!(throttle.timeout_millis, 5000);
+        assert_eq!(throttle.clear_period_seconds, 3600);
+
+        let content = config.content;
+
+        assert_eq!(content.path, "./");
+        assert_eq!(content.home, "index.html");
+        assert_eq!(content.allow_without_extension, true);
+        assert_eq!(content.ignore_regexes, None);
+        assert_eq!(content.browser_cache_period_seconds, 3600);
+        assert_eq!(content.server_cache_period_seconds, 3600);
+        assert_eq!(content.static_content, Some(false));
+
+        assert_eq!(config.port_https, 443);
+        assert_eq!(config.port_http, 80);
+        assert!(config.notification_endpoint.is_none());
+        assert_eq!(config.cert_path, "certs/cert.pem");
+        assert_eq!(config.key_path, "certs/key.pem");
+        assert_eq!(config.domain, "127.0.0.1");
+
+        config = read_config("tests/config.json").unwrap();
+
+        assert_eq!(config.port_https, 443);
+        assert_eq!(config.port_http, 80);
+        assert_eq!(config.domain, "127.0.0.1");
+        assert_eq!(config.api_token, Some("some_secure_secret_token".to_string()));
+        assert_eq!(config.notification_endpoint.unwrap().get_addr(), "https://discord.com/api/webhooks/abc/xyz");
+        assert_eq!(config.cert_path, "certs/cert.pem");
+        assert_eq!(config.key_path, "certs/key.pem");
+
+        assert_eq!(config.throttle.max_requests_per_second, 64.0);
+        assert_eq!(config.throttle.timeout_millis, 5000);
+        assert_eq!(config.throttle.clear_period_seconds, 3600);
+
+        assert_eq!(config.stats.save_period_seconds, 10);
+        assert_eq!(config.stats.path, "stats");
+        assert_eq!(config.stats.hit_cooloff_seconds, 60);
+        assert_eq!(config.stats.digest_period_seconds, 86400);
+        assert_eq!(config.stats.log_files_clear_period_seconds, 2419200);
+        assert_eq!(config.stats.ignore_regexes.unwrap(), vec!["/favicon.ico".to_string()]);
+
+        assert_eq!(config.content.path, "/home/jerboa/Website/");
+        assert_eq!(config.content.home, "/home/jerboa/Website/jerboa.html");
+        assert_eq!(config.content.allow_without_extension, true);
+        assert_eq!(config.content.browser_cache_period_seconds, 3600);
+        assert_eq!(config.content.server_cache_period_seconds, 1);
+        assert_eq!(config.content.ignore_regexes.unwrap(), vec!["/.git", "workspace"]);
+    }
 }
