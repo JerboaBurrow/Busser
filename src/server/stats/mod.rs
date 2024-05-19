@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use cron::Schedule;
 use tokio::sync::Mutex;
 
-use crate::{config::{self, read_config, Config, CONFIG_PATH}, filesystem::file::File, integrations::discord::post::post, task::{next_job_time, schedule_from_option, Task}};
+use crate::{config::{read_config, Config, CONFIG_PATH}, filesystem::file::File, integrations::discord::post::post, task::{next_job_time, schedule_from_option, Task}};
 
 use self::{digest::{digest_message, process_hits}, file::StatsFile, hits::HitStats};
 
@@ -35,7 +35,7 @@ impl StatsSaveTask
         { 
             state, 
             last_run: chrono::offset::Utc::now(), 
-            next_run: if schedule.is_none() { None } else { next_job_time(None, schedule.clone().unwrap()) },
+            next_run: if schedule.is_none() { None } else { next_job_time(schedule.clone().unwrap()) },
             schedule
         }
     }
@@ -68,7 +68,7 @@ impl Task for StatsSaveTask
 
         self.next_run = match &self.schedule
         {
-            Some(s) => next_job_time(self.next_run, s.clone()),
+            Some(s) => next_job_time(s.clone()),
             None => None
         };
 
@@ -118,7 +118,7 @@ impl StatsDigestTask
         { 
             state, 
             last_run: chrono::offset::Utc::now(), 
-            next_run: if schedule.is_none() { None } else { next_job_time(None, schedule.clone().unwrap()) },
+            next_run: if schedule.is_none() { None } else { next_job_time(schedule.clone().unwrap()) },
             schedule
         }
     }
@@ -167,7 +167,7 @@ impl Task for StatsDigestTask
 
         self.next_run = match &self.schedule
         {
-            Some(s) => next_job_time(self.next_run, s.clone()),
+            Some(s) => next_job_time(s.clone()),
             None => None
         };
 
