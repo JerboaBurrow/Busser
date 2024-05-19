@@ -1,7 +1,8 @@
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 
 use axum::async_trait;
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
+use cron::Schedule;
 use tokio::sync::Mutex;
 
 use crate::{config::{read_config, Config, CONFIG_PATH}, filesystem::file::File, integrations::discord::post::post, task::Task};
@@ -17,7 +18,8 @@ pub mod file;
 pub struct StatsSaveTask
 {
     pub state: Arc<Mutex<HitStats>>,
-    pub last_run: DateTime<Utc>
+    pub last_run: DateTime<Utc>,
+    pub next_run: Option<DateTime<Utc>> 
 }
 
 #[async_trait]
@@ -25,41 +27,47 @@ impl Task for StatsSaveTask
 {
     async fn run(&mut self) -> Result<(), crate::task::TaskError> 
     {
-        let stats = self.state.lock().await;
+        {
+            let stats = self.state.lock().await;
 
-        let mut file = StatsFile::new();
-        file.load(&stats);
-        file.write_bytes();
+            let mut file = StatsFile::new();
+            file.load(&stats);
+            file.write_bytes();
+        }
 
         self.last_run = chrono::offset::Utc::now();
+        self.next_run = None;
         Ok(())
     }
 
-    fn next(&self) -> Option<chrono::prelude::DateTime<chrono::prelude::Utc>> 
+    fn next(&mut self) -> Option<chrono::prelude::DateTime<chrono::prelude::Utc>> 
     {
-        let config = Config::load_or_default(CONFIG_PATH);
-
-        let time: chrono::prelude::DateTime<chrono::prelude::Utc> = chrono::offset::Utc::now();
-        let time_until_save = config.stats.save_period_seconds as i64 - (time - self.last_run).num_seconds();
-
-        if time_until_save < 0
+        if self.next_run.is_none()
         {
-            Some(time)
+            let config = Config::load_or_default(CONFIG_PATH);
+
+            self.next_run = match config.stats.save_schedule.clone()
+            {
+                Some(s) => next_job_time(&s),
+                None => None
+            };
+            
         }
-        else
-        {
-            Some(self.last_run + Duration::seconds(time_until_save))
-        }
+        self.next_run
     }
 
     fn runnable(&self) -> bool 
     {
-        chrono::offset::Utc::now() > self.next().unwrap()
+        match self.next_run
+        {
+            Some(t) => chrono::offset::Utc::now() > t,
+            None => false
+        }
     }
 
     fn info(&self) -> String 
     {
-        "Statistics saveing".to_string()
+        "Statistics saving".to_string()
     }
 }
 
@@ -68,7 +76,8 @@ impl Task for StatsSaveTask
 pub struct StatsDigestTask
 {
     pub state: Arc<Mutex<HitStats>>,
-    pub last_run: DateTime<Utc>
+    pub last_run: DateTime<Utc>,
+    pub next_run: Option<DateTime<Utc>> 
 }
 
 #[async_trait]
@@ -76,65 +85,84 @@ impl Task for StatsDigestTask
 {
     async fn run(&mut self) -> Result<(), crate::task::TaskError> 
     {
-        let mut stats = self.state.lock().await;
-
-        let config = match read_config(CONFIG_PATH)
         {
-            Some(c) => c,
-            None =>
+            let mut stats = self.state.lock().await;
+
+            let config = match read_config(CONFIG_PATH)
             {
-                Config::default()
-            }
-        };
-        
-        stats.summary = process_hits
-        (
-            config.stats.path.clone(), 
-            Some(self.last_run), 
-            None, 
-            config.stats.top_n_digest, 
-            Some(stats.to_owned())
-        );
-
-        let msg = digest_message(stats.summary.clone(), Some(self.last_run), None);
-        match config.notification_endpoint 
-        {
-            Some(endpoint) => match post(&endpoint, msg).await
+                Some(c) => c,
+                None =>
                 {
-                    Ok(_s) => (),
-                    Err(e) => {crate::debug(format!("Error posting to discord\n{}", e), None);}
-                },
-            None => ()
+                    Config::default()
+                }
+            };
+            
+            stats.summary = process_hits
+            (
+                config.stats.path.clone(), 
+                Some(self.last_run), 
+                None, 
+                config.stats.top_n_digest, 
+                Some(stats.to_owned())
+            );
+
+            let msg = digest_message(stats.summary.clone(), Some(self.last_run), None);
+            match config.notification_endpoint 
+            {
+                Some(endpoint) => match post(&endpoint, msg).await
+                    {
+                        Ok(_s) => (),
+                        Err(e) => {crate::debug(format!("Error posting to discord\n{}", e), None);}
+                    },
+                None => ()
+            }
         }
 
+        self.next_run = None;
         self.last_run = chrono::offset::Utc::now();
         Ok(())
     }
 
-    fn next(&self) -> Option<chrono::prelude::DateTime<chrono::prelude::Utc>> 
+    fn next(&mut self) -> Option<chrono::prelude::DateTime<chrono::prelude::Utc>> 
     {
-        let config = Config::load_or_default(CONFIG_PATH);
-
-        let time: chrono::prelude::DateTime<chrono::prelude::Utc> = chrono::offset::Utc::now();
-        let time_until_digest = config.stats.digest_period_seconds as i64 - (time - self.last_run).num_seconds();
-
-        if time_until_digest < 0
+        if self.next_run.is_none()
         {
-            Some(time)
+            let config = Config::load_or_default(CONFIG_PATH);
+
+            self.next_run = match config.stats.save_schedule.clone()
+            {
+                Some(s) => next_job_time(&s),
+                None => None
+            };
+            
         }
-        else
-        {
-            Some(self.last_run + Duration::seconds(time_until_digest))
-        }
+        self.next_run
     }
 
     fn runnable(&self) -> bool 
     {
-        chrono::offset::Utc::now() > self.next().unwrap()
+        match self.next_run
+        {
+            Some(t) => chrono::offset::Utc::now() > t,
+            None => false
+        }
     }
 
     fn info(&self) -> String 
     {
         "Statistics digest".to_string()
+    }
+}
+
+pub fn next_job_time(cron: &str) -> Option<DateTime<Utc>>
+{
+    match Schedule::from_str(cron) 
+    {
+        Ok(s) => 
+        {
+            let jobs: Vec<DateTime<Utc>> = s.upcoming(Utc).take(1).collect();
+            jobs.first().copied()
+        }, 
+        Err(e) => {crate::debug(format!("Could not parse cron string, {:?}, for digest schedule\n{}", cron, e), None); None}
     }
 }

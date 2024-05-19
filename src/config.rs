@@ -5,21 +5,20 @@ use serde::{Serialize, Deserialize};
 use crate::{filesystem::file::read_file_utf8, integrations::webhook::Webhook};
 
 /// Configure the stats collection
-/// - ```save_period_seconds```: periodically save to disc
 /// - ```path```: where to save to disc (time-stamped files)
 /// - ```hit_cooloff_seconds```: cooloff period after which the same IP is counted as a new hit
 /// - ```clear_period_seconds```: periodcially clear data in memory
-/// - ```digest_period_seconds```: periodically send a digts to a Discord webhook
-/// - ```log_files_clear_period_seconds```:archive and clear stats log files periodically
+/// - ```save_schedule```: periodically save to disc, cron format: "sec min hour day-of-month month day-of-week year"
+/// - ```digest_schedule```: periodically send a digts to a Discord webhook, cron format: "sec min hour day-of-month month day-of-week year"
 /// - ```ignore_regexes```: collect, but do not report, hits on these regexes
 /// - ```top_n_digest```: top n listing of pages and resources in API/discord default is 3
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StatsConfig
 {
-    pub save_period_seconds: u64,
     pub path: String,
     pub hit_cooloff_seconds: u64,
-    pub digest_period_seconds: u64,
+    pub save_schedule: Option<String>,
+    pub digest_schedule: Option<String>,
     pub ignore_regexes: Option<Vec<String>>,
     pub top_n_digest: Option<usize>
 }
@@ -30,10 +29,10 @@ impl StatsConfig
     {
         StatsConfig
         {
-            save_period_seconds: 86400,
             path: "stats".to_string(),
             hit_cooloff_seconds: 60,
-            digest_period_seconds: 86400,
+            save_schedule: None,
+            digest_schedule: None,
             ignore_regexes: None,
             top_n_digest: None
         }

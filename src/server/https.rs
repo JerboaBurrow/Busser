@@ -144,12 +144,12 @@ impl Server
 
         server.tasks.add
         (
-            Box::new(StatsSaveTask { state: stats.clone(), last_run: chrono::offset::Utc::now() })
+            Box::new(StatsSaveTask { state: stats.clone(), last_run: chrono::offset::Utc::now(), next_run: None })
         );
 
         server.tasks.add
         (
-            Box::new(StatsDigestTask { state: stats.clone(), last_run: chrono::offset::Utc::now() })
+            Box::new(StatsDigestTask { state: stats.clone(), last_run: chrono::offset::Utc::now(), next_run: None })
         );
 
         server

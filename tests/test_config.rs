@@ -26,10 +26,10 @@ mod config
         assert_eq!(config.throttle.timeout_millis, 5000);
         assert_eq!(config.throttle.clear_period_seconds, 3600);
 
-        assert_eq!(config.stats.save_period_seconds, 10);
+        assert_eq!(config.stats.save_schedule, Some("0 0 1 * * Wed *".to_string()));
         assert_eq!(config.stats.path, "stats");
         assert_eq!(config.stats.hit_cooloff_seconds, 60);
-        assert_eq!(config.stats.digest_period_seconds, 86400);
+        assert_eq!(config.stats.digest_schedule, Some("0 0 1 * * Fri *".to_string()));
         assert_eq!(config.stats.ignore_regexes.unwrap(), vec!["/favicon.ico".to_string()]);
 
         assert_eq!(config.content.path, "/home/jerboa/Website/");
@@ -57,10 +57,10 @@ mod config
     {
         let stats = StatsConfig::default();
 
-        assert_eq!(stats.save_period_seconds, 86400);
+        assert_eq!(stats.save_schedule, None);
         assert_eq!(stats.path, "stats");
         assert_eq!(stats.hit_cooloff_seconds, 60);
-        assert_eq!(stats.digest_period_seconds, 86400);
+        assert_eq!(stats.digest_schedule, None);
         assert_eq!(stats.ignore_regexes, None);
         assert_eq!(stats.top_n_digest, None);
 
@@ -99,10 +99,10 @@ mod config
 
         let stats = config.stats;
 
-        assert_eq!(stats.save_period_seconds, 86400);
+        assert_eq!(stats.save_schedule, None);
         assert_eq!(stats.path, "stats");
         assert_eq!(stats.hit_cooloff_seconds, 60);
-        assert_eq!(stats.digest_period_seconds, 86400);
+        assert_eq!(stats.digest_schedule, None);
         assert_eq!(stats.ignore_regexes, None);
         assert_eq!(stats.top_n_digest, None);
 
@@ -143,10 +143,10 @@ mod config
         assert_eq!(config.throttle.timeout_millis, 5000);
         assert_eq!(config.throttle.clear_period_seconds, 3600);
 
-        assert_eq!(config.stats.save_period_seconds, 10);
+        assert_eq!(config.stats.save_schedule, Some("0 0 1 * * Wed *".to_string()));
         assert_eq!(config.stats.path, "stats");
         assert_eq!(config.stats.hit_cooloff_seconds, 60);
-        assert_eq!(config.stats.digest_period_seconds, 86400);
+        assert_eq!(config.stats.digest_schedule, Some("0 0 1 * * Fri *".to_string()));
         assert_eq!(config.stats.ignore_regexes.unwrap(), vec!["/favicon.ico".to_string()]);
 
         assert_eq!(config.content.path, "/home/jerboa/Website/");

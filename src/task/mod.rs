@@ -6,7 +6,7 @@ use chrono::{DateTime, Local, Utc};
 use tokio::{spawn, sync::Mutex};
 use uuid::Uuid;
 
-pub const DEFAULT_WAIT: tokio::time::Duration = tokio::time::Duration::from_secs(1);
+pub const DEFAULT_WAIT: tokio::time::Duration = tokio::time::Duration::from_secs(60);
 
 #[derive(Debug, Clone)]
 pub struct TaskError
@@ -26,7 +26,7 @@ impl fmt::Display for TaskError {
 pub trait Task
 {
     async fn run(&mut self) -> Result<(), TaskError>;
-    fn next(&self) -> Option<DateTime<Utc>>;
+    fn next(&mut self) -> Option<DateTime<Utc>>;
     fn runnable(&self) -> bool;
     fn info(&self) -> String;
 }
@@ -82,14 +82,16 @@ impl TaskPool
         let now = chrono::offset::Utc::now();
         let mut wait = u64::MAX;
         let mut info = String::new();
+        let mut all_none = true;
 
         for (id, task_lock) in &self.tasks
         {
-            let task = task_lock.lock().await;
+            let mut task = task_lock.lock().await;
             match task.next()
             {
                 Some(d) => 
                 {
+                    all_none = false;
                     let dt = (d-now).num_seconds();
                     if dt <= 0
                     {
@@ -109,7 +111,14 @@ impl TaskPool
             }
         }
 
-        (tokio::time::Duration::from_secs(wait), info)
+        if all_none
+        {
+            (DEFAULT_WAIT, info)
+        }
+        else
+        {
+            (tokio::time::Duration::from_secs(wait), info)
+        }
     }
 
     pub fn run(self)
