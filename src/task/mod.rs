@@ -150,8 +150,10 @@ impl TaskPool
                         }
                     }
                     let (wait, info) = self.waiting_for().await;
-                    crate::debug(format!("Next task\n  {}\n Waiting for {}s", info, wait.as_secs()), None);
-                    tokio::time::sleep(wait).await;
+                    if wait > tokio::time::Duration::ZERO
+                    {   crate::debug(format!("Next task\n  {}\n Waiting for {}s", info, wait.as_secs()), None);
+                        tokio::time::sleep(wait).await;
+                    }
                 }
             }
         );

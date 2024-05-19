@@ -32,8 +32,11 @@ pub trait Observed
 
 pub fn write_file_bytes(path: &str, data: &[u8])
 {
-    let mut file = fs::File::create(path).unwrap();
-    file.write_all(data).unwrap();
+    match fs::File::create(path)
+    {
+        Ok(mut file) => file.write_all(data).unwrap(),
+        Err(e) => {crate::debug(format!("Error {} creating file {}", e, path), None)}
+    }
 }
 
 pub fn read_file_utf8(path: &str) -> Option<String>

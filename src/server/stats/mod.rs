@@ -1,11 +1,11 @@
-use std::sync::Arc;
+use std::{fs::create_dir, sync::Arc};
 
 use axum::async_trait;
 use chrono::{DateTime, Utc};
 use cron::Schedule;
 use tokio::sync::Mutex;
 
-use crate::{config::{read_config, Config, CONFIG_PATH}, filesystem::file::File, integrations::discord::post::post, task::{next_job_time, schedule_from_option, Task}};
+use crate::{config::{self, read_config, Config, CONFIG_PATH}, filesystem::file::File, integrations::discord::post::post, task::{next_job_time, schedule_from_option, Task}};
 
 use self::{digest::{digest_message, process_hits}, file::StatsFile, hits::HitStats};
 
@@ -46,15 +46,24 @@ impl Task for StatsSaveTask
 {
     async fn run(&mut self) -> Result<(), crate::task::TaskError> 
     {
+        let config = Config::load_or_default(CONFIG_PATH);
         {
             let stats = self.state.lock().await;
+
+            if !std::path::Path::new(&config.stats.path).exists()
+            {
+                match create_dir(config.stats.path.to_string())
+                {
+                    Ok(_s) => {},
+                    Err(e) => {crate::debug(format!("Error creating stats dir {}",e), None)}
+                }
+            }
 
             let mut file = StatsFile::new();
             file.load(&stats);
             file.write_bytes();
         }
 
-        let config = Config::load_or_default(CONFIG_PATH);
         self.schedule = schedule_from_option(config.stats.save_schedule.clone());
 
         self.next_run = match &self.schedule
