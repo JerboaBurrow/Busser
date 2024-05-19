@@ -90,13 +90,13 @@ impl Task for StatsDigestTask
         stats.summary = process_hits
         (
             config.stats.path.clone(), 
-            Some(stats.last_digest), 
+            Some(self.last_run), 
             None, 
             config.stats.top_n_digest, 
             Some(stats.to_owned())
         );
 
-        let msg = digest_message(stats.summary.clone(), Some(stats.last_digest), None);
+        let msg = digest_message(stats.summary.clone(), Some(self.last_run), None);
         match config.notification_endpoint 
         {
             Some(endpoint) => match post(&endpoint, msg).await
