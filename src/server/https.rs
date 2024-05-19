@@ -1,6 +1,6 @@
 use crate::
 {
-    config::{read_config, Config, CONFIG_PATH}, content::{filter::ContentFilter, sitemap::SiteMap, Content}, server::throttle::{handle_throttle, IpThrottler}, task::TaskPool, CRAB
+    config::{read_config, Config, CONFIG_PATH}, content::{filter::ContentFilter, sitemap::SiteMap, Content}, server::throttle::{handle_throttle, IpThrottler}, task::{schedule_from_option, TaskPool}, CRAB
 };
 
 use std::{collections::HashMap, net::{IpAddr, Ipv4Addr, SocketAddr}};
@@ -138,18 +138,32 @@ impl Server
         {
             addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(a,b,c,d)), config.port_https),
             router,
-            config,
+            config: config.clone(),
             tasks: TaskPool::new()
         };
 
         server.tasks.add
         (
-            Box::new(StatsSaveTask { state: stats.clone(), last_run: chrono::offset::Utc::now(), next_run: None })
+            Box::new
+            (
+                StatsSaveTask::new
+                (
+                    stats.clone(), 
+                    schedule_from_option(config.stats.digest_schedule.clone())
+                ) 
+            )
         );
 
         server.tasks.add
         (
-            Box::new(StatsDigestTask { state: stats.clone(), last_run: chrono::offset::Utc::now(), next_run: None })
+            Box::new
+            (
+                StatsDigestTask::new
+                (
+                    stats.clone(), 
+                    schedule_from_option(config.stats.digest_schedule.clone())
+                ) 
+            )
         );
 
         server

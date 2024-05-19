@@ -20,7 +20,7 @@ mod task
         assert_eq!(wait, DEFAULT_WAIT);
 
         let stats = Arc::new(Mutex::new(HitStats::new()));
-        let task = StatsSaveTask{ state: stats, last_run: chrono::offset::Utc::now(), next_run: None };
+        let task = StatsSaveTask{ state: stats, last_run: chrono::offset::Utc::now(), next_run: None, schedule: None};
 
         pool.add(Box::new(task));
 

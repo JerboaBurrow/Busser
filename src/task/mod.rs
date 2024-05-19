@@ -1,8 +1,9 @@
 use core::fmt;
-use std::{cmp::min, collections::HashMap, sync::Arc};
+use std::{cmp::min, collections::HashMap, str::FromStr, sync::Arc};
 
 use axum::async_trait;
 use chrono::{DateTime, Local, Utc};
+use cron::Schedule;
 use tokio::{spawn, sync::Mutex};
 use uuid::Uuid;
 
@@ -154,5 +155,44 @@ impl TaskPool
                 }
             }
         );
+    }
+}
+
+pub fn next_job_time(last_run: Option<DateTime<Utc>>, cron: Schedule) -> Option<DateTime<Utc>>
+{
+    let jobs: Vec<DateTime<Utc>> = cron.upcoming(Utc).take(2).collect();
+    let first = jobs.first().copied();
+    let second = jobs.first().copied();
+    if first.is_none() 
+    {
+        None
+    }
+    else if last_run != first
+    {
+        first
+    }
+    else
+    {
+        second
+    }
+}
+
+pub fn schedule_from_option(cron: Option<String>) -> Option<Schedule>
+{
+    if cron.is_some()
+    {
+        match Schedule::from_str(&cron.clone().unwrap())
+        {
+            Ok(s) => Some(s),
+            Err(e) => 
+            {
+                crate::debug(format!("Could not parse cron schedule {:?}, {}", cron, e), None);
+                None
+            }
+        }
+    }
+    else
+    {
+        None
     }
 }
