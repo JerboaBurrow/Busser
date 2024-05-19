@@ -2,7 +2,7 @@ use std::{cmp::{max, min}, collections::HashMap};
 
 use chrono::{DateTime, Timelike};
 
-use crate::{config::{read_config, CONFIG_PATH}, content::is_page, util::matches_one};
+use crate::{config::{Config, CONFIG_PATH}, content::is_page, util::matches_one};
 
 use super::hits::{collect_hits, HitStats};
 
@@ -44,18 +44,14 @@ pub fn process_hits(path: String, from: Option<DateTime<chrono::Utc>>, to: Optio
 
     let mut digest = Digest::new();
 
-    let (ignore_patterns, domain) = match read_config(CONFIG_PATH)
+    let config = Config::load_or_default(CONFIG_PATH);
+
+    let (ignore_patterns, domain) = match config.stats.ignore_regexes
     {
-        Some(c) => 
-        {
-            match c.stats.ignore_regexes
-            {
-                Some(i) => (i, c.domain),
-                None => (vec![], c.domain)
-            }
-        },
-        None => (vec![], "127.0.0.1".to_string())
+        Some(r) => (r, config.domain),
+        None => (vec![], config.domain)
     };
+
     let mut hitters: HashMap<String, u16> = HashMap::new();
     let mut pages: HashMap<String, u16> = HashMap::new();
     let mut resources: HashMap<String, u16> = HashMap::new();

@@ -150,6 +150,18 @@ impl Config
             api_token: None
         }
     }
+
+    pub fn load_or_default(path: &str) -> Config
+    {
+        match read_config(path)
+        {
+            Some(c) => c,
+            None =>
+            {
+                Config::default()
+            }
+        }
+    }
 }
 
 pub fn read_config(path: &str) -> Option<Config>

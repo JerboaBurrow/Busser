@@ -4,12 +4,13 @@ use axum::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use tokio::sync::Mutex;
 
-use crate::{config::{read_config, Config, CONFIG_PATH}, integrations::discord::post::post, task::Task};
+use crate::{config::{read_config, Config, CONFIG_PATH}, filesystem::file::File, integrations::discord::post::post, task::Task};
 
-use self::{digest::{digest_message, process_hits}, hits::{save, HitStats}};
+use self::{digest::{digest_message, process_hits}, file::StatsFile, hits::HitStats};
 
 pub mod hits;
 pub mod digest;
+pub mod file;
 
 /// A task to periodically save HitStats to disk
 /// See [crate::task::Task] and [crate::task::TaskPool]
@@ -24,22 +25,19 @@ impl Task for StatsSaveTask
 {
     async fn run(&mut self) -> Result<(), crate::task::TaskError> 
     {
-        let mut stats = self.state.lock().await;
-        save(&mut stats);
+        let stats = self.state.lock().await;
+
+        let mut file = StatsFile::new();
+        file.load(&stats);
+        file.write_bytes();
+
         self.last_run = chrono::offset::Utc::now();
         Ok(())
     }
 
     fn next(&self) -> Option<chrono::prelude::DateTime<chrono::prelude::Utc>> 
     {
-        let config = match read_config(CONFIG_PATH)
-        {
-            Some(c) => c,
-            None =>
-            {
-                Config::default()
-            }
-        };
+        let config = Config::load_or_default(CONFIG_PATH);
 
         let time: chrono::prelude::DateTime<chrono::prelude::Utc> = chrono::offset::Utc::now();
         let time_until_save = config.stats.save_period_seconds as i64 - (time - self.last_run).num_seconds();
@@ -115,14 +113,7 @@ impl Task for StatsDigestTask
 
     fn next(&self) -> Option<chrono::prelude::DateTime<chrono::prelude::Utc>> 
     {
-        let config = match read_config(CONFIG_PATH)
-        {
-            Some(c) => c,
-            None =>
-            {
-                Config::default()
-            }
-        };
+        let config = Config::load_or_default(CONFIG_PATH);
 
         let time: chrono::prelude::DateTime<chrono::prelude::Utc> = chrono::offset::Utc::now();
         let time_until_digest = config.stats.digest_period_seconds as i64 - (time - self.last_run).num_seconds();

@@ -3,9 +3,9 @@ mod common;
 #[cfg(test)]
 mod test_stats_graph
 {
-    use std::collections::HashMap;
+    use std::{collections::HashMap, fs::remove_file, iter::FusedIterator, path::Path};
 
-    use busser::server::stats::{digest::{hits_by_hour_text_graph, process_hits, Digest}, hits::{collect_hits, Hit, HitStats}};
+    use busser::{filesystem::file::File, server::stats::{digest::{hits_by_hour_text_graph, process_hits, Digest}, file::StatsFile, hits::{collect_hits, Hit, HitStats}}};
     use chrono::DateTime;
 
     const GRAPH: &str = r#"00:00
@@ -104,6 +104,53 @@ mod test_stats_graph
 
         assert_eq!(stats.hits, HashMap::new());
         assert_eq!(stats.summary, Digest::new());        
+    }
+
+    #[test]
+    fn test_stats_file()
+    {
+        let mut file = StatsFile::new();
+
+        assert_eq!(file.path, None);
+        assert_eq!(file.hits, vec![]);
+
+        let hits = HitStats::new();
+
+        if Path::exists(Path::new(&file.path()))
+        {
+            let _ = remove_file(Path::new(&file.path()));
+        }
+
+        file.load(&hits);
+
+        assert_eq!(file.path, None);
+        assert_eq!(file.hits, vec![]);
+
+        let hit = Hit 
+        {
+            count: 1,
+            times: vec!["2024-03-24T04:12:44.736120969+00:00".to_string()],
+            path: "/login.php/'%3E%3Csvg/onload=confirm%60xss%60%3E".to_owned(),
+            ip_hash: "75A05052881EA1D68995532845978B4090012883F99354EFF67AD4E1ED5FF1833F4A2EC893181EAA00B94B9CD35E1E1DD581B7F80FEF2EFF45B75D529A080BD8".to_owned()
+        };
+
+        file.path = Some("tests/stats/2024-03-24".to_owned());
+        file.load(&hits);
+        
+        assert_eq!(file.hits.len(), 16);
+        assert!(file.hits.contains(&hit));
+
+        file.path = Some("test_stats_file".to_owned());
+        file.write_bytes();
+        file.load(&hits);
+        
+        assert_eq!(file.hits.len(), 16);
+        assert!(file.hits.contains(&hit));
+
+        if Path::exists(Path::new("test_stats_file"))
+        {
+            let _ = remove_file(Path::new("test_stats_file"));
+        }
     }
 
 }
