@@ -19,15 +19,10 @@ pub mod sitemap;
 
 /// Store web content 
 /// 
-/// CF [crate::content::pages::page::Page] and [crate::content::resources::resource::Resource]
-/// 
-/// - [Content::uri]                   is the served uri of the content (webaddress)
-/// - [Content::body]                  is a byte body
-/// - [Content::disk_path]             is a path to the locally stored file on disk representing [Content::body]
-/// - [Content::cache_period_seconds]  is the cache-control max-age 
-/// 
 /// - The body is unpopulated until [Content::load_from_file] is called
 /// - The body may be converted to a utf8 string using [Content::utf8_body]
+/// - A hash of the file is used to check it is stale, used by [Observed]
+/// - Content may have different server side and browser side cache ages
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Content
 {

@@ -6,6 +6,7 @@ pub struct Webhook
     addr: String
 }
 
+/// Wraps a webhook url
 impl Webhook
 {
 

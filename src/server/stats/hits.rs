@@ -1,25 +1,39 @@
-use std::{collections::HashMap, fs::create_dir, net::{IpAddr, Ipv4Addr, SocketAddr}, sync::Arc, time::Instant};
+use std::{collections::HashMap, net::{IpAddr, Ipv4Addr, SocketAddr}, sync::Arc, time::Instant};
 
 use axum::{extract::{ConnectInfo, State}, http::Request, middleware::Next, response::Response};
 use chrono::DateTime;
 use openssl::sha::sha512;
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
-use tokio::sync::{Mutex, MutexGuard};
+use tokio::sync::Mutex;
 
-use crate::{config::{Config, CONFIG_PATH}, filesystem::{file::{read_file_utf8, write_file_bytes}, folder::list_dir_by}, util::{compress, date_to_rfc3339, dump_bytes}};
+use crate::{config::{Config, CONFIG_PATH}, filesystem::{file::read_file_utf8, folder::list_dir_by}, util::{date_to_rfc3339, dump_bytes}};
 
 use super::digest::Digest;
 
+/// A hit defined by a uri and an ip (hashed) at given times
+/// - [Hit::times]   the unique hit times of equivalent events (controlled by [crate::config::StatsConfig::hit_cooloff_seconds])
+/// - [Hit::path]    the uri defining this hit
+/// - [Hit::ip_hash] the sha512 hash of the ip defining this hit
+/// 
+/// Further hits inside the [crate::config::StatsConfig::hit_cooloff_seconds] period will be ignored
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Hit
 {
-    pub count: u16,
     pub times: Vec<String>,
     pub path: String,
     pub ip_hash: String
 }
 
+impl Hit
+{
+    pub fn count(&self) -> usize
+    {
+        self.times.len().clone()
+    }
+}
+
+/// A collections of Hits indexed by a sha512 of the ip and uri
 #[derive(Debug, Clone)]
 pub struct HitStats
 {
@@ -39,6 +53,7 @@ impl HitStats
     }
 }
 
+/// Launches a thread to log statistics for this request
 pub async fn log_stats<B>
 (
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
@@ -59,6 +74,7 @@ pub async fn log_stats<B>
     Ok(next.run(request).await)
 }
 
+/// Updates hit statistics with this request
 pub async fn process_hit
 (
     addr: SocketAddr,
@@ -112,7 +128,6 @@ pub async fn process_hit
                                 return
                             }
                             hit.times.push(chrono::offset::Utc::now().to_rfc3339());
-                            hit.count += 1;
                             hit
                         },
                         Err(_e) => {hit}
@@ -122,7 +137,7 @@ pub async fn process_hit
         },
         false => 
         {
-            Hit {path: uri, count: 1, times: vec![chrono::offset::Utc::now().to_rfc3339()], ip_hash: dump_bytes(&ip_hash)}
+            Hit {path: uri, times: vec![chrono::offset::Utc::now().to_rfc3339()], ip_hash: dump_bytes(&ip_hash)}
         }
     };
 
@@ -138,6 +153,7 @@ pub async fn process_hit
     ), Some("PERFORMANCE".to_string()));
 }
 
+/// Gathers [Hit]s both from disk and those cached in [HitStats]
 pub fn collect_hits(path: String, stats: Option<HitStats>, from: Option<DateTime<chrono::Utc>>, to: Option<DateTime<chrono::Utc>>) -> Vec<Hit>
 {
     let stats_files = list_dir_by(None, path);
@@ -189,7 +205,6 @@ pub fn collect_hits(path: String, stats: Option<HitStats>, from: Option<DateTime
     for hit in hits_to_filter
     {
         // check the cached stats are within the time period, then add
-        let mut count = 0;
         let mut times: Vec<String> = vec![];
         for i in 0..hit.times.len()
         {
@@ -200,13 +215,12 @@ pub fn collect_hits(path: String, stats: Option<HitStats>, from: Option<DateTime
             };
             if !from.is_some_and(|from| t < from) && !to.is_some_and(|to| t > to) 
             {
-                count += 1;
                 times.push(hit.times[i].clone());
             }
         }
-        if count > 0
+        if times.len() > 0
         {
-            let h = Hit {count, times, ip_hash: hit.ip_hash.clone(), path: hit.path.clone()};
+            let h = Hit {times, ip_hash: hit.ip_hash.clone(), path: hit.path.clone()};
             hits.push(h.clone());
         }
     }

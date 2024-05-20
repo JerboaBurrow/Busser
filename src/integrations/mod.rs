@@ -13,6 +13,7 @@ pub mod webhook;
 
 /// Uses openssl to verify the request body via the given hmac_token
 ///   - hmac_header_key is the location in the https header for the digest
+///   - hmac_token must be 64 byte Hex, as should he the sent HMAC digest
 pub fn is_authentic
 (
     headers: &HeaderMap,

@@ -6,15 +6,16 @@ use crate::{config::{Config, CONFIG_PATH}, content::is_page, util::matches_one};
 
 use super::hits::{collect_hits, HitStats};
 
+/// A digest of hit statistics
 #[derive(Debug, Clone, PartialEq)]
 pub struct Digest
 {
-    pub top_hitters: Vec<(String, u16)>,
-    pub top_pages: Vec<(String, u16)>,
-    pub top_resources: Vec<(String, u16)>,
-    pub hits_by_hour_utc: [u16; 24],
-    pub total_hits: u16,
-    pub unique_hits: u16
+    pub top_hitters: Vec<(String, usize)>,
+    pub top_pages: Vec<(String, usize)>,
+    pub top_resources: Vec<(String, usize)>,
+    pub hits_by_hour_utc: [usize; 24],
+    pub total_hits: usize,
+    pub unique_hits: usize
 }
 
 impl Digest
@@ -33,6 +34,7 @@ impl Digest
     }
 }
 
+/// Collect hits cached and from local files into a [Digest]
 pub fn process_hits(path: String, from: Option<DateTime<chrono::Utc>>, to: Option<DateTime<chrono::Utc>>, top_n: Option<usize>, stats: Option<HitStats>) -> Digest
 {
 
@@ -52,9 +54,9 @@ pub fn process_hits(path: String, from: Option<DateTime<chrono::Utc>>, to: Optio
         None => (vec![], config.domain)
     };
 
-    let mut hitters: HashMap<String, u16> = HashMap::new();
-    let mut pages: HashMap<String, u16> = HashMap::new();
-    let mut resources: HashMap<String, u16> = HashMap::new();
+    let mut hitters: HashMap<String, usize> = HashMap::new();
+    let mut pages: HashMap<String, usize> = HashMap::new();
+    let mut resources: HashMap<String, usize> = HashMap::new();
 
     for hit in collect_hits(path, stats, from, to)
     {
@@ -65,10 +67,10 @@ pub fn process_hits(path: String, from: Option<DateTime<chrono::Utc>>, to: Optio
 
         match hitters.contains_key(&hit.ip_hash)
         {
-            true => {hitters.insert(hit.ip_hash.clone(), hit.count+hitters[&hit.ip_hash]);},
+            true => {hitters.insert(hit.ip_hash.clone(), hit.count()+hitters[&hit.ip_hash]);},
             false => 
             {
-                hitters.insert(hit.ip_hash, hit.count);
+                hitters.insert(hit.ip_hash.clone(), hit.count());
                 digest.unique_hits += 1;
             }
         }
@@ -77,20 +79,20 @@ pub fn process_hits(path: String, from: Option<DateTime<chrono::Utc>>, to: Optio
         {
             match pages.contains_key(&hit.path)
             {
-                true => {pages.insert(hit.path.clone(), hit.count+pages[&hit.path]);},
-                false => {pages.insert(hit.path, hit.count);}
+                true => {pages.insert(hit.path.clone(), hit.count()+pages[&hit.path]);},
+                false => {pages.insert(hit.path.clone(), hit.count());}
             }
         }
         else
         {
             match resources.contains_key(&hit.path)
             {
-                true => {resources.insert(hit.path.clone(), hit.count+resources[&hit.path]);},
-                false => {resources.insert(hit.path, hit.count);}
+                true => {resources.insert(hit.path.clone(), hit.count()+resources[&hit.path]);},
+                false => {resources.insert(hit.path.clone(), hit.count());}
             }
         }
 
-        digest.total_hits += hit.count;
+        digest.total_hits += hit.count();
 
         for time in hit.times
         {
@@ -105,13 +107,13 @@ pub fn process_hits(path: String, from: Option<DateTime<chrono::Utc>>, to: Optio
         }
     }
 
-    let mut all_hitters: Vec<(String, u16)> = hitters.into_iter().collect();
-    let mut all_pages: Vec<(String, u16)> = pages.into_iter().collect();
-    let mut all_resources: Vec<(String, u16)> = resources.into_iter().collect();
+    let mut all_hitters: Vec<(String, usize)> = hitters.into_iter().collect();
+    let mut all_pages: Vec<(String, usize)> = pages.into_iter().collect();
+    let mut all_resources: Vec<(String, usize)> = resources.into_iter().collect();
 
     for data in vec![&mut all_hitters, &mut all_pages, &mut all_resources]
     {
-        data.sort_by(|a: &(String, u16), b: &(String, u16)| a.1.cmp(&b.1));
+        data.sort_by(|a: &(String, usize), b: &(String, usize)| a.1.cmp(&b.1));
         data.reverse();
     }
 
@@ -157,6 +159,7 @@ pub fn process_hits(path: String, from: Option<DateTime<chrono::Utc>>, to: Optio
 
 }
 
+/// Post a [Digest] as a formatted message to Discord
 pub fn digest_message(digest: Digest, from: Option<DateTime<chrono::Utc>>, to: Option<DateTime<chrono::Utc>>) -> String
 {
     let mut msg = String::new(); 
@@ -204,7 +207,7 @@ pub fn digest_message(digest: Digest, from: Option<DateTime<chrono::Utc>>, to: O
     msg
 }
 
-pub fn hits_by_hour_text_graph(hits: [u16; 24], symbol: char, size: u8) -> String
+pub fn hits_by_hour_text_graph(hits: [usize; 24], symbol: char, size: u8) -> String
 {
     let mut graph = String::new();
 

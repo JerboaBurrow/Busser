@@ -66,7 +66,7 @@ impl TaskPool
     
     /// Returns a duration to wait for the next runnable process
     ///  and an information string about that process including
-    ///  a [DateTime<Utc>] when it will be run
+    ///  a [`DateTime<Utc>`] when it will be run
     pub async fn waiting_for(&self) -> (tokio::time::Duration, String) 
     {
         if self.tasks.len() == 0

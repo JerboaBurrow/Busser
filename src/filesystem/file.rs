@@ -23,6 +23,8 @@ pub trait File
     fn path(&self) -> String;
 }
 
+/// Something that may be observed for changes
+///  [Observed::is_stale] is typically a hash function
 pub trait Observed
 {
     fn is_stale(&self) -> bool;
