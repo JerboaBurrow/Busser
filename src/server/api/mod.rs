@@ -15,7 +15,7 @@ use super::stats::hits::HitStats;
 pub trait ApiRequest
 {
     /// Validate a request's hmac given a token read from config.json 
-    ///   - See [crate::config::Config] and [crate::web::is_authentic]
+    ///   - See [crate::config::Config] and [crate::integrations::is_authentic]
     fn is_authentic(headers: HeaderMap, body: Bytes) -> StatusCode;
     /// Deserialise the Bytes body from JSON
     fn deserialise_payload(&mut self, headers: HeaderMap, body: Bytes) -> StatusCode;

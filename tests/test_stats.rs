@@ -37,7 +37,7 @@ mod test_stats_graph
     #[test]
     fn test_text_graph()
     {
-        let hits: [u16; 24] = core::array::from_fn(|i| i as u16);
+        let hits: [usize; 24] = core::array::from_fn(|i| i);
         let graph = hits_by_hour_text_graph(hits, '-', 24);
         println!("{}", graph);
         assert_eq!(graph, GRAPH);
@@ -51,7 +51,6 @@ mod test_stats_graph
 
         let mut hit = Hit 
         {
-            count: 1,
             times: vec!["2024-03-25T04:12:44.736120969+00:00".to_string()],
             path: "/login.php/'%3E%3Csvg/onload=confirm%60xss%60%3E".to_owned(),
             ip_hash: "75A05052881EA1D68995532845978B4090012883F99354EFF67AD4E1ED5FF1833F4A2EC893181EAA00B94B9CD35E1E1DD581B7F80FEF2EFF45B75D529A080BD8".to_owned()
@@ -71,7 +70,6 @@ mod test_stats_graph
 
         hit = Hit 
         {
-            count: 1,
             times: vec!["2024-03-24T04:12:44.736120969+00:00".to_string()],
             path: "/login.php/'%3E%3Csvg/onload=confirm%60xss%60%3E".to_owned(),
             ip_hash: "75A05052881EA1D68995532845978B4090012883F99354EFF67AD4E1ED5FF1833F4A2EC893181EAA00B94B9CD35E1E1DD581B7F80FEF2EFF45B75D529A080BD8".to_owned()
@@ -90,11 +88,11 @@ mod test_stats_graph
         assert_eq!(digest.total_hits, 21);
         assert_eq!(digest.hits_by_hour_utc, [1, 0, 0, 0, 2, 4, 0, 0, 1, 0, 0, 2, 0, 0, 0, 0, 0, 3, 1, 0, 2, 1, 0, 0]);
     
-        assert_eq!(digest.top_hitters.first().unwrap(), &("75A05052881EA1D68995532845978B4090012883F99354EFF67AD4E1ED5FF1833F4A2EC893181EAA00B94B9CD35E1E1DD581B7F80FEF2EFF45B75D529A080BD8".to_string(), 6 as u16));
+        assert_eq!(digest.top_hitters.first().unwrap(), &("75A05052881EA1D68995532845978B4090012883F99354EFF67AD4E1ED5FF1833F4A2EC893181EAA00B94B9CD35E1E1DD581B7F80FEF2EFF45B75D529A080BD8".to_string(), 6));
         assert_eq!(digest.top_pages.first().unwrap(), &("/".to_string(), 5));
-        assert!(digest.top_resources.contains(&("/login.php/'%3E%3Csvg/onload=confirm%60xss%60%3E".to_string(), 2 as u16))); 
-        assert!(digest.top_resources.contains(&("https://jerboa.app/console.js".to_string(), 2 as u16))); 
-        assert!(digest.top_resources.contains(&("/admin/.env".to_string(), 2 as u16)));
+        assert!(digest.top_resources.contains(&("/login.php/'%3E%3Csvg/onload=confirm%60xss%60%3E".to_string(), 2))); 
+        assert!(digest.top_resources.contains(&("https://jerboa.app/console.js".to_string(), 2))); 
+        assert!(digest.top_resources.contains(&("/admin/.env".to_string(), 2)));
     }
 
     #[test]
@@ -128,7 +126,6 @@ mod test_stats_graph
 
         let hit = Hit 
         {
-            count: 1,
             times: vec!["2024-03-24T04:12:44.736120969+00:00".to_string()],
             path: "/login.php/'%3E%3Csvg/onload=confirm%60xss%60%3E".to_owned(),
             ip_hash: "75A05052881EA1D68995532845978B4090012883F99354EFF67AD4E1ED5FF1833F4A2EC893181EAA00B94B9CD35E1E1DD581B7F80FEF2EFF45B75D529A080BD8".to_owned()

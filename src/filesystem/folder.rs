@@ -15,6 +15,7 @@ impl fmt::Display for ListDirError {
     }
 }
 
+/// List all files in path
 pub fn list_dir(path: String) -> Result<std::fs::ReadDir, ListDirError>
 {
     match std::fs::read_dir(path)
@@ -30,6 +31,7 @@ pub fn list_dir(path: String) -> Result<std::fs::ReadDir, ListDirError>
     }
 }
 
+/// Return parsed [std::ffi::OsString] from [DirEntry]
 pub fn dir_entry_to_path(d: DirEntry) -> Option<String>
 {
     let file_os_string = d.file_name();
@@ -45,6 +47,7 @@ pub fn dir_entry_to_path(d: DirEntry) -> Option<String>
     }
 }
 
+/// List all subdirectories of a path
 pub fn list_sub_dirs(path: String) -> Vec<String>
 {
     let mut found_dirs: Vec<String> = vec![];
@@ -100,6 +103,7 @@ pub fn list_sub_dirs(path: String) -> Vec<String>
     found_dirs
 }
 
+/// List all files conforming to an [Option] [Regex]
 pub fn list_dir_by(pattern: Option<Regex>, path: String) -> Vec<String>
 {
     match std::fs::read_dir(path.clone())
