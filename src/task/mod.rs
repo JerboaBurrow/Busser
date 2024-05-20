@@ -37,15 +37,14 @@ pub trait Task
 /// - [TaskPool::run] loops continuously (with sleeps) running tasks when they are available
 pub struct TaskPool
 {
-    tasks: HashMap<Uuid, Arc<Mutex<Box<dyn Task + Send>>>>,
-    closing: Arc<Mutex<bool>>
+    tasks: HashMap<Uuid, Arc<Mutex<Box<dyn Task + Send>>>>
 }
 
 impl TaskPool
 {
     pub fn new() -> TaskPool
     {
-        TaskPool { tasks: HashMap::new(), closing: Arc::new(Mutex::new(false)) }
+        TaskPool { tasks: HashMap::new() }
     }
 
     pub fn ntasks(&self) -> usize { self.tasks.len() }
@@ -63,11 +62,6 @@ impl TaskPool
         {
             self.tasks.remove(id);
         }
-    }
-
-    pub async fn stop(&mut self)
-    {
-        *self.closing.lock().await = true; 
     }
     
     /// Returns a duration to wait for the next runnable process
@@ -122,16 +116,12 @@ impl TaskPool
         }
     }
 
-    pub fn run(self)
+    pub fn run(self) -> tokio::task::JoinHandle<()>
     {
         spawn(
             async move {
                 loop
                 {
-                    if self.closing.lock().await.to_owned()
-                    {
-                        break;
-                    }
                     for (id, task_lock) in &self.tasks
                     {
                         let mut task = task_lock.lock().await;
@@ -156,7 +146,7 @@ impl TaskPool
                     }
                 }
             }
-        );
+        )
     }
 }
 

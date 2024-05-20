@@ -5,7 +5,7 @@ mod task
 {
     use std::{str::FromStr, sync::Arc};
 
-    use busser::{server::stats::{hits::HitStats, StatsDigestTask, StatsSaveTask}, task::{Task, TaskPool, DEFAULT_WAIT}};
+    use busser::{server::stats::{hits::HitStats, StatsDigestTask, StatsSaveTask}, task::{schedule_from_option, Task, TaskPool, DEFAULT_WAIT}};
     use chrono::Timelike;
     use cron::Schedule;
     use tokio::sync::Mutex;
@@ -46,12 +46,38 @@ mod task
         assert_eq!(task.runnable(), false);
         assert_eq!(task.info(), "Statistics digest".to_string());
 
-        pool.add(Box::new(task));
+        let id = pool.add(Box::new(task));
 
         assert_eq!(pool.ntasks(), 2);
 
         let (wait, _info) = pool.waiting_for().await;
         println!("{:?}", wait);
         assert!(wait > DEFAULT_WAIT);
+
+        pool.remove(&id);
+
+        let (wait, _info) = pool.waiting_for().await;
+        assert!(wait > tokio::time::Duration::ZERO);
+        assert_eq!(wait, DEFAULT_WAIT);
+
+        let handle = pool.run();
+        handle.abort();
+
+    }
+
+    #[test]
+    pub fn test_schedule()
+    {
+        let option: Option<String> = None;
+
+        assert_eq!(schedule_from_option(option), None);
+
+        let option = "not_a_schedule_string".to_string();
+
+        assert_eq!(schedule_from_option(Some(option)), None);
+
+        let option = "0 * * * * * *".to_string();
+
+        assert_eq!(schedule_from_option(Some(option)), Some(Schedule::from_str("0 * * * * * *").unwrap()));
     }
 }

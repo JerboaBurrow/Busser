@@ -3,7 +3,7 @@ use crate::
     config::{read_config, Config, CONFIG_PATH}, content::{filter::ContentFilter, sitemap::SiteMap, Content}, server::throttle::{handle_throttle, IpThrottler}, task::{schedule_from_option, TaskPool}, CRAB
 };
 
-use std::{collections::HashMap, net::{IpAddr, Ipv4Addr, SocketAddr}};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -15,7 +15,7 @@ use axum::
 };
 use axum_server::tls_rustls::RustlsConfig;
 
-use super::{api::{stats::StatsDigest, ApiRequest}, stats::{digest::Digest, hits::{log_stats, HitStats}, StatsSaveTask, StatsDigestTask}};
+use super::{api::{stats::StatsDigest, ApiRequest}, stats::{hits::{log_stats, HitStats}, StatsSaveTask, StatsDigestTask}};
 
 /// An https server that reads a directory configured with [Config]
 /// ```.html``` pages and resources, then serves them.
