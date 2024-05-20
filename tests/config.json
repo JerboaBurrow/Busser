@@ -9,11 +9,10 @@
     },
     "stats": 
     {
-        "save_period_seconds": 10,
         "path": "stats",
         "hit_cooloff_seconds": 60,
-        "digest_period_seconds": 86400,
-        "log_files_clear_period_seconds": 2419200,
+        "save_schedule": "0 0 1 * * Wed *",
+        "digest_schedule": "0 0 1 * * Fri *",
         "ignore_regexes": ["/favicon.ico"]
     },
     "content": 

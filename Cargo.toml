@@ -1,6 +1,6 @@
 [package]
 name = "busser"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Jerboa"]
 
 edition="2021"
@@ -26,6 +26,7 @@ libflate = "2"
 quick-xml = "0.31.0"
 indicatif = "0.17.8"
 uuid = { version = "1.8.0", features = ["v4", "fast-rng", "macro-diagnostics"]}
+cron = "0.12.1"
 
 [profile.dev]
 opt-level = 0
