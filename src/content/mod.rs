@@ -164,6 +164,11 @@ impl Content
         String::from_utf8(self.body.clone())
     }
 
+    pub fn byte_body(&self) -> Vec<u8>
+    {
+        self.body.clone()
+    }
+
     pub fn get_content_type(&self) -> MIME
     {
         self.content_type.clone()
