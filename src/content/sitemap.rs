@@ -1,5 +1,6 @@
 
 use std::{collections::BTreeMap, sync::Arc, time::{Duration, Instant, SystemTime}, vec};
+use openssl::sha::Sha256;
 use tokio::sync::Mutex;
 
 use axum::{response::IntoResponse, routing::get, Router};
@@ -64,6 +65,27 @@ impl ContentTree
         }
 
         router
+    }
+
+    fn calculate_hash(&self) -> Vec<u8>
+    {
+        let mut sha = Sha256::new();
+        for (mut content, _) in self.contents.clone()
+        {
+            if content.is_stale()
+            {
+                content.refresh();
+                sha.update(&content.byte_body());
+                sha.update(content.get_uri().as_bytes());
+            }
+        }
+
+        for (_, child) in &self.children
+        {
+            sha.update(&child.calculate_hash());
+        }
+
+        sha.finish().to_vec()
     }
 
     pub fn push(&mut self, uri_stem: String, content: Content)
@@ -189,19 +211,31 @@ pub struct SiteMap
 {
     contents: ContentTree,
     content_path: String,
-    domain: String
+    domain: String,
+    hash: Vec<u8>
 }
 
 impl SiteMap
 {
     pub fn new(domain: String, content_path: String) -> SiteMap
     {
-        SiteMap { contents: ContentTree::new("/"), content_path, domain }
+        SiteMap { contents: ContentTree::new("/"), content_path, domain, hash: vec![] }
     }
 
     pub fn push(&mut self, content: Content)
     {
         self.contents.push(content.uri.clone(), content);
+        self.calculate_hash();
+    }
+
+    pub fn get_hash(&self) -> Vec<u8>
+    {
+        self.hash.clone()
+    }
+
+    fn calculate_hash(&mut self)
+    {
+        self.hash = self.contents.calculate_hash();
     }
 
     /// Searches the content path from [SiteMap::new] for [Content]
@@ -300,6 +334,7 @@ impl SiteMap
             self.contents.push(sitemap.uri.clone(), sitemap);
             crate::debug(format!("No sitemap.xml specified, generating sitemap.xml"), None);
         }
+        self.calculate_hash();
     }
 
     /// Implements writing to an xml conforming to <https://www.sitemaps.org/protocol.html>
