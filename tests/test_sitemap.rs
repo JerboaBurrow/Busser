@@ -31,7 +31,7 @@ mod sitemap
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1"></urlset>"#;
         let mut sitemap = SiteMap::new("https://test.domain".to_owned(), "tests/pages".to_owned());
         assert_eq!(empty_sitemap, String::from_utf8(sitemap.to_xml()).unwrap());
-        sitemap.build(60, 3600, true, true, None);
+        sitemap.build(true, false, None);
         
         assert!(Path::new("tests/pages/robots.txt").exists());
         assert!(Path::new("tests/pages/sitemap.xml").exists());
@@ -68,12 +68,12 @@ mod sitemap
         
         assert_eq!(sitemap.get_hash(), Vec::<u8>::new());
     
-        sitemap.build(60, 3600, true, true, None);
+        sitemap.build(true, true, None);
         assert_ne!(sitemap.get_hash(), Vec::<u8>::new());
         assert!(sitemap.get_hash().len() > 0);
 
         let mut sitemap_no_short = SiteMap::new("https://test.domain".to_owned(), "tests/pages".to_owned());
-        sitemap_no_short.build(60, 3600, true, false, None);
+        sitemap_no_short.build(true, true, None);
         
         assert_ne!(sitemap_no_short.get_hash(), Vec::<u8>::new());
         assert!(sitemap_no_short.get_hash().len() > 0);
