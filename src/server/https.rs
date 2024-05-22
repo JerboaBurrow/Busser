@@ -93,10 +93,8 @@ impl Server
             {
                 sitemap.build
                 (
-                    config.content.browser_cache_period_seconds,
-                    config.content.server_cache_period_seconds,
                     tag, 
-                    config.content.allow_without_extension, 
+                    false,
                     Some(&ContentFilter::new(p))
                 );
             },
@@ -104,10 +102,8 @@ impl Server
             {
                 sitemap.build
                 (
-                    config.content.browser_cache_period_seconds,
-                    config.content.server_cache_period_seconds,
                     tag, 
-                    config.content.allow_without_extension, 
+                    false,
                     None
                 );
             }
