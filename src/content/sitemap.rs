@@ -19,6 +19,7 @@ use super::{get_content, mime_type::Mime, Content};
 ///  [crate::config::ContentConfig::static_content] is false. If
 ///  so and the server cache has expired ([crate::config::ContentConfig::server_cache_period_seconds])
 ///  then content is automatically refreshed when served
+#[derive(Clone)]
 pub struct ContentTree
 {
     uri_stem: String,
@@ -67,7 +68,7 @@ impl ContentTree
         router
     }
 
-    fn calculate_hash(&self) -> Vec<u8>
+    fn calculate_hash(&self, with_bodies: bool) -> Vec<u8>
     {
         let mut sha = Sha256::new();
         for (mut content, _) in self.contents.clone()
@@ -75,14 +76,14 @@ impl ContentTree
             if content.is_stale()
             {
                 content.refresh();
-                sha.update(&content.byte_body());
+                if with_bodies { sha.update(&content.byte_body()); }
                 sha.update(content.get_uri().as_bytes());
             }
         }
 
         for (_, child) in &self.children
         {
-            sha.update(&child.calculate_hash());
+            sha.update(&child.calculate_hash(with_bodies));
         }
 
         sha.finish().to_vec()
@@ -207,6 +208,7 @@ impl ContentTree
 /// 
 /// Convertable to a router, see [ContentTree] for dynamic
 ///  options
+#[derive(Clone)]
 pub struct SiteMap
 {
     contents: ContentTree,
@@ -222,6 +224,52 @@ impl SiteMap
         SiteMap { contents: ContentTree::new("/"), content_path, domain, hash: vec![] }
     }
 
+    pub fn from_config(config: &Config, insert_tag: bool) -> SiteMap
+    {
+        let mut sitemap = SiteMap::new(config.domain.clone(), config.content.path.clone());
+
+        match config.content.ignore_regexes.clone()
+        {
+            Some(p) => 
+            {
+                sitemap.build
+                (
+                    insert_tag, 
+                    false,
+                    Some(&ContentFilter::new(p))
+                );
+            },
+            None => 
+            {
+                sitemap.build
+                (
+                    insert_tag, 
+                    false,
+                    None
+                );
+            }
+        };
+
+        let mut home = Content::new
+        (
+            "/", 
+            &config.content.home.clone(), 
+            config.content.server_cache_period_seconds, 
+            config.content.browser_cache_period_seconds, 
+            insert_tag
+        );
+        match home.load_from_file()
+        {
+            Ok(()) =>
+            {
+                sitemap.push(home);
+            },
+            Err(e) => {crate::debug(format!("Error serving home page resource {}", e), None);}
+        }
+
+        sitemap
+    }
+
     pub fn push(&mut self, content: Content)
     {
         self.contents.push(content.uri.clone(), content);
@@ -235,7 +283,7 @@ impl SiteMap
 
     fn calculate_hash(&mut self)
     {
-        self.hash = self.contents.calculate_hash();
+        self.hash = self.contents.calculate_hash(false);
     }
 
     /// Searches the content path from [SiteMap::new] for [Content]

@@ -1,6 +1,6 @@
 use crate::
 {
-    config::{read_config, Config, CONFIG_PATH}, content::{filter::ContentFilter, sitemap::SiteMap, Content}, server::throttle::{handle_throttle, IpThrottler}, task::{schedule_from_option, TaskPool}, CRAB
+    config::{read_config, Config, CONFIG_PATH}, content::sitemap::SiteMap, server::throttle::{handle_throttle, IpThrottler}, task::{schedule_from_option, TaskPool}, CRAB
 };
 
 use core::time;
@@ -20,22 +20,13 @@ use super::{api::{stats::StatsDigest, ApiRequest}, stats::{hits::{log_stats, Hit
 
 /// An https server that reads a directory configured with [Config]
 /// ```.html``` pages and resources, then serves them.
-/// # Example
-/// ```no_run
-/// use busser::server::https::Server;
-/// #[tokio::main]
-/// async fn main() 
-/// {
-///     let server = Server::new(0,0,0,0,true);
-///     server.serve().await;
-/// }
-/// ```
 pub struct Server
 {
     addr: SocketAddr,
     router: Router,
     config: Config,
     handle: Handle,
+    sitemap_hash: Vec<u8>,
     pub tasks: TaskPool
 }
 
@@ -64,7 +55,7 @@ impl Server
         b: u8,
         c: u8,
         d: u8,
-        tag: bool
+        sitemap: SiteMap
     ) 
     -> Server
     {
@@ -86,41 +77,8 @@ impl Server
         );
 
         let throttle_state = Arc::new(Mutex::new(requests));
-
-        let mut sitemap = SiteMap::new(config.domain.clone(), config.content.path.clone());
-
-        match config.content.ignore_regexes.clone()
-        {
-            Some(p) => 
-            {
-                sitemap.build
-                (
-                    tag, 
-                    false,
-                    Some(&ContentFilter::new(p))
-                );
-            },
-            None => 
-            {
-                sitemap.build
-                (
-                    tag, 
-                    false,
-                    None
-                );
-            }
-        };
-
-        let mut home = Content::new("/", &config.content.home.clone(), config.content.server_cache_period_seconds, config.content.browser_cache_period_seconds, tag);
-        match home.load_from_file()
-        {
-            Ok(()) =>
-            {
-                sitemap.push(home);
-            },
-            Err(e) => {crate::debug(format!("Error serving home page resource {}", e), None);}
-        }
         
+        let hash = sitemap.get_hash();
         let mut router: Router<(), axum::body::Body> = sitemap.into();
 
         let stats = Arc::new(Mutex::new(
@@ -138,7 +96,8 @@ impl Server
             router,
             config: config.clone(),
             handle: Handle::new(),
-            tasks: TaskPool::new()
+            tasks: TaskPool::new(),
+            sitemap_hash: hash
         };
 
         server.tasks.add
@@ -173,13 +132,18 @@ impl Server
         self.addr
     }
 
-    pub async fn serve(self: Server)
+    pub fn get_hash(&self) -> Vec<u8> 
+    {
+        self.sitemap_hash.clone()
+    }
+
+    pub async fn serve(self)
     {
 
         // configure https
 
-        let cert_path = self.config.cert_path;
-        let key_path = self.config.key_path;
+        let cert_path = self.config.cert_path.clone();
+        let key_path = self.config.key_path.clone();
 
         let config = match RustlsConfig::from_pem_file(
             PathBuf::from(cert_path.clone()),
@@ -210,16 +174,16 @@ impl Server
             println!("(or https://127.0.0.1)");
         }
         
-        self.tasks.run();
+        self.tasks.clone().run();
         
         axum_server::bind_rustls(self.addr, config)
-        .handle(self.handle)
-        .serve(self.router.into_make_service_with_connect_info::<SocketAddr>())
+        .handle(self.handle.clone())
+        .serve(self.router.clone().into_make_service_with_connect_info::<SocketAddr>())
         .await
         .unwrap();
     }
 
-    pub async fn shutdown(&self, graceful: Option<time::Duration>)
+    pub async fn shutdown(&mut self, graceful: Option<time::Duration>)
     {
         match graceful
         {
