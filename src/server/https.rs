@@ -3,6 +3,7 @@ use crate::
     config::{read_config, Config, CONFIG_PATH}, content::{filter::ContentFilter, sitemap::SiteMap, Content}, server::throttle::{handle_throttle, IpThrottler}, task::{schedule_from_option, TaskPool}, CRAB
 };
 
+use core::time;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -13,7 +14,7 @@ use axum::
     middleware, 
     Router
 };
-use axum_server::tls_rustls::RustlsConfig;
+use axum_server::{tls_rustls::RustlsConfig, Handle};
 
 use super::{api::{stats::StatsDigest, ApiRequest}, stats::{hits::{log_stats, HitStats}, StatsSaveTask, StatsDigestTask}};
 
@@ -34,6 +35,7 @@ pub struct Server
     addr: SocketAddr,
     router: Router,
     config: Config,
+    handle: Handle,
     pub tasks: TaskPool
 }
 
@@ -135,6 +137,7 @@ impl Server
             addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(a,b,c,d)), config.port_https),
             router,
             config: config.clone(),
+            handle: Handle::new(),
             tasks: TaskPool::new()
         };
 
@@ -210,9 +213,20 @@ impl Server
         self.tasks.run();
         
         axum_server::bind_rustls(self.addr, config)
+        .handle(self.handle)
         .serve(self.router.into_make_service_with_connect_info::<SocketAddr>())
         .await
         .unwrap();
+    }
+
+    pub async fn shutdown(&self, graceful: Option<time::Duration>)
+    {
+        match graceful
+        {
+            // not sure if graceful_shutdown defaults to shutdown if None is passed
+            Some(_) => self.handle.graceful_shutdown(graceful),
+            None => self.handle.shutdown()
+        }
     }
 
 }
