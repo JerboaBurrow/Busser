@@ -58,11 +58,6 @@ mod sitemap
 
         assert_eq!(sitemap_disk, expected_sitemap);
         assert_eq!("Sitemap: https://test.domain/sitemap.xml", robots_disk);
-    }
-
-    #[test]
-    pub fn test_hash()
-    {
 
         let mut sitemap = SiteMap::new("https://test.domain".to_owned(), "tests/pages".to_owned());
         

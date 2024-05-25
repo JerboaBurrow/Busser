@@ -7,7 +7,7 @@ mod mime
 
 
     #[test]
-    fn test_build()
+    fn test_mime()
     {
         assert!(MIME::TextPlain.is_text());
         assert!(MIME::TextHtml.is_text());
