@@ -3,7 +3,10 @@ mod common;
 #[cfg(test)]
 mod config
 {
-    use busser::config::{read_config, Config, ContentConfig, StatsConfig, ThrottleConfig};
+    use busser::{config::{read_config, Config, ContentConfig, StatsConfig, ThrottleConfig}, filesystem::file::write_file_bytes};
+    use uuid::Uuid;
+
+    use crate::common::BAD_UTF8;
 
     #[test]
     fn test_read_config()
@@ -158,5 +161,23 @@ mod config
         assert_eq!(config.content.browser_cache_period_seconds, 3600);
         assert_eq!(config.content.server_cache_period_seconds, 1);
         assert_eq!(config.content.ignore_regexes.unwrap(), vec!["/.git", "workspace"]);
+    }
+
+    #[test]
+    fn test_bad_utf8()
+    {
+        let file_name = format!("tests/bad_utf8-{}", Uuid::new_v4());
+        write_file_bytes(&file_name, &BAD_UTF8);
+        assert!(read_config(&file_name).is_none());
+        std::fs::remove_file(file_name).unwrap();
+    }
+
+    #[test]
+    fn test_not_json()
+    {
+        let file_name = format!("tests/not_json-{}", Uuid::new_v4());
+        write_file_bytes(&file_name, "not_json{".as_bytes());
+        assert!(read_config(&file_name).is_none());
+        std::fs::remove_file(file_name).unwrap();
     }
 }

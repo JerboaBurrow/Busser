@@ -14,4 +14,11 @@ mod discord
 
         assert!(post(&w, "400".to_string()).await.is_ok());
     }
+
+    #[tokio::test]
+    async fn test_err_webhook()
+    {
+        let w = Webhook::new("not_a_domain".to_string());
+        assert!(post(&w, "400".to_string()).await.is_err());
+    }
 }
