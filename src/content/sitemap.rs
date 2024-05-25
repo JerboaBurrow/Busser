@@ -1,6 +1,6 @@
 
-use std::{clone, collections::BTreeMap, sync::Arc, time::{Duration, Instant, SystemTime}, vec};
-use openssl::{conf::Conf, sha::Sha256};
+use std::{collections::BTreeMap, sync::Arc, time::{Duration, Instant, SystemTime}, vec};
+use openssl::sha::Sha256;
 use tokio::sync::Mutex;
 
 use axum::{response::IntoResponse, routing::get, Router};
@@ -39,6 +39,7 @@ impl ContentTree
         let mut router: Router<(), axum::body::Body> = Router::new();
         for (mut content, mutex) in self.contents.clone()
         {
+            content.refresh();
             router = router.route
             (
                 &content.get_uri(), 
@@ -71,13 +72,15 @@ impl ContentTree
     fn calculate_hash(&self, with_bodies: bool) -> Vec<u8>
     {
         let mut sha = Sha256::new();
-        for (mut content, _) in self.contents.clone()
+        let mut content: Vec<Content> = self.contents.clone().into_iter().map(|(x, _)| x).collect();
+        content.sort_by(|a, b| a.get_uri().cmp(&b.get_uri()));
+        for mut content in content
         {
-            if content.is_stale()
+            sha.update(content.get_uri().as_bytes());
+            if with_bodies && content.is_stale() 
             {
                 content.refresh();
-                if with_bodies { sha.update(&content.byte_body()); }
-                sha.update(content.get_uri().as_bytes());
+                sha.update(&content.byte_body());
             }
         }
 
@@ -224,7 +227,7 @@ impl SiteMap
         SiteMap { contents: ContentTree::new("/"), content_path, domain, hash: vec![] }
     }
 
-    pub fn from_config(config: &Config, insert_tag: bool) -> SiteMap
+    pub fn from_config(config: &Config, insert_tag: bool, silent: bool) -> SiteMap
     {
         let mut sitemap = SiteMap::new(config.domain.clone(), config.content.path.clone());
 
@@ -235,7 +238,7 @@ impl SiteMap
                 sitemap.build
                 (
                     insert_tag, 
-                    false,
+                    silent,
                     Some(&ContentFilter::new(p))
                 );
             },
@@ -244,7 +247,7 @@ impl SiteMap
                 sitemap.build
                 (
                     insert_tag, 
-                    false,
+                    silent,
                     None
                 );
             }
@@ -276,6 +279,7 @@ impl SiteMap
         self.calculate_hash();
     }
 
+    /// Hash a sitemap by detected uri's
     pub fn get_hash(&self) -> Vec<u8>
     {
         self.hash.clone()
@@ -336,7 +340,6 @@ impl SiteMap
         }
         contents.sort_by_key(|x|x.get_uri());
 
-        let mut no_sitemap = true;
         let mut no_robots = true;
 
         tic = Instant::now();
@@ -350,32 +353,31 @@ impl SiteMap
             None
         };
 
-        for mut content in contents
+        let generate_sitemap = match config.content.generate_sitemap
+        {
+            Some(b) => b,
+            None => true
+        };
+
+        for content in contents
         { 
-            if content.get_uri().contains("sitemap.xml")
-            {
-                no_sitemap = false;
-            }
             if content.get_uri().contains("robots.txt")
             {
                 no_robots = false;
             }
-            crate::debug(format!("Attempting to add content {:?}", content.preview(64)), None);
+            if generate_sitemap && content.get_uri().contains("sitemap.xml")
+            {
+                continue
+            }
+            crate::debug(format!("Adding content {:?}", content.preview(64)), None);
             let path = self.content_path.clone()+"/";
             let uri = parse_uri(content.get_uri(), path);
 
-            match content.load_from_file()
+            if short_urls && content.get_content_type().is_html()
             {
-                Ok(()) =>
-                {
-                    if short_urls && content.get_content_type().is_html()
-                    {
-                        let short_uri = Regex::new(r"\.\S+$").unwrap().replacen(&uri, 1, "");
-                        crate::debug(format!("Adding content as short url: {}", short_uri), None);
-                        self.contents.push(short_uri.to_string(), Content::new(&short_uri, &content.path(), server_cache_period, browser_cache_period, tag));
-                    }
-                }
-                Err(e) => {crate::debug(format!("Error adding content {}\n{}", content.get_uri(), e), None);}
+                let short_uri = Regex::new(r"\.\S+$").unwrap().replacen(&uri, 1, "");
+                crate::debug(format!("Adding content as short url: {}", short_uri), None);
+                self.contents.push(short_uri.to_string(), Content::new(&short_uri, &content.path(), server_cache_period, browser_cache_period, tag));
             }
 
             self.contents.push(content.uri.clone(), content);
@@ -395,7 +397,7 @@ impl SiteMap
             crate::debug(format!("No robots.txt specified, generating robots.txt"), None);
         }
 
-        if no_sitemap
+        if generate_sitemap
         {
             let path = format!("{}/{}",self.content_path,"sitemap.xml");
             write_file_bytes(&path, &self.to_xml());

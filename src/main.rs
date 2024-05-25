@@ -1,14 +1,10 @@
 use std::time::Duration;
 
-use busser::config::{read_config, Config, CONFIG_PATH};
-use busser::content::filter::ContentFilter;
-use busser::content::sitemap::{self, SiteMap};
-use busser::content::Content;
+use busser::config::{Config, CONFIG_PATH};
+use busser::content::sitemap::SiteMap;
 use busser::server::http::ServerHttp;
 use busser::server::https::Server;
-use busser::task::{next_job_time, schedule_from_option, TaskPool};
 use busser::{openssl_version, program_version};
-
 use tokio::task::spawn;
 
 #[tokio::main]
@@ -41,43 +37,61 @@ async fn main() {
         true
     };
     
-    let config = match read_config(CONFIG_PATH)
-    {
-        Some(c) => c,
-        None =>
-        {
-            std::process::exit(1)
-        }
-    };
-    
     let http_server = ServerHttp::new(0,0,0,0);
     let _http_redirect = spawn(http_server.serve());
 
-    serve(insert_tag).await;
-
+    if args.iter().any(|x| x == "--static-sitemap")
+    {
+        busser::debug(format!("Serving with static sitemap"), None);
+        serve(insert_tag).await;
+    }
+    else
+    {
+        busser::debug(format!("Serving with dynamic sitemap"), None);
+        serve_observed(insert_tag).await;
+    }
 }
 
-async fn serve(insert_tag: bool)
+/// Serve by observing the site content found at the path [busser::config::ContentConfig]
+///  every [busser::config::ContentConfig::server_cache_period_seconds] the sitemap
+///  hash (see [busser::content::sitemap::SiteMap::get_hash]) is checked, if it is 
+///  different the server is re-served. 
+async fn serve_observed(insert_tag: bool)
 {
-    let mut hash: Vec<u8> = vec![];
-    let mut server = Server::new(0,0,0,0,sitemap);
+    let sitemap = SiteMap::from_config(&Config::load_or_default(CONFIG_PATH), insert_tag, false);
+    let mut hash = sitemap.get_hash();
+
+    let server = Server::new(0,0,0,0,sitemap);
+    let mut server_handle = server.get_handle();
+    let mut thread_handle = spawn(async move {server.serve()}.await);
+    
     loop
     {
         let config = Config::load_or_default(CONFIG_PATH);
-        let sitemap = SiteMap::from_config(&config, insert_tag);
+        let sitemap = SiteMap::from_config(&config, insert_tag, false);
         let sitemap_hash = sitemap.get_hash();
 
         if sitemap_hash != hash
         {
-            spawn(server.serve());
-        }
+            busser::debug(format!("Sitemap changed, shutting down"), None);
+            server_handle.shutdown();
+            thread_handle.abort();
 
-        let schedule = schedule_from_option(config.stats.save_schedule.clone());
-        let next_run = match schedule
-        {
-            Some(s) => next_job_time(s.clone()),
-            None => None
-        };
-        let last_run = chrono::offset::Utc::now();
+            let server = Server::new(0,0,0,0,sitemap);
+            server_handle = server.get_handle();
+            thread_handle = spawn(async move {server.serve()}.await);
+            hash = sitemap_hash;
+            busser::debug(format!("Re-served"), None);
+        }
+        busser::debug(format!("Next sitemap check: {}s", config.content.server_cache_period_seconds), None);
+        tokio::time::sleep(Duration::from_secs(config.content.server_cache_period_seconds.into())).await;
     }
+}
+
+/// Serve without checking for sitemap changes
+async fn serve(insert_tag: bool)
+{
+    let sitemap = SiteMap::from_config(&Config::load_or_default(CONFIG_PATH), insert_tag, false);
+    let server = Server::new(0,0,0,0,sitemap);
+    server.serve().await;
 }

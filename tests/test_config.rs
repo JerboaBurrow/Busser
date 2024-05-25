@@ -31,6 +31,7 @@ mod config
         assert_eq!(config.stats.hit_cooloff_seconds, 60);
         assert_eq!(config.stats.digest_schedule, Some("0 0 1 * * Fri *".to_string()));
         assert_eq!(config.stats.ignore_regexes.unwrap(), vec!["/favicon.ico".to_string()]);
+        assert_eq!(config.stats.top_n_digest, None);
 
         assert_eq!(config.content.path, "/home/jerboa/Website/");
         assert_eq!(config.content.home, "/home/jerboa/Website/jerboa.html");
@@ -38,6 +39,8 @@ mod config
         assert_eq!(config.content.browser_cache_period_seconds, 3600);
         assert_eq!(config.content.server_cache_period_seconds, 1);
         assert_eq!(config.content.ignore_regexes.unwrap(), vec!["/.git", "workspace"]);
+        assert_eq!(config.content.static_content, None);
+        assert_eq!(config.content.generate_sitemap, None);
     }
 
     #[test]

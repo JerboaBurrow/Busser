@@ -26,7 +26,6 @@ pub struct Server
     router: Router,
     config: Config,
     handle: Handle,
-    sitemap_hash: Vec<u8>,
     pub tasks: TaskPool
 }
 
@@ -78,7 +77,6 @@ impl Server
 
         let throttle_state = Arc::new(Mutex::new(requests));
         
-        let hash = sitemap.get_hash();
         let mut router: Router<(), axum::body::Body> = sitemap.into();
 
         let stats = Arc::new(Mutex::new(
@@ -96,8 +94,7 @@ impl Server
             router,
             config: config.clone(),
             handle: Handle::new(),
-            tasks: TaskPool::new(),
-            sitemap_hash: hash
+            tasks: TaskPool::new()
         };
 
         server.tasks.add
@@ -132,9 +129,9 @@ impl Server
         self.addr
     }
 
-    pub fn get_hash(&self) -> Vec<u8> 
+    pub fn get_handle(&self) -> Handle
     {
-        self.sitemap_hash.clone()
+        self.handle.clone()
     }
 
     pub async fn serve(self)

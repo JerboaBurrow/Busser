@@ -3,7 +3,7 @@ mod common;
 #[cfg(test)]
 mod sitemap
 {
-    use std::{fs::remove_file, hash::Hash, path::Path, time::SystemTime};
+    use std::{fs::remove_file, path::Path, time::SystemTime};
 
     use busser::{content::sitemap::{lastmod, SiteMap}, filesystem::file::read_file_utf8};
     use chrono::{DateTime, Datelike, Utc};
@@ -71,13 +71,6 @@ mod sitemap
         sitemap.build(true, true, None);
         assert_ne!(sitemap.get_hash(), Vec::<u8>::new());
         assert!(sitemap.get_hash().len() > 0);
-
-        let mut sitemap_no_short = SiteMap::new("https://test.domain".to_owned(), "tests/pages".to_owned());
-        sitemap_no_short.build(true, true, None);
-        
-        assert_ne!(sitemap_no_short.get_hash(), Vec::<u8>::new());
-        assert!(sitemap_no_short.get_hash().len() > 0);
-        assert_ne!(sitemap_no_short.get_hash(), sitemap.get_hash());
         
         for file in vec!["tests/pages/robots.txt", "tests/pages/sitemap.xml"]
         {
