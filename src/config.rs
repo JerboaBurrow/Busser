@@ -74,6 +74,7 @@ impl ThrottleConfig
 /// - ```server_cache_period_seconds: u16```: internal cache period if content is not static
 /// - ```static_content: Option<bool>```: all content is immutably cached at launch
 /// - ```ignore_regexes: Option<Vec<String>>```: do not serve content matching any of these patterns
+/// - ```generate_sitemap: Option<bool>```: sitemap.xml will be automatically generated (and updated) 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ContentConfig
 {
@@ -83,7 +84,8 @@ pub struct ContentConfig
     pub ignore_regexes: Option<Vec<String>>,
     pub browser_cache_period_seconds: u16,
     pub server_cache_period_seconds: u16,
-    pub static_content: Option<bool>
+    pub static_content: Option<bool>,
+    pub generate_sitemap: Option<bool>
 }
 
 impl ContentConfig
@@ -98,7 +100,8 @@ impl ContentConfig
             ignore_regexes: None,
             browser_cache_period_seconds: 3600,
             server_cache_period_seconds: 3600,
-            static_content: Some(false)
+            static_content: Some(false),
+            generate_sitemap: Some(true)
         }
     }
 }

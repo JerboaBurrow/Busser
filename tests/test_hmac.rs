@@ -8,6 +8,8 @@ mod hmac
     use openssl::{hash::MessageDigest, pkey::PKey, sha::sha256, sign::Signer};
     use reqwest::StatusCode;
 
+    use crate::common::BAD_UTF8;
+
     const TOKEN: &str = "A_SECRET_TOKEN";
     const KEY: &str = "HMAC_TOKEN_HEADER_KEY";
 
@@ -36,5 +38,9 @@ mod hmac
         headers = HeaderMap::new();
         headers.append(KEY, HeaderValue::from_str(&hmac).unwrap());
         assert_eq!(is_authentic(&headers, KEY, TOKEN.to_string(), &body), StatusCode::ACCEPTED);
+
+        headers = HeaderMap::new();
+        headers.append(KEY, HeaderValue::from_bytes(&BAD_UTF8).unwrap());
+        assert_eq!(is_authentic(&headers, KEY, TOKEN.to_string(), &body), StatusCode::BAD_REQUEST);
     }
 }

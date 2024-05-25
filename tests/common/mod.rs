@@ -1,0 +1,1 @@
+pub const BAD_UTF8: [u8; 2] = [0xC0, 0xC1]; 

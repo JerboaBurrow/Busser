@@ -35,6 +35,7 @@ pub trait Task
 /// A pool of tasks to be executed 
 /// - [Task]s are added to the pool using [TaskPool::add] 
 /// - [TaskPool::run] loops continuously (with sleeps) running tasks when they are available
+#[derive(Clone)]
 pub struct TaskPool
 {
     tasks: HashMap<Uuid, Arc<Mutex<Box<dyn Task + Send>>>>
