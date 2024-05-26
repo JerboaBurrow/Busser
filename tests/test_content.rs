@@ -99,11 +99,12 @@ mod test_content
     #[test]
     fn test_content_types()
     {
-        let contents = get_content("tests/pages", "tests/pages/data", None, None, None);
+        let contents = get_content("tests/pages", "tests/pages/data", None, None, None, None);
 
         assert_eq!(contents.len(), 19);
 
-        let paths = HashMap::from(
+        let paths = HashMap::from
+        (
             [
                 ("tests/pages/data/b.txt", ("/data/b.txt", MIME::TextPlain)),
                 ("tests/pages/data/css.css", ("/data/css.css", MIME::TextCSS)),
@@ -135,9 +136,47 @@ mod test_content
     }
 
     #[test]
+    fn test_filter()
+    {
+        let filter = ContentFilter::new
+        (
+            vec![".jpg".to_string(), ".gif".to_string(), ".png".to_string(), ".webm".to_string(), "daslkfjnldskafjalsfdk".to_string()]
+        );
+        let contents = get_content("tests/pages", "tests/pages/data", None, None, None, Some(&filter));
+
+        assert_eq!(contents.len(), 13);
+
+        let paths = HashMap::from
+        (
+            [
+                ("tests/pages/data/b.txt", ("/data/b.txt", MIME::TextPlain)),
+                ("tests/pages/data/css.css", ("/data/css.css", MIME::TextCSS)),
+                ("tests/pages/data/csv.csv", ("/data/csv.csv", MIME::TextCSV)),
+                ("tests/pages/data/ico.ico", ("/data/ico.ico", MIME::ImageXICON)),
+                ("tests/pages/data/mp4.mp4", ("/data/mp4.mp4", MIME::VideoMP4)),
+                ("tests/pages/data/mpeg.mpeg", ("/data/mpeg.mpeg", MIME::VideoMPEG)),
+                ("tests/pages/data/js.js", ("/data/js.js", MIME::TextJavascript)),
+                ("tests/pages/data/qt.mov", ("/data/qt.mov", MIME::VideoQuicktime)),
+                ("tests/pages/data/svg.svg", ("/data/svg.svg", MIME::ImageSVG)),
+                ("tests/pages/data/tiff.tiff", ("/data/tiff.tiff", MIME::ImageTIFF)),
+                ("tests/pages/data/vid.flv", ("/data/vid.flv", MIME::VideoFLV)),
+                ("tests/pages/data/vid.wmv", ("/data/vid.wmv", MIME::VideoWMV)),
+                ("tests/pages/data/xml.xml", ("/data/xml.xml", MIME::TextXML))
+            ]
+        );
+
+        for (path, (expected_uri, expected_mime_type)) in paths
+        {
+            assert!(contents.contains(&Content::new(expected_uri, path, 60, 3600, false)));
+            let res = Content::new(path, &path, 60, 3600, false);
+            assert_eq!(res.get_content_type(), expected_mime_type)
+        }
+    }
+
+    #[test]
     fn test_read_contents()
     {
-        let contents = get_content("tests/pages", "tests/pages", None, None, None);
+        let contents = get_content("tests/pages", "tests/pages", None, None, None, None);
 
         assert_eq!(contents.len(), 24);
 

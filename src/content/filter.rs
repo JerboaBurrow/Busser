@@ -18,4 +18,9 @@ impl ContentFilter
     {
         items.into_iter().filter(|item| !matches_one(&item.get_uri(), &self.ignore_patterns)).collect()
     }
+
+    pub fn filter_uris(&self, uris: Vec<String>) -> Vec<String>
+    {
+        uris.into_iter().filter(|item| !matches_one(&item, &self.ignore_patterns)).collect()
+    }
 }
