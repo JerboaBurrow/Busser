@@ -1,5 +1,5 @@
 use core::fmt;
-use std::{fmt::Write, io::{Read, Write as ioWrite}, time::Instant};
+use std::{collections::HashSet, fmt::Write, io::{Read, Write as ioWrite}, time::Instant};
 use chrono::{DateTime, Datelike, FixedOffset};
 use libflate::deflate::{Encoder, Decoder};
 use openssl::sha::Sha256;
@@ -168,4 +168,37 @@ pub fn date_now() -> String
 pub fn date_to_rfc3339(date: &str) -> Result<DateTime<FixedOffset>, chrono::ParseError>
 {
     DateTime::parse_from_rfc3339(format!("{}T00:00:00+00:00", date).as_str())
+}
+
+pub fn differences(new: Vec<String>, old: Vec<String>) -> (Vec<String>, Vec<String>)
+{
+    let hnew: HashSet<String> = new.into_iter().collect();
+    let hold: HashSet<String> = old.into_iter().collect();
+
+    let new_values = hnew.difference(&hold);
+    let lost_values = hold.difference(&hnew);
+    
+    let mut added: Vec<String> = new_values.cloned().collect();
+    let mut removed: Vec<String> = lost_values.cloned().collect();
+
+    added.sort();
+    removed.sort();
+
+    (added, removed)
+}
+
+pub fn formatted_differences(new: Vec<String>, old: Vec<String>) -> String
+{
+    let (added, removed) = differences(new, old);
+    let mut diffs = String::new();
+    for add in added
+    {
+        diffs = format!("{}+ {}\n", diffs, add);
+    }
+    for rm in removed
+    {
+        diffs = format!("{}- {}\n", diffs, rm);
+    }
+
+    diffs
 }

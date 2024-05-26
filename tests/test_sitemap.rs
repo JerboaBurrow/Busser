@@ -30,11 +30,22 @@ mod sitemap
         let empty_sitemap = r#"<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1"></urlset>"#;
         let mut sitemap = SiteMap::new("https://test.domain".to_owned(), "tests/pages".to_owned());
+        
         assert_eq!(empty_sitemap, String::from_utf8(sitemap.to_xml()).unwrap());
+        assert_eq!(sitemap.collect_uris(), Vec::<String>::new());
+
         sitemap.build(true, false, None);
         
         assert!(Path::new("tests/pages/robots.txt").exists());
         assert!(Path::new("tests/pages/sitemap.xml").exists());
+
+        let uris = sitemap.collect_uris();
+        assert!(uris.contains(&"/a".to_string()));
+        assert!(uris.contains(&"/b".to_string()));
+        assert!(uris.contains(&"/c/d".to_string()));
+        assert!(uris.contains(&"/a.html".to_string()));
+        assert!(uris.contains(&"/b.html".to_string()));
+        assert!(uris.contains(&"/c/d.html".to_string()));
 
         let sitemap_disk = read_file_utf8("tests/pages/sitemap.xml").unwrap();
         let robots_disk = read_file_utf8("tests/pages/robots.txt").unwrap();

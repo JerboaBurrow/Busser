@@ -92,6 +92,19 @@ impl ContentTree
         sha.finish().to_vec()
     }
 
+    pub fn collect_uris(&self) -> Vec<String>
+    {
+        let mut content: Vec<Content> = self.contents.clone().into_iter().map(|(x, _)| x).collect();
+        content.sort_by(|a, b| a.get_uri().cmp(&b.get_uri()));
+        
+        let mut uris: Vec<String> = content.into_iter().map(|c| c.get_uri()).collect();
+        for (_, child) in &self.children
+        {
+            uris.append(&mut child.collect_uris());
+        }
+        uris
+    }
+
     pub fn push(&mut self, uri_stem: String, content: Content)
     {
         if uri_stem == "/"
@@ -288,6 +301,11 @@ impl SiteMap
     fn calculate_hash(&mut self)
     {
         self.hash = self.contents.calculate_hash(false);
+    }
+
+    pub fn collect_uris(&self) -> Vec<String>
+    {
+        self.contents.collect_uris()
     }
 
     /// Searches the content path from [SiteMap::new] for [Content]

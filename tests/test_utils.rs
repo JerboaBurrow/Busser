@@ -3,7 +3,7 @@ mod common;
 #[cfg(test)]
 mod util
 {
-    use busser::util::{date_now, date_to_rfc3339, hash, matches_one, read_bytes, strip_control_characters};
+    use busser::util::{date_now, date_to_rfc3339, differences, formatted_differences, hash, matches_one, read_bytes, strip_control_characters};
 
     use busser::util::{compress, compress_string, decompress, decompress_utf8_string};
     use chrono::{DateTime, Datelike};
@@ -85,5 +85,31 @@ mod util
             let test_string = format!("{}a_test_string", ch);
             assert_eq!(strip_control_characters(test_string), "a_test_string");
         }
+    }
+
+    #[test]
+    fn test_differences()
+    {
+        let old = vec!["a".to_string(), "b".to_string()];
+        let new = vec!["b".to_string(), "c".to_string()];
+
+        let (new, lost) = differences(new, old);
+
+        assert_eq!(new, vec!["c".to_string()]);
+        assert_eq!(lost, vec!["a".to_string()]);
+    }
+
+    #[test]
+    fn test_formatted_differences()
+    {
+        let old = vec!["a".to_string(), "b".to_string()];
+        let new = vec!["b".to_string(), "c".to_string(), "d".to_string()];
+
+        let diffs = formatted_differences(new, old);
+        let expected = r#"+ c
++ d
+- a
+"#;
+        assert_eq!(diffs, expected);
     }
 }
