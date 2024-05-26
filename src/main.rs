@@ -92,7 +92,7 @@ async fn serve_observed(insert_tag: bool)
             busser::debug(format!("Re-served\n Diffs:\n{}", diffs), None);
             if config.content.message_on_sitemap_reload.is_some_and(|x|x)
             {
-                try_post(config.notification_endpoint, &format!("The sitemap was refreshed with diffs:\n{}", diffs)).await;
+                try_post(config.notification_endpoint, &format!("The sitemap was refreshed with diffs:\n```{}```", diffs)).await;
             }
         }
         busser::debug(format!("Next sitemap check: {}s", config.content.server_cache_period_seconds), None);
