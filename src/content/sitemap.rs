@@ -343,7 +343,8 @@ impl SiteMap
             &self.content_path,
             Some(server_cache_period),
             Some(browser_cache_period),
-            Some(tag)
+            Some(tag),
+            filter
         );
 
         if !silent
@@ -352,10 +353,6 @@ impl SiteMap
             spinner.unwrap().set_message(format!("Detecting site files took {}", format_elapsed(tic)));
         }
 
-        if filter.is_some()
-        {
-            contents = filter.unwrap().filter::<Content>(contents);
-        }
         contents.sort_by_key(|x|x.get_uri());
 
         let mut no_robots = true;

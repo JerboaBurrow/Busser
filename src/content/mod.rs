@@ -11,6 +11,7 @@ use crate::filesystem::folder::{list_dir_by, list_sub_dirs};
 use crate::program_version;
 use crate::util::{dump_bytes, hash};
 
+use self::filter::ContentFilter;
 use self::mime_type::{Mime, MIME};
 
 pub mod mime_type;
@@ -251,10 +252,24 @@ pub fn is_page(uri: &str, domain: &str) -> bool
     }
 }
 
-pub fn get_content(root: &str, path: &str, server_cache_period_seconds: Option<u16>, browser_cache_period_seconds: Option<u16>, tagging: Option<bool>) -> Vec<Content>
+pub fn get_content
+(
+    root: &str,
+    path: &str,
+    server_cache_period_seconds: Option<u16>,
+    browser_cache_period_seconds: Option<u16>,
+    tagging: Option<bool>,
+    filter: Option<&ContentFilter>
+) -> Vec<Content>
 {
 
-    let content_paths = list_dir_by(None, path.to_string());
+    let mut content_paths = list_dir_by(None, path.to_string());
+
+    if filter.is_some()
+    {
+        content_paths = filter.unwrap().filter_uris(content_paths);
+    }
+
     let mut contents: Vec<Content> = vec![];
     let tag = match tagging
     {
@@ -280,13 +295,26 @@ pub fn get_content(root: &str, path: &str, server_cache_period_seconds: Option<u
         contents.push(Content::new(&uri, &content_path, server_cache, browser_cache, tag));
     }
 
-    let dirs = list_sub_dirs(path.to_string());
+    let mut dirs = list_sub_dirs(path.to_string());
+
+    if filter.is_some()
+    {
+        dirs = filter.unwrap().filter_uris(dirs);
+    }
 
     if !dirs.is_empty()
     {
         for dir in dirs
         {
-            for resource in get_content(root, &dir, server_cache_period_seconds, browser_cache_period_seconds, tagging)
+            for resource in get_content
+            (
+                root,
+                &dir,
+                server_cache_period_seconds,
+                browser_cache_period_seconds,
+                tagging,
+                filter
+            )
             {
                 contents.push(resource);
             }
