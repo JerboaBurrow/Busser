@@ -15,11 +15,11 @@ use crate::integrations::webhook::Webhook;
 /// # Example
 /// ```rust
 /// 
-/// use busser::integrations::{webhook::Webhook, discord::post::post};
+/// use busser::integrations::{webhook::Webhook, discord::post::post_message};
 /// 
 /// pub async fn post_to_discord(){
 ///     let w = Webhook::new("https://discord.com/api/webhooks/xxx/yyy".to_string());
-///     post(&w, "this is some plaintext".to_string());
+///     post_message(&w, &"this is some plaintext".to_string());
 /// }
 /// ```
 /// 
@@ -34,9 +34,9 @@ use crate::integrations::webhook::Webhook;
 ///  {"content": "this is some plaintext"}
 /// ``` 
 
-pub async fn post(w: &Webhook, msg: String) -> Result<String, reqwest::Error>
+/// Post a text message to a discord Webhook
+pub async fn post_message(w: &Webhook, msg: &String) -> Result<String, reqwest::Error>
 {
-
     crate::debug(format!("Posting to Discord {:?}", msg), None);
     let client = reqwest::Client::new();
 
@@ -51,5 +51,18 @@ pub async fn post(w: &Webhook, msg: String) -> Result<String, reqwest::Error>
         Ok(r) => Ok(format!("OK\nGot response:\n\n{:#?}", r)),
         Err(e) => Err(e)
     }
+}
 
+/// Attempt to post a message to the discord webhook
+pub async fn try_post(webhook: Option<Webhook>, msg: &String)
+{
+    match webhook
+    {
+        Some(w) => match post_message(&w, msg).await
+            {
+                Ok(_s) => (),
+                Err(e) => {crate::debug(format!("Error posting to discord\n{}", e), None);}
+            },
+        None => {crate::debug(format!("Discord webhook is None"), None);}
+    }
 }

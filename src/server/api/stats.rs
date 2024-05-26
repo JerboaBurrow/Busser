@@ -6,7 +6,7 @@ use reqwest::StatusCode;
 use serde::Deserialize;
 use tokio::sync::Mutex;
 
-use crate::{config::{read_config, CONFIG_PATH}, server::stats::{digest::{digest_message, process_hits}, hits::HitStats}, integrations::{discord::post::post, is_authentic}};
+use crate::{config::{read_config, CONFIG_PATH}, integrations::{discord::post::try_post, is_authentic}, server::stats::{digest::{digest_message, process_hits}, hits::HitStats}};
 
 use super::ApiRequest;
 
@@ -145,20 +145,15 @@ impl ApiRequest for StatsDigest
             None => None
         };
 
-        let digest = process_hits(config.stats.path, from,to,config.stats.top_n_digest,stats);
-        let msg = digest_message(digest, from, to);
+        let msg = digest_message(process_hits(config.stats.path, from,to,config.stats.top_n_digest,stats), from, to);
 
         if self.payload.post_discord
         {
-            match config.notification_endpoint
-            {
-                Some(endpoint) => match post(&endpoint, msg.clone()).await
-                    {
-                        Ok(_s) => (),
-                        Err(e) => {crate::debug(format!("Error posting to discord\n{}", e), None);}
-                    },
-                None => ()
-            }
+            try_post
+            (
+                config.notification_endpoint,
+                &msg
+            ).await;
         }
 
         (Some(msg), StatusCode::OK)

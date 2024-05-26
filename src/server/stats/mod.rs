@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use cron::Schedule;
 use tokio::sync::Mutex;
 
-use crate::{config::{read_config, Config, CONFIG_PATH}, filesystem::file::File, integrations::discord::post::post, task::{next_job_time, schedule_from_option, Task}};
+use crate::{config::{Config, CONFIG_PATH}, filesystem::file::File, integrations::discord::post::try_post, task::{next_job_time, schedule_from_option, Task}};
 
 use self::{digest::{digest_message, process_hits}, file::StatsFile, hits::HitStats};
 
@@ -132,14 +132,7 @@ impl Task for StatsDigestTask
         {
             let mut stats = self.state.lock().await;
 
-            let config = match read_config(CONFIG_PATH)
-            {
-                Some(c) => c,
-                None =>
-                {
-                    Config::default()
-                }
-            };
+            let config = Config::load_or_default(CONFIG_PATH);
             
             stats.summary = process_hits
             (
@@ -150,16 +143,11 @@ impl Task for StatsDigestTask
                 Some(stats.to_owned())
             );
 
-            let msg = digest_message(stats.summary.clone(), Some(self.last_run), None);
-            match config.notification_endpoint 
-            {
-                Some(endpoint) => match post(&endpoint, msg).await
-                    {
-                        Ok(_s) => (),
-                        Err(e) => {crate::debug(format!("Error posting to discord\n{}", e), None);}
-                    },
-                None => ()
-            }
+            try_post
+            (
+                config.notification_endpoint,
+                &digest_message(stats.summary.clone(), Some(self.last_run), None)
+            ).await;
         }
 
         let config = Config::load_or_default(CONFIG_PATH);
