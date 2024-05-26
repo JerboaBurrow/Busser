@@ -75,6 +75,7 @@ impl ThrottleConfig
 /// - ```static_content: Option<bool>```: all content is immutably cached at launch
 /// - ```ignore_regexes: Option<Vec<String>>```: do not serve content matching any of these patterns
 /// - ```generate_sitemap: Option<bool>```: sitemap.xml will be automatically generated (and updated) 
+/// - ```message_on_sitemap_reload: Option<bool>```: optionally send Discord notifications when sitemap is reloaded
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ContentConfig
 {
@@ -85,7 +86,8 @@ pub struct ContentConfig
     pub browser_cache_period_seconds: u16,
     pub server_cache_period_seconds: u16,
     pub static_content: Option<bool>,
-    pub generate_sitemap: Option<bool>
+    pub generate_sitemap: Option<bool>,
+    pub message_on_sitemap_reload: Option<bool>
 }
 
 impl ContentConfig
@@ -101,7 +103,8 @@ impl ContentConfig
             browser_cache_period_seconds: 3600,
             server_cache_period_seconds: 3600,
             static_content: Some(false),
-            generate_sitemap: Some(true)
+            generate_sitemap: Some(true),
+            message_on_sitemap_reload: Some(false)
         }
     }
 }

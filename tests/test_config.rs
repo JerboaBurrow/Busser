@@ -85,6 +85,7 @@ mod config
         assert_eq!(content.browser_cache_period_seconds, 3600);
         assert_eq!(content.server_cache_period_seconds, 3600);
         assert_eq!(content.static_content, Some(false));
+        assert_eq!(content.message_on_sitemap_reload, Some(false));
 
         let config = Config::default();
 
