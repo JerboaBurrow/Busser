@@ -136,9 +136,9 @@ impl Task for StatsDigestTask
             
             stats.summary = process_hits
             (
-                Some(self.last_run), 
-                None,  
-                config.clone(),
+                Some(self.last_run),
+                None,
+                &config,
                 Some(stats.to_owned())
             );
 

@@ -208,9 +208,9 @@ pub fn collect_hits
         }
     }
 
-    let uris: Option<HashSet<String>> = if config.stats.ignore_invalid_paths.is_some_and(|x|x)
+    let uris: Option<HashSet<String>> = if let Some(true) = config.stats.ignore_invalid_paths
     {
-        Some(SiteMap::from_config(&Config::load_or_default(CONFIG_PATH), false, true).collect_uris().into_iter().collect())
+        Some(SiteMap::from_config(&config, false, true).collect_uris().into_iter().collect())
     }
     else
     {

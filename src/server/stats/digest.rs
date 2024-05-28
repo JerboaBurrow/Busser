@@ -39,7 +39,7 @@ pub fn process_hits
 (
     from: Option<DateTime<chrono::Utc>>, 
     to: Option<DateTime<chrono::Utc>>, 
-    config: Config,
+    config: &Config,
     stats: Option<HitStats>
 ) -> Digest
 {

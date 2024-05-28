@@ -99,7 +99,7 @@ mod test_stats_graph
             ip_hash: "75A05052881EA1D68995532845978B4090012883F99354EFF67AD4E1ED5FF1833F4A2EC893181EAA00B94B9CD35E1E1DD581B7F80FEF2EFF45B75D529A080BD8".to_owned()
         };
         
-        assert_eq!(hits.len(), 3);
+        assert_eq!(hits.len(), 2);
         assert!(!hits.contains(&hit));
     }
 
@@ -108,7 +108,7 @@ mod test_stats_graph
     {
         let mut config = Config::load_or_default("tests/config.json");
         config.stats.ignore_invalid_paths = Some(false);
-        let digest = process_hits(None, None, config, None);
+        let digest = process_hits(None, None, &config, None);
         
         assert_eq!(digest.unique_hits, 9);
         assert_eq!(digest.total_hits, 21);
