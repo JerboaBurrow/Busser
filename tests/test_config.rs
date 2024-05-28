@@ -30,14 +30,14 @@ mod config
         assert_eq!(config.throttle.clear_period_seconds, 3600);
 
         assert_eq!(config.stats.save_schedule, Some("0 0 1 * * Wed *".to_string()));
-        assert_eq!(config.stats.path, "stats");
+        assert_eq!(config.stats.path, "tests/stats");
         assert_eq!(config.stats.hit_cooloff_seconds, 60);
         assert_eq!(config.stats.digest_schedule, Some("0 0 1 * * Fri *".to_string()));
         assert_eq!(config.stats.ignore_regexes.unwrap(), vec!["/favicon.ico".to_string()]);
         assert_eq!(config.stats.top_n_digest, None);
 
-        assert_eq!(config.content.path, "/home/jerboa/Website/");
-        assert_eq!(config.content.home, "/home/jerboa/Website/jerboa.html");
+        assert_eq!(config.content.path, "tests/pages");
+        assert_eq!(config.content.home, "tests/pages/a.html");
         assert_eq!(config.content.allow_without_extension, true);
         assert_eq!(config.content.browser_cache_period_seconds, 3600);
         assert_eq!(config.content.server_cache_period_seconds, 1);
@@ -69,6 +69,7 @@ mod config
         assert_eq!(stats.digest_schedule, None);
         assert_eq!(stats.ignore_regexes, None);
         assert_eq!(stats.top_n_digest, None);
+        assert_eq!(stats.ignore_invalid_paths, Some(false));
 
         let throttle = ThrottleConfig::default();
 
@@ -151,13 +152,13 @@ mod config
         assert_eq!(config.throttle.clear_period_seconds, 3600);
 
         assert_eq!(config.stats.save_schedule, Some("0 0 1 * * Wed *".to_string()));
-        assert_eq!(config.stats.path, "stats");
+        assert_eq!(config.stats.path, "tests/stats");
         assert_eq!(config.stats.hit_cooloff_seconds, 60);
         assert_eq!(config.stats.digest_schedule, Some("0 0 1 * * Fri *".to_string()));
         assert_eq!(config.stats.ignore_regexes.unwrap(), vec!["/favicon.ico".to_string()]);
 
-        assert_eq!(config.content.path, "/home/jerboa/Website/");
-        assert_eq!(config.content.home, "/home/jerboa/Website/jerboa.html");
+        assert_eq!(config.content.path, "tests/pages");
+        assert_eq!(config.content.home, "tests/pages/a.html");
         assert_eq!(config.content.allow_without_extension, true);
         assert_eq!(config.content.browser_cache_period_seconds, 3600);
         assert_eq!(config.content.server_cache_period_seconds, 1);

@@ -9,7 +9,7 @@
     },
     "stats": 
     {
-        "path": "stats",
+        "path": "tests/stats",
         "hit_cooloff_seconds": 60,
         "save_schedule": "0 0 1 * * Wed *",
         "digest_schedule": "0 0 1 * * Fri *",
@@ -17,8 +17,8 @@
     },
     "content": 
     {
-        "path": "/home/jerboa/Website/",
-        "home": "/home/jerboa/Website/jerboa.html",
+        "path": "tests/pages",
+        "home": "tests/pages/a.html",
         "allow_without_extension": true,
         "browser_cache_period_seconds": 3600,
         "server_cache_period_seconds": 1,

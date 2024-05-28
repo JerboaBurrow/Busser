@@ -1,4 +1,4 @@
-use std::{collections::HashMap, net::{IpAddr, Ipv4Addr, SocketAddr}, sync::Arc, time::Instant};
+use std::{collections::{HashMap, HashSet}, net::{IpAddr, Ipv4Addr, SocketAddr}, sync::Arc, time::Instant};
 
 use axum::{extract::{ConnectInfo, State}, http::Request, middleware::Next, response::Response};
 use chrono::DateTime;
@@ -7,7 +7,7 @@ use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 
-use crate::{config::{Config, CONFIG_PATH}, filesystem::{file::read_file_utf8, folder::list_dir_by}, util::{date_to_rfc3339, dump_bytes}};
+use crate::{config::{Config, CONFIG_PATH}, content::sitemap::SiteMap, filesystem::{file::read_file_utf8, folder::list_dir_by}, util::{date_to_rfc3339, dump_bytes}};
 
 use super::digest::Digest;
 
@@ -154,9 +154,15 @@ pub async fn process_hit
 }
 
 /// Gathers [Hit]s both from disk and those cached in [HitStats]
-pub fn collect_hits(path: String, stats: Option<HitStats>, from: Option<DateTime<chrono::Utc>>, to: Option<DateTime<chrono::Utc>>) -> Vec<Hit>
+pub fn collect_hits
+(
+    stats: Option<HitStats>, 
+    from: Option<DateTime<chrono::Utc>>, 
+    to: Option<DateTime<chrono::Utc>>,
+    config: &Config
+) -> Vec<Hit>
 {
-    let stats_files = list_dir_by(None, path);
+    let stats_files = list_dir_by(None, config.stats.path.clone());
 
     let mut hits: Vec<Hit> = vec![];
 
@@ -202,12 +208,26 @@ pub fn collect_hits(path: String, stats: Option<HitStats>, from: Option<DateTime
         }
     }
 
+    let uris: Option<HashSet<String>> = if config.stats.ignore_invalid_paths.is_some_and(|x|x)
+    {
+        Some(SiteMap::from_config(&Config::load_or_default(CONFIG_PATH), false, true).collect_uris().into_iter().collect())
+    }
+    else
+    {
+        None
+    };
+
     for hit in hits_to_filter
     {
         // check the cached stats are within the time period, then add
         let mut times: Vec<String> = vec![];
         for i in 0..hit.times.len()
         {
+            if uris.as_ref().is_some_and(|u| !u.contains(&hit.path))
+            {
+                continue
+            } 
+
             let t = match DateTime::parse_from_rfc3339(&hit.times[i])
             {
                 Ok(date) => date,

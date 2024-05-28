@@ -2,7 +2,7 @@ use std::{cmp::{max, min}, collections::HashMap};
 
 use chrono::{DateTime, Timelike};
 
-use crate::{config::{Config, CONFIG_PATH}, content::is_page, util::matches_one};
+use crate::{config::Config, content::is_page, util::matches_one};
 
 use super::hits::{collect_hits, HitStats};
 
@@ -35,10 +35,16 @@ impl Digest
 }
 
 /// Collect hits cached and from local files into a [Digest]
-pub fn process_hits(path: String, from: Option<DateTime<chrono::Utc>>, to: Option<DateTime<chrono::Utc>>, top_n: Option<usize>, stats: Option<HitStats>) -> Digest
+pub fn process_hits
+(
+    from: Option<DateTime<chrono::Utc>>, 
+    to: Option<DateTime<chrono::Utc>>, 
+    config: Config,
+    stats: Option<HitStats>
+) -> Digest
 {
 
-    let n = match top_n
+    let n = match config.stats.top_n_digest
     {
         Some(n) => n,
         None => 3
@@ -46,19 +52,17 @@ pub fn process_hits(path: String, from: Option<DateTime<chrono::Utc>>, to: Optio
 
     let mut digest = Digest::new();
 
-    let config = Config::load_or_default(CONFIG_PATH);
-
-    let (ignore_patterns, domain) = match config.stats.ignore_regexes
+    let (ignore_patterns, domain) = match config.stats.ignore_regexes.clone()
     {
-        Some(r) => (r, config.domain),
-        None => (vec![], config.domain)
+        Some(r) => (r, config.domain.clone()),
+        None => (vec![], config.domain.clone())
     };
 
     let mut hitters: HashMap<String, usize> = HashMap::new();
     let mut pages: HashMap<String, usize> = HashMap::new();
     let mut resources: HashMap<String, usize> = HashMap::new();
 
-    for hit in collect_hits(path, stats, from, to)
+    for hit in collect_hits(stats, from, to, &config)
     {
         if matches_one(&hit.path, &ignore_patterns)
         {
