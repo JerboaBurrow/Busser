@@ -210,7 +210,7 @@ pub fn collect_hits
 
     let uris: Option<HashSet<String>> = if let Some(true) = config.stats.ignore_invalid_paths
     {
-        Some(SiteMap::from_config(&config, false, true).collect_uris().into_iter().collect())
+        Some(SiteMap::build(config, false, true).collect_uris().into_iter().collect())
     }
     else
     {

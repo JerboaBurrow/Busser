@@ -228,62 +228,136 @@ impl ContentTree
 pub struct SiteMap
 {
     contents: ContentTree,
-    content_path: String,
     domain: String,
+    path: String,
     hash: Vec<u8>
 }
 
 impl SiteMap
 {
-    pub fn new(domain: String, content_path: String) -> SiteMap
+    /// Searches the content path from [SiteMap::new] for [Content]
+    ///  robots.txt and sitemap.xml can be generated and added here
+    pub fn build
+    (
+        config: &Config,
+        tag: bool,
+        silent: bool
+    ) -> SiteMap
     {
-        SiteMap { contents: ContentTree::new("/"), content_path, domain, hash: vec![] }
-    }
 
-    pub fn from_config(config: &Config, insert_tag: bool, silent: bool) -> SiteMap
-    {
-        let mut sitemap = SiteMap::new(config.domain.clone(), config.content.path.clone());
-
-        match config.content.ignore_regexes.clone()
+        let server_cache_period = config.content.server_cache_period_seconds;
+        let browser_cache_period = config.content.browser_cache_period_seconds;
+        let short_urls = config.content.allow_without_extension;
+        let filter = match config.content.ignore_regexes.clone()
         {
-            Some(p) => 
-            {
-                sitemap.build
-                (
-                    insert_tag, 
-                    silent,
-                    Some(&ContentFilter::new(p))
-                );
-            },
-            None => 
-            {
-                sitemap.build
-                (
-                    insert_tag, 
-                    silent,
-                    None
-                );
-            }
+            Some(p) => Some(ContentFilter::new(p.clone())),
+            None => None
         };
 
-        let mut home = Content::new
+        let mut tic = Instant::now();
+        let spinner = if !silent
+        {
+            let spinner = ProgressBar::new_spinner();
+            spinner.set_message("Detecting site files");
+            spinner.enable_steady_tick(Duration::from_millis(100));
+            Some(spinner)
+        }
+        else
+        {
+            None
+        };
+
+        let mut contents = get_content
+        (
+            &config.content.path,
+            &config.content.path,
+            Some(server_cache_period),
+            Some(browser_cache_period),
+            Some(tag),
+            filter.as_ref()
+        );
+
+        if !silent
+        {
+            spinner.as_ref().unwrap().finish();
+            spinner.unwrap().set_message(format!("Detecting site files took {}", format_elapsed(tic)));
+        }
+
+        contents.sort_by_key(|x|x.get_uri());
+
+        tic = Instant::now();
+        let bar = if !silent 
+        {
+            println!("Building sitemap");
+            Some(ProgressBar::new(contents.len() as u64))
+        }
+        else
+        {
+            None
+        };
+
+        let mut content_tree = ContentTree::new("/");
+
+        for content in contents
+        { 
+            crate::debug(format!("Adding content {:?}", content.preview(64)), None);
+            let path = config.content.path.clone()+"/";
+            let uri = parse_uri(content.get_uri(), path);
+
+            if short_urls && content.get_content_type().is_html()
+            {
+                let short_uri = Regex::new(r"\.\S+$").unwrap().replacen(&uri, 1, "");
+                crate::debug(format!("Adding content as short url: {}", short_uri), None);
+                content_tree.push(short_uri.to_string(), Content::new(&short_uri, &content.path(), server_cache_period, browser_cache_period, tag));
+            }
+
+            content_tree.push(content.uri.clone(), content);
+            if !silent {bar.as_ref().unwrap().inc(1);}
+        }
+        if !silent
+        {
+            bar.as_ref().unwrap().finish();
+            println!("Building sitemap took {}", format_elapsed(tic));
+        }
+
+        let mut sitemap = SiteMap
+        {
+            contents: content_tree,
+            domain: config.domain.clone(),
+            path: config.content.path.clone(),
+            hash: vec![]
+        };
+
+        let home = Content::new
         (
             "/", 
             &config.content.home.clone(), 
             config.content.server_cache_period_seconds, 
             config.content.browser_cache_period_seconds, 
-            insert_tag
+            tag
         );
-        match home.load_from_file()
+
+        sitemap.push(home);
+
+        if let Some(true) = config.content.generate_sitemap
         {
-            Ok(()) =>
-            {
-                sitemap.push(home);
-            },
-            Err(e) => {crate::debug(format!("Error serving home page resource {}", e), None);}
+            sitemap.write_robots();
+            sitemap.write_sitemap_xml();
         }
 
+        sitemap.calculate_hash();
+
         sitemap
+    }
+
+    pub fn write_robots(&self)
+    {
+        write_file_bytes(&format!("{}/{}",self.path,"robots.txt"), format!("Sitemap: {}/sitemap.xml", self.domain).as_bytes());
+    }
+
+    pub fn write_sitemap_xml(&self)
+    {
+        write_file_bytes(&format!("{}/{}",self.path,"sitemap.xml"), &self.to_xml());
     }
 
     pub fn push(&mut self, content: Content)
@@ -306,120 +380,6 @@ impl SiteMap
     pub fn collect_uris(&self) -> Vec<String>
     {
         self.contents.collect_uris()
-    }
-
-    /// Searches the content path from [SiteMap::new] for [Content]
-    ///  robots.txt and sitemap.xml can be generated and added here
-    pub fn build
-    (
-        &mut self, 
-        tag: bool,
-        silent: bool,
-        filter: Option<&ContentFilter>
-    )
-    {
-
-        let config = Config::load_or_default(CONFIG_PATH);
-        let server_cache_period = config.content.server_cache_period_seconds;
-        let browser_cache_period = config.content.browser_cache_period_seconds;
-        let short_urls = config.content.allow_without_extension;
-
-        let mut tic = Instant::now();
-        let spinner = if !silent
-        {
-            let spinner = ProgressBar::new_spinner();
-            spinner.set_message("Detecting site files");
-            spinner.enable_steady_tick(Duration::from_millis(100));
-            Some(spinner)
-        }
-        else
-        {
-            None
-        };
-
-        let mut contents = get_content
-        (
-            &self.content_path,
-            &self.content_path,
-            Some(server_cache_period),
-            Some(browser_cache_period),
-            Some(tag),
-            filter
-        );
-
-        if !silent
-        {
-            spinner.as_ref().unwrap().finish();
-            spinner.unwrap().set_message(format!("Detecting site files took {}", format_elapsed(tic)));
-        }
-
-        contents.sort_by_key(|x|x.get_uri());
-
-        let mut no_robots = true;
-
-        tic = Instant::now();
-        let bar = if !silent 
-        {
-            println!("Building sitemap");
-            Some(ProgressBar::new(contents.len() as u64))
-        }
-        else
-        {
-            None
-        };
-
-        let generate_sitemap = match config.content.generate_sitemap
-        {
-            Some(b) => b,
-            None => true
-        };
-
-        for content in contents
-        { 
-            if content.get_uri().contains("robots.txt")
-            {
-                no_robots = false;
-            }
-            if generate_sitemap && content.get_uri().contains("sitemap.xml")
-            {
-                continue
-            }
-            crate::debug(format!("Adding content {:?}", content.preview(64)), None);
-            let path = self.content_path.clone()+"/";
-            let uri = parse_uri(content.get_uri(), path);
-
-            if short_urls && content.get_content_type().is_html()
-            {
-                let short_uri = Regex::new(r"\.\S+$").unwrap().replacen(&uri, 1, "");
-                crate::debug(format!("Adding content as short url: {}", short_uri), None);
-                self.contents.push(short_uri.to_string(), Content::new(&short_uri, &content.path(), server_cache_period, browser_cache_period, tag));
-            }
-
-            self.contents.push(content.uri.clone(), content);
-            if !silent {bar.as_ref().unwrap().inc(1);}
-        }
-        if !silent
-        {
-            bar.as_ref().unwrap().finish();
-            println!("Building sitemap took {}", format_elapsed(tic));
-        }
-
-        if no_robots
-        {
-            let path = format!("{}/{}",self.content_path,"robots.txt");
-            write_file_bytes(&path, format!("Sitemap: {}/sitemap.xml", self.domain).as_bytes());
-            self.contents.push("/robots.txt".to_string(), Content::new("/robots.txt",&path, server_cache_period, browser_cache_period, tag));
-            crate::debug(format!("No robots.txt specified, generating robots.txt"), None);
-        }
-
-        if generate_sitemap
-        {
-            let path = format!("{}/{}",self.content_path,"sitemap.xml");
-            write_file_bytes(&path, &self.to_xml());
-            self.contents.push("/sitemap.xml".to_string(), Content::new("/sitemap.xml", &path, server_cache_period, browser_cache_period, tag));
-            crate::debug(format!("No sitemap.xml specified, generating sitemap.xml"), None);
-        }
-        self.calculate_hash();
     }
 
     /// Implements writing to an xml conforming to <https://www.sitemaps.org/protocol.html>
