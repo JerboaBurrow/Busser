@@ -22,7 +22,8 @@
         "allow_without_extension": true,
         "browser_cache_period_seconds": 3600,
         "server_cache_period_seconds": 1,
-        "ignore_regexes": ["/.git", "workspace"]
+        "ignore_regexes": ["/.git", "workspace"],
+        "generate_sitemap": false
     },
     "domain": "127.0.0.1",
     "api_token": "some_secure_secret_token",
