@@ -63,7 +63,7 @@ async fn main() {
 ///   A status message with (uri) additions and removals will be posted to Discord.
 async fn serve_observed(insert_tag: bool)
 {
-    let mut sitemap = SiteMap::from_config(&Config::load_or_default(CONFIG_PATH), insert_tag, false);
+    let mut sitemap = SiteMap::build(&Config::load_or_default(CONFIG_PATH), insert_tag, false);
     let mut hash = sitemap.get_hash();
 
     let server = Server::new(0,0,0,0,sitemap.clone());
@@ -73,7 +73,10 @@ async fn serve_observed(insert_tag: bool)
     loop
     {
         let config = Config::load_or_default(CONFIG_PATH);
-        let new_sitemap = SiteMap::from_config(&config, insert_tag, false);
+        busser::debug(format!("Next sitemap check: {}s", config.content.server_cache_period_seconds), None);
+        tokio::time::sleep(Duration::from_secs(config.content.server_cache_period_seconds.into())).await;
+        
+        let new_sitemap = SiteMap::build(&config, insert_tag, false);
         let sitemap_hash = new_sitemap.get_hash();
 
         if sitemap_hash != hash
@@ -95,15 +98,13 @@ async fn serve_observed(insert_tag: bool)
                 try_post(config.notification_endpoint, &format!("The sitemap was refreshed with diffs:\n```{}```", diffs)).await;
             }
         }
-        busser::debug(format!("Next sitemap check: {}s", config.content.server_cache_period_seconds), None);
-        tokio::time::sleep(Duration::from_secs(config.content.server_cache_period_seconds.into())).await;
     }
 }
 
 /// Serve without checking for sitemap changes
 async fn serve(insert_tag: bool)
 {
-    let sitemap = SiteMap::from_config(&Config::load_or_default(CONFIG_PATH), insert_tag, false);
+    let sitemap = SiteMap::build(&Config::load_or_default(CONFIG_PATH), insert_tag, false);
     let server = Server::new(0,0,0,0,sitemap);
     server.serve().await;
 }

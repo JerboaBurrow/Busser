@@ -12,6 +12,7 @@ use crate::{filesystem::file::read_file_utf8, integrations::webhook::Webhook};
 /// - ```digest_schedule```: periodically send a digts to a Discord webhook, cron format: "sec min hour day-of-month month day-of-week year"
 /// - ```ignore_regexes```: collect, but do not report, hits on these regexes
 /// - ```top_n_digest```: top n listing of pages and resources in API/discord default is 3
+/// - ```ignore_invalid_paths: Option<bool>```: in digest don't report hits to invalid paths
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StatsConfig
 {
@@ -20,7 +21,8 @@ pub struct StatsConfig
     pub save_schedule: Option<String>,
     pub digest_schedule: Option<String>,
     pub ignore_regexes: Option<Vec<String>>,
-    pub top_n_digest: Option<usize>
+    pub top_n_digest: Option<usize>,
+    pub ignore_invalid_paths: Option<bool>
 }
 
 impl StatsConfig
@@ -34,7 +36,8 @@ impl StatsConfig
             save_schedule: None,
             digest_schedule: None,
             ignore_regexes: None,
-            top_n_digest: None
+            top_n_digest: None,
+            ignore_invalid_paths: Some(false)
         }
     }
 }

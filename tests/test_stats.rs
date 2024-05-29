@@ -5,8 +5,9 @@ mod test_stats_graph
 {
     use std::{collections::HashMap, fs::remove_file, path::Path};
 
-    use busser::{filesystem::file::File, server::stats::{digest::{hits_by_hour_text_graph, process_hits, Digest}, file::StatsFile, hits::{collect_hits, Hit, HitStats}}};
+    use busser::{config::Config, filesystem::file::File, server::stats::{digest::{hits_by_hour_text_graph, process_hits, Digest}, file::StatsFile, hits::{collect_hits, Hit, HitStats}}};
     use chrono::DateTime;
+    use openssl::conf;
 
     const GRAPH: &str = r#"00:00
 01:00-
@@ -46,7 +47,13 @@ mod test_stats_graph
     #[test]
     fn test_collect_hits()
     {
-        let mut hits = collect_hits("tests/stats".to_owned(), None, None, None);
+
+        let mut config = Config::load_or_default("tests/config.json");
+
+        let mut hits = collect_hits(None, None, None, &config);
+
+        config.stats.ignore_invalid_paths = Some(false);
+
         assert_eq!(hits.len(), 17);
 
         let mut hit = Hit 
@@ -58,13 +65,13 @@ mod test_stats_graph
 
         assert!(hits.contains(&hit));
 
-        hits = collect_hits("tests/stats".to_owned(), None, Some(DateTime::parse_from_rfc3339("2024-03-25T00:00:00.000000000+00:00").unwrap().to_utc()), None);
+        hits = collect_hits( None, Some(DateTime::parse_from_rfc3339("2024-03-25T00:00:00.000000000+00:00").unwrap().to_utc()), None, &config);
         
         assert_eq!(hits.len(), 1);
 
         assert!(hits.contains(&hit));
 
-        hits = collect_hits("tests/stats".to_owned(), None, None, Some(DateTime::parse_from_rfc3339("2024-03-24T23:12:44.736120969+00:00").unwrap().to_utc()));
+        hits = collect_hits(None, None, Some(DateTime::parse_from_rfc3339("2024-03-24T23:12:44.736120969+00:00").unwrap().to_utc()), &config);
         
         assert_eq!(hits.len(), 16);
 
@@ -80,9 +87,28 @@ mod test_stats_graph
     }
 
     #[test]
+    fn test_collect_hits_ignore_invalid()
+    {
+        let mut config = Config::load_or_default("tests/config.json");
+        config.stats.ignore_invalid_paths = Some(true);
+        let hits = collect_hits(None, None, None, &config);
+        let hit = Hit 
+        {
+            times: vec!["2024-03-25T04:12:44.736120969+00:00".to_string()],
+            path: "/login.php/'%3E%3Csvg/onload=confirm%60xss%60%3E".to_owned(),
+            ip_hash: "75A05052881EA1D68995532845978B4090012883F99354EFF67AD4E1ED5FF1833F4A2EC893181EAA00B94B9CD35E1E1DD581B7F80FEF2EFF45B75D529A080BD8".to_owned()
+        };
+        
+        assert_eq!(hits.len(), 2);
+        assert!(!hits.contains(&hit));
+    }
+
+    #[test]
     fn test_stats_digest()
     {
-        let digest = process_hits("tests/stats".to_owned(), None, None, None, None);
+        let mut config = Config::load_or_default("tests/config.json");
+        config.stats.ignore_invalid_paths = Some(false);
+        let digest = process_hits(None, None, &config, None);
         
         assert_eq!(digest.unique_hits, 9);
         assert_eq!(digest.total_hits, 21);
