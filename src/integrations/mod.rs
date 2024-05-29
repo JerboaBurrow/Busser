@@ -9,6 +9,7 @@ use regex::Regex;
 use crate::util::{read_bytes, dump_bytes};
 
 pub mod discord;
+pub mod git;
 pub mod webhook;
 
 /// Uses openssl to verify the request body via the given hmac_token

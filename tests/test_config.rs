@@ -97,6 +97,8 @@ mod config
         assert_eq!(config.key_path, "certs/key.pem");
         assert_eq!(config.domain, "127.0.0.1");
 
+        assert!(config.git.is_none());
+
     }
 
     #[test]

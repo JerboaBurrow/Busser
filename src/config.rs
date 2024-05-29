@@ -112,6 +112,30 @@ impl ContentConfig
     }
 }
 
+/// Passphrase or ssh authentication setup (plaintext storage)
+/// - ```key_path```: optional location of ssh key (ssh connection will be used)
+/// - ```user```: user name for authentication
+/// - ```passphrase```: passphrase for ssh key or for user-pass auth
+#[derive(Clone, Serialize, Deserialize)]
+pub struct GitAuthConfig
+{
+    pub key_path: Option<String>,
+    pub user: String,
+    pub passphrase: String
+}
+
+/// Git repository busser will track for content
+/// - ```remote```: the url (public or private)
+/// - ```branch```: the tracked branch
+/// - ```auth```: if present either ssh key or passphrase will be used
+#[derive(Clone, Serialize, Deserialize)]
+pub struct GitConfig
+{
+    pub remote: String,
+    pub branch: String,
+    pub auth: Option<GitAuthConfig>
+}
+
 /// Configure the server
 /// - ```port_https```: https port to serve on
 /// - ```port_http```: http port to serve on
@@ -119,10 +143,16 @@ impl ContentConfig
 /// - ```cert_path```: ssl certificate
 /// - ```key_path```: ssl key
 /// - ```domain```: domain name for https redirect etc.
+/// - ```api_token```: token to use for the server's POST api
 /// - ```throttle```: [ThrottleConfig]
 /// - ```stats```: [StatsConfig]
 /// - ```content```: [ContentConfig]
-/// - ```api_token```: token to use for the server's POST api
+/// - ```git```: [GitConfig] if present busser will track a git repo for content
+/// 
+/// <div class="warning"><p>The config.json is a sensitive file which may contain plaintext access tokens/ passphrases.
+/// Content matching "config.json" is not served.
+/// </p>
+/// </div>
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Config
 {
@@ -132,10 +162,11 @@ pub struct Config
     pub cert_path: String,
     pub key_path: String,
     pub domain: String,
+    pub api_token: Option<String>,
     pub throttle: ThrottleConfig,
     pub stats: StatsConfig,
     pub content: ContentConfig,
-    pub api_token: Option<String>
+    pub git: Option<GitConfig>
 }
 
 impl Config 
@@ -150,10 +181,11 @@ impl Config
             cert_path: "certs/cert.pem".to_string(),
             key_path: "certs/key.pem".to_string(),
             domain: "127.0.0.1".to_string(),
+            api_token: None,
             throttle: ThrottleConfig::default(),
             stats: StatsConfig::default(),
             content: ContentConfig::default(),
-            api_token: None
+            git: None
         }
     }
 
