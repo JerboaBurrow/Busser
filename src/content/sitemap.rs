@@ -300,6 +300,7 @@ impl SiteMap
 
         for content in contents
         { 
+            if content.get_uri().contains("config.json") { continue }
             crate::debug(format!("Adding content {:?}", content.preview(64)), None);
             let path = config.content.path.clone()+"/";
             let uri = parse_uri(content.get_uri(), path);

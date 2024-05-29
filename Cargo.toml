@@ -27,6 +27,7 @@ quick-xml = "0.31.0"
 indicatif = "0.17.8"
 uuid = { version = "1.8.0", features = ["v4", "fast-rng", "macro-diagnostics"]}
 cron = "0.12.1"
+git2 = "0.18.3"
 
 [profile.dev]
 opt-level = 0
