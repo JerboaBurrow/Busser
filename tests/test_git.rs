@@ -43,11 +43,15 @@ mod git
         };
 
         let path = "tests/test_clean_and_clone";
-        let repo = from_clone(path.into(), &config);
+        
+        {
+            let repo = from_clone(path.into(), &config);
 
-        assert!(repo.is_ok());
-        assert!(!repo.as_ref().unwrap().is_empty().unwrap());
-        assert!(Path::exists(Path::new(path)));
+            assert!(repo.is_ok());
+            assert!(!repo.as_ref().unwrap().is_empty().unwrap());
+            assert!(Path::exists(Path::new(path)));
+            drop(repo.unwrap());
+        }
 
         let repo = clean_and_clone(path.into(), config);
         println!("{:?}",repo.as_ref().err());
