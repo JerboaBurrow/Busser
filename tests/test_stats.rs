@@ -7,7 +7,6 @@ mod test_stats_graph
 
     use busser::{config::Config, filesystem::file::File, server::stats::{digest::{hits_by_hour_text_graph, process_hits, Digest}, file::StatsFile, hits::{collect_hits, Hit, HitStats}}};
     use chrono::DateTime;
-    use openssl::conf;
 
     const GRAPH: &str = r#"00:00
 01:00-

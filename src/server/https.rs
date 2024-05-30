@@ -1,6 +1,6 @@
 use crate::
 {
-    config::{read_config, Config, CONFIG_PATH}, content::sitemap::SiteMap, server::throttle::{handle_throttle, IpThrottler}, task::{schedule_from_option, TaskPool}, CRAB
+    config::{read_config, Config, CONFIG_PATH}, content::sitemap::SiteMap, integrations::git::refresh::GitRefreshTask, server::throttle::{handle_throttle, IpThrottler}, task::{schedule_from_option, TaskPool}, CRAB
 };
 
 use core::time;
@@ -26,6 +26,7 @@ pub struct Server
     router: Router,
     config: Config,
     handle: Handle,
+    repo_mutex: Arc<Mutex<()>>,
     pub tasks: TaskPool
 }
 
@@ -88,12 +89,15 @@ impl Server
 
         router = router.layer(middleware::from_fn_with_state(Some(stats.clone()), StatsDigest::filter));
 
+        let repo_mutex = Arc::new(Mutex::new(()));
+
         let mut server = Server
         {
             addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(a,b,c,d)), config.port_https),
             router,
             config: config.clone(),
             handle: Handle::new(),
+            repo_mutex: repo_mutex.clone(),
             tasks: TaskPool::new()
         };
 
@@ -120,6 +124,21 @@ impl Server
                 ) 
             )
         );
+
+        if config.git.is_some()
+        {
+            server.tasks.add
+            (
+                Box::new
+                (
+                    GitRefreshTask::new
+                    (
+                        repo_mutex,
+                        schedule_from_option(config.git.unwrap().checkout_schedule)
+                    )
+                )
+            );
+        }
 
         server
     }

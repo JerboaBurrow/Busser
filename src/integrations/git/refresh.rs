@@ -22,12 +22,13 @@ impl GitRefreshTask
 {
     pub fn new
     (
+        lock: Arc<Mutex<()>>,
         schedule: Option<Schedule>
     ) -> GitRefreshTask
     {
         GitRefreshTask 
         {
-            lock: Arc::new(Mutex::new(())), 
+            lock, 
             last_run: chrono::offset::Utc::now(), 
             next_run: if schedule.is_none() { None } else { next_job_time(schedule.clone().unwrap()) },
             schedule
