@@ -12,10 +12,6 @@ const MAJOR: &str = env!("CARGO_PKG_VERSION_MAJOR");
 const MINOR: &str = env!("CARGO_PKG_VERSION_MINOR");
 const PATCH: &str = env!("CARGO_PKG_VERSION_PATCH");
 
-const RESOURCE_REGEX: &str = r"(\.\S+)";
-const HTML_REGEX: &str = r"(\.html)$";
-const NO_EXTENSION_REGEX: &str = r"^(?!.*\.).*";
-
 const CRAB: [u8; 4] = [0xF0, 0x9F, 0xA6, 0x80];
 const BLAZING: [u8; 4] = [0xF0, 0x9F, 0x94, 0xA5];
 

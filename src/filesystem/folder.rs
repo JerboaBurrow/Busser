@@ -1,35 +1,6 @@
-use core::fmt;
 use std::fs::DirEntry;
 
 use regex::Regex;
-
-#[derive(Debug, Clone)]
-pub struct ListDirError
-{
-    pub why: String
-}
-
-impl fmt::Display for ListDirError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.why)
-    }
-}
-
-/// List all files in path
-pub fn list_dir(path: String) -> Result<std::fs::ReadDir, ListDirError>
-{
-    match std::fs::read_dir(path)
-    {
-        Ok(files) => 
-        {
-            Ok(files)
-        },
-        Err(why) => 
-        {
-            Err(ListDirError { why: format!("{}", why)})
-        }
-    }
-}
 
 /// Return parsed [std::ffi::OsString] from [DirEntry]
 pub fn dir_entry_to_path(d: DirEntry) -> Option<String>
