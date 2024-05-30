@@ -133,6 +133,7 @@ pub struct GitConfig
 {
     pub remote: String,
     pub branch: String,
+    pub checkout_schedule: Option<String>,
     pub auth: Option<GitAuthConfig>
 }
 

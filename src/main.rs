@@ -1,8 +1,9 @@
 use std::time::Duration;
 
-use busser::config::{Config, CONFIG_PATH};
+use busser::config::{read_config, Config, CONFIG_PATH};
 use busser::content::sitemap::SiteMap;
 use busser::integrations::discord::post::try_post;
+use busser::integrations::git::clean_and_clone;
 use busser::server::http::ServerHttp;
 use busser::server::https::Server;
 use busser::util::formatted_differences;
@@ -41,6 +42,30 @@ async fn main() {
     
     let http_server = ServerHttp::new(0,0,0,0);
     let _http_redirect = spawn(http_server.serve());
+
+    match read_config(CONFIG_PATH)
+    {
+        Some(c) => 
+        {
+            if c.git.is_some()
+            {
+                match clean_and_clone(&c.content.path, c.git.unwrap())
+                {
+                    Ok(_) => (),
+                    Err(e) =>
+                    {
+                        busser::debug(format!("{}", e), None);
+                        std::process::exit(1);
+                    }
+                }
+            }
+        },
+        None =>
+        {
+            println!("No config found at {}", CONFIG_PATH);
+            std::process::exit(1);
+        }
+    };
 
     if args.iter().any(|x| x == "--static-sitemap")
     {
