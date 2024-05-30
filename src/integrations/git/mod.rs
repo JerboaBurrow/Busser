@@ -3,7 +3,7 @@ use std::path::Path;
 
 use git2::{Cred, RemoteCallbacks, Repository};
 
-use crate::config::GitConfig;
+use crate::{config::GitConfig, filesystem::{folder::list_sub_dirs, set_dir_readonly}};
 
 pub mod refresh;
 
@@ -26,6 +26,17 @@ impl From<git2::Error> for GitError
         GitError
         {
             why: format!("git2::Error {}", value)
+        }
+    }
+}
+
+impl From<std::io::Error> for GitError
+{
+    fn from(value: std::io::Error) -> Self
+    {
+        GitError
+        {
+            why: format!("std::io::Error {}", value)
         }
     }
 }
@@ -95,31 +106,24 @@ pub fn from_clone(path: &str, config: &GitConfig) -> Result<Repository, GitError
     }
 }
 
+pub fn remove_repository(dir: &str) -> Result<(), std::io::Error>
+{
+    for dir in list_sub_dirs(dir.to_owned())
+    {
+        set_dir_readonly(&dir, false)?;
+    }
+    set_dir_readonly(dir, false)?;
+
+    std::fs::remove_dir_all(dir)?;
+
+    Ok(())
+}
+
 /// Make a fresh clone if [crate::config::Config::git] is present
 ///  deleting any file/dir called [crate::config::ContentConfig::path]
 pub fn clean_and_clone(dir: &str, config: GitConfig) -> Result<Repository, GitError>
 {
-    let path = Path::new(dir);
-    let result = if path.is_file()
-    {
-        std::fs::remove_file(path)
-    }
-    else if path.is_dir()
-    {
-        std::fs::remove_dir_all(path)
-    }
-    else
-    {
-        Ok(())
-    };
-    match result
-    {
-        Ok(_) => (),
-        Err(e) =>
-        {
-            return Err(GitError{why: format!("Could not clone, could not remove, {}", e)})
-        }
-    }
+    remove_repository(dir)?;
     match from_clone(dir, &config)
     {
         Ok(repo) =>
