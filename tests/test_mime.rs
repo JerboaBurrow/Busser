@@ -118,6 +118,28 @@ mod mime
         assert_eq!(MIME::VideoWEBM.as_str(), "video/webm");
         assert_eq!(MIME::VideoWMV.as_str(), "video/x-ms-wmv");
         assert_eq!(MIME::Unknown.as_str(), "application/octet-stream");
+
+        assert!(!MIME::TextPlain.in_sitemap());
+        assert!(MIME::TextHtml.in_sitemap());
+        assert!(!MIME::TextCSS.in_sitemap());
+        assert!(!MIME::TextCSV.in_sitemap());
+        assert!(!MIME::TextJavascript.in_sitemap());
+        assert!(!MIME::TextXML.in_sitemap());
+        assert!(MIME::ImageDJV.in_sitemap());
+        assert!(MIME::ImageGIF.in_sitemap());
+        assert!(MIME::ImageJPEG.in_sitemap());
+        assert!(MIME::ImagePNG.in_sitemap());
+        assert!(MIME::ImageSVG.in_sitemap());
+        assert!(MIME::ImageTIFF.in_sitemap());
+        assert!(MIME::ImageWEBP.in_sitemap());
+        assert!(MIME::ImageXICON.in_sitemap());
+        assert!(MIME::VideoFLV.in_sitemap());
+        assert!(MIME::VideoMP4.in_sitemap());
+        assert!(MIME::VideoMPEG.in_sitemap());
+        assert!(MIME::VideoQuicktime.in_sitemap());
+        assert!(MIME::VideoWEBM.in_sitemap());
+        assert!(MIME::VideoWMV.in_sitemap());
+        assert!(!MIME::Unknown.in_sitemap());
     }
 
 }

@@ -148,6 +148,11 @@ impl ContentTree
         }
     }
 
+    pub fn has_sitemap_content(&self) -> bool
+    {
+        (!self.contents.is_empty()) && self.contents.clone().into_iter().any(|(c, _)| c.content_type.in_sitemap())
+    }
+
     /// Implements writing to an xml conforming to <https://www.sitemaps.org/protocol.html>
     ///  with <http://www.google.com/schemas/sitemap-image/1.1> and <http://www.google.com/schemas/sitemap-video/1.1>
     pub fn to_xml(&self, domain: String) -> Vec<u8>
@@ -160,7 +165,7 @@ impl ContentTree
         let mut buffer = vec![];
         let mut writer = Writer::new_with_indent(&mut buffer, b' ', 8);
 
-        if !self.contents.is_empty()
+        if self.has_sitemap_content()
         {
             match writer.create_element("url")
                 .write_inner_content::<_, Error>

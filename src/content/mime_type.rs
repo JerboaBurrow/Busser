@@ -69,6 +69,8 @@ pub trait Mime
     fn is_text(&self) -> bool {false}
     fn is_image(&self) -> bool {false}
     fn is_video(&self) -> bool {false}
+    
+    fn in_sitemap(&self) -> bool { self.is_html() || self.is_image() || self.is_video() }
 
     fn as_str(&self) -> &'static str {"application/octet-stream"}
     fn infer_mime_type(extension: &str) -> MIME;
