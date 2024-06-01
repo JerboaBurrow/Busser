@@ -44,7 +44,7 @@ impl From<std::io::Error> for GitError
 /// Attempt to clone a remote repo from a [crate::config::GitConfig]
 pub fn from_clone(path: &str, config: &GitConfig) -> Result<Repository, GitError>
 {
-    if let GitConfig{auth: Some(_), remote: _, checkout_schedule: _, branch: _} = config
+    if let GitConfig{auth: Some(_), remote: _, checkout_schedule: _, branch: _, remote_webhook_token: _} = config
     {
         let auth = config.auth.clone().unwrap();
         let result = match &auth.key_path
@@ -87,7 +87,7 @@ pub fn from_clone(path: &str, config: &GitConfig) -> Result<Repository, GitError
             Ok(repo) => Ok(repo),
             Err(e) =>
             {
-                crate::debug(format!("Error {} while cloning (authenticated) repo at {}", e, config.remote), None);
+                crate::debug(format!("Error {} while cloning (authenticated) repo at {}", e, config.remote), Some("GIT"));
                 Err(GitError::from(e))
             }
         }
@@ -99,7 +99,7 @@ pub fn from_clone(path: &str, config: &GitConfig) -> Result<Repository, GitError
             Ok(repo) => Ok(repo),
             Err(e) => 
             {
-                crate::debug(format!("Error {} while cloning (pub) repo at {}", e, config.remote), None);
+                crate::debug(format!("Error {} while cloning (pub) repo at {}", e, config.remote), Some("GIT"));
                 Err(GitError::from(e))
             }
         }
@@ -139,7 +139,7 @@ pub fn clean_and_clone(dir: &str, config: GitConfig) -> Result<Repository, GitEr
 
 /// Fast forward pull from the repository, makes no attempt to resolve
 ///  if a fast foward is not possible
-pub fn fast_forward_pull(repo: Repository, branch: &str) -> Result<(), GitError>
+pub fn fast_forward_pull(repo: Repository, branch: &str) -> Result<Option<HeadInfo>, GitError>
 {
     // modified from https://stackoverflow.com/questions/58768910/how-to-perform-git-pull-with-the-rust-git2-crate
     repo.find_remote("origin")?.fetch(&[branch], None, None)?;
@@ -150,7 +150,7 @@ pub fn fast_forward_pull(repo: Repository, branch: &str) -> Result<(), GitError>
 
     if analysis.is_up_to_date()
     {
-        Ok(())
+        Ok(None)
     }
     else if analysis.is_fast_forward()
     {
@@ -158,10 +158,48 @@ pub fn fast_forward_pull(repo: Repository, branch: &str) -> Result<(), GitError>
         let mut reference = repo.find_reference(&refname)?;
         reference.set_target(fetch_commit.id(), "Fast-Forward")?;
         repo.set_head(&refname)?;
-        Ok(repo.checkout_head(Some(git2::build::CheckoutBuilder::default().force()))?)
+        repo.checkout_head(Some(git2::build::CheckoutBuilder::default().force()))?;
+        Ok(head_info(&repo))
     }
     else
     {
         Err(GitError{why: "Cannot fastforward".to_owned()})
+    }
+}
+
+pub struct HeadInfo
+{
+    pub hash: git2::Oid,
+    pub author: String,
+    pub datetime: String 
+}
+
+pub fn head_info(repo: &Repository) -> Option<HeadInfo>
+{
+    let head = match repo.head()
+    {
+        Ok(h) => match h.target()
+        {
+            Some(h) => h,
+            None => return None
+        },
+        Err(_) => return None
+    };
+
+    match repo.find_commit(head)
+    {
+        Ok(c) =>
+        {
+            Some
+            (
+                HeadInfo
+                {
+                    hash: c.id(),
+                    author: c.author().to_string(),
+                    datetime: format!("{:?}", c.time())
+                }
+            )
+        },
+        Err(_) => None
     }
 }

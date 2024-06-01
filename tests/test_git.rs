@@ -3,9 +3,9 @@ mod common;
 #[cfg(test)]
 mod git
 {
-    use std::{fs::remove_dir_all, path::Path};
+    use std::path::Path;
 
-    use busser::{config::{GitAuthConfig, GitConfig}, integrations::git::{clean_and_clone, fast_forward_pull, from_clone}};
+    use busser::{config::{Config, GitAuthConfig, GitConfig}, integrations::git::{clean_and_clone, fast_forward_pull, from_clone, refresh::GitRefreshTask, remove_repository}};
 
     #[test]
     pub fn test_clone()
@@ -16,6 +16,7 @@ mod git
             branch: "main".into(),
             checkout_schedule: None,
             auth: None,
+            remote_webhook_token: None
         };
 
         let path = "tests/test_clone";
@@ -27,7 +28,7 @@ mod git
 
         if Path::exists(Path::new(path))
         {
-            let _ = remove_dir_all(Path::new(path));
+            let _ = remove_repository(&path);
         }
     }
 
@@ -40,6 +41,7 @@ mod git
             branch: "main".into(),
             checkout_schedule: None,
             auth: None,
+            remote_webhook_token: None
         };
 
         let path = "tests/test_clean_and_clone";
@@ -61,7 +63,7 @@ mod git
 
         if Path::exists(Path::new(path))
         {
-            let _ = remove_dir_all(Path::new(path));
+            let _ = remove_repository(&path);
         }
     }
 
@@ -73,6 +75,7 @@ mod git
             remote: "https://github.com/JerboaBurrow/test".into(),
             branch: "main".into(),
             checkout_schedule: None,
+            remote_webhook_token: None,
             auth: Some(GitAuthConfig
             {
                 key_path: Some("not_a_key".into()),
@@ -92,7 +95,7 @@ mod git
 
         if Path::exists(Path::new(path))
         {
-            let _ = remove_dir_all(Path::new(path));
+            let _ = remove_repository(&path);
         }
     }
 
@@ -104,6 +107,7 @@ mod git
             remote: "https://github.com/JerboaBurrow/test".into(),
             branch: "main".into(),
             checkout_schedule: None,
+            remote_webhook_token: None,
             auth: Some(GitAuthConfig
             {
                 key_path: None,
@@ -119,22 +123,23 @@ mod git
 
         if Path::exists(Path::new(path))
         {
-            let _ = remove_dir_all(Path::new(path));
+            let _ = remove_repository(&path);
         }
     }
 
     #[test]
-    pub fn test_pull()
+    pub fn test_fast_forward_pull()
     {
         let config = GitConfig
         {
             remote: "https://github.com/JerboaBurrow/Busser".into(),
             branch: "main".into(),
             checkout_schedule: None,
+            remote_webhook_token: None,
             auth: None,
         };
 
-        let path = "tests/test_pull";
+        let path = "tests/test_fast_forward_pull";
         let repo = from_clone(path.into(), &config);
 
         assert!(repo.is_ok());
@@ -145,7 +150,37 @@ mod git
 
         if Path::exists(Path::new(path))
         {
-            let _ = remove_dir_all(Path::new(path));
+            let _ = remove_repository(&path);
         }
+    }
+
+    #[test]
+    pub fn test_pull()
+    {
+        let git_config = GitConfig
+        {
+            remote: "https://github.com/JerboaBurrow/Busser".into(),
+            branch: "main".into(),
+            checkout_schedule: None,
+            remote_webhook_token: None,
+            auth: None,
+        };
+
+        let mut config = Config::default();
+        config.git = Some(git_config);
+
+        let path = "tests/test_pull";
+        config.content.path = path.to_owned();
+
+        std::fs::create_dir(path).unwrap();
+        GitRefreshTask::pull(&config);
+
+        assert!(Path::exists(Path::new(path)));
+
+        if Path::exists(Path::new(path))
+        {
+            let _ = remove_repository(&path);
+        }
+
     }
 }
