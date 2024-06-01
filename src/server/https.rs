@@ -108,7 +108,7 @@ impl Server
                 StatsSaveTask::new
                 (
                     stats.clone(), 
-                    schedule_from_option(config.stats.digest_schedule.clone())
+                    schedule_from_option(config.stats.save_schedule.clone())
                 ) 
             )
         );

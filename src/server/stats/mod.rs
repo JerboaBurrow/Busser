@@ -1,4 +1,4 @@
-use std::{fs::create_dir, sync::Arc};
+use std::{collections::HashMap, fs::create_dir, sync::Arc};
 
 use axum::async_trait;
 use chrono::{DateTime, Utc};
@@ -13,7 +13,8 @@ pub mod hits;
 pub mod digest;
 pub mod file;
 
-/// A task to periodically save HitStats to disk
+/// A task to periodically save HitStats to disk, clearing
+///  the HitStats memory.
 /// See [crate::task::Task] and [crate::task::TaskPool]
 pub struct StatsSaveTask
 {
@@ -48,7 +49,7 @@ impl Task for StatsSaveTask
     {
         let config = Config::load_or_default(CONFIG_PATH);
         {
-            let stats = self.state.lock().await;
+            let mut stats = self.state.lock().await;
 
             if !std::path::Path::new(&config.stats.path).exists()
             {
@@ -62,6 +63,7 @@ impl Task for StatsSaveTask
             let mut file = StatsFile::new();
             file.load(&stats);
             file.write_bytes();
+            stats.hits = HashMap::new();
         }
 
         self.schedule = schedule_from_option(config.stats.save_schedule.clone());

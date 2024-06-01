@@ -85,14 +85,14 @@ impl ApiRequest for StatsDigest
                     Ok(p) => p,
                     Err(e) =>
                     {
-                        crate::debug(format!("{} deserialising POST payload",e), Some("Stats Digest".to_string()));
+                        crate::debug(format!("{} deserialising POST payload",e), Some("Stats Digest"));
                         return StatusCode::BAD_REQUEST
                     }
                 }
             }
             Err(e) => 
             {
-                crate::debug(format!("{} deserialising POST payload",e), Some("Stats Digest".to_string()));
+                crate::debug(format!("{} deserialising POST payload",e), Some("Stats Digest"));
                 return StatusCode::BAD_REQUEST
             }
         };
