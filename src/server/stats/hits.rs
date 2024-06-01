@@ -123,7 +123,7 @@ pub async fn process_hit
                                     "\nTotal stats time:         {} s (Passthrough)\nCompute stats time:       {} s (Passthrough)", 
                                     start_time.elapsed().as_secs_f64(),
                                     compute_start_time.elapsed().as_secs_f64()
-                                ), Some("PERFORMANCE".to_string()));
+                                ), Some("PERFORMANCE"));
 
                                 return
                             }
@@ -141,7 +141,7 @@ pub async fn process_hit
         }
     };
 
-    crate::debug(format!("{:?}", hit), Some("Statistics".to_string()));
+    crate::debug(format!("{:?}", hit), Some("Statistics"));
 
     stats.hits.insert(hash, hit);
 
@@ -150,7 +150,7 @@ pub async fn process_hit
         "\nTotal stats time:         {} s\nCompute stats time:       {} s", 
         start_time.elapsed().as_secs_f64(),
         compute_start_time.elapsed().as_secs_f64()
-    ), Some("PERFORMANCE".to_string()));
+    ), Some("PERFORMANCE"));
 }
 
 /// Gathers [Hit]s both from disk and those cached in [HitStats]

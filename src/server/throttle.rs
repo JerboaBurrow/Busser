@@ -19,14 +19,21 @@ pub struct Request
     hash: [u8; 64]
 }
 
+/// sha512 an ip and uri
 impl Request
 {
     pub fn new(ip: Ipv4Addr, uri: &str) -> Request
     {
         Request { hash: sha512(&[uri.as_bytes(), &ip.octets()].concat()) }
     }
+
+    pub fn hash(&self) -> [u8; 64]
+    {
+        return self.hash
+    }
 }
 
+/// Represent a unique [Request] (ip+uri hash) repeated count times
 pub struct RequestData
 {
     count: u32,
@@ -42,6 +49,7 @@ impl RequestData
     }
 }
 
+/// Detect repeated [Request]s and reflect if block for [IpThrottler::timeout_millis]
 pub struct IpThrottler
 {
     requests_from: HashMap<Request, RequestData>,
@@ -58,22 +66,26 @@ impl IpThrottler
         IpThrottler 
         {
             requests_from: HashMap::new(), 
-            max_requests_per_second: max_requests_per_second,
-            timeout_millis: timeout_millis,
+            max_requests_per_second,
+            timeout_millis,
             clear_period: Duration::from_secs(clear_period_seconds),
             last_clear: Instant::now()
         }
     }
 
+    /// Free hashmap (= HashMap::new()) if [IpThrottler::clear_period] has elapsed
     pub fn check_clear(&mut self)
     {
         if self.last_clear.elapsed() > self.clear_period
         {
-            self.requests_from.clear();
+            self.requests_from = HashMap::new();
             self.last_clear = Instant::now();
         }
     }
 
+    /// Record hit counts for unique [Request]s over a time window of 
+    ///   [IpThrottler::clear_period]s. If more than [IpThrottler::max_requests_per_second]
+    ///   the [Request] is marked as in [RequestData::timeout] for [IpThrottler::timeout_millis]ms.
     pub fn is_limited(&mut self, addr: SocketAddr, uri: &str) -> bool
     {
         let ip = addr.ip();
@@ -86,17 +98,15 @@ impl IpThrottler
         }
 
         let request = Request::new(ipv4, uri);
-
-        println!("{:?}", request);
     
         let requests = if self.requests_from.contains_key(&request)
         {
-            self.requests_from[&request].clone()
+            &self.requests_from[&request]
         }
         else 
         {
             self.requests_from.insert(request.clone(), RequestData {count: 0 as u32, last_request_time: Instant::now(), timeout: false});
-            self.requests_from[&request].clone()
+            &self.requests_from[&request]
         };
 
         let time = requests.last_request_time.elapsed().as_millis();
@@ -128,6 +138,8 @@ impl IpThrottler
     }
 }
 
+/// Reflects any [Request]s in timeout (see [IpThrottler::is_limited]) as 
+///   [StatusCode::TOO_MANY_REQUESTS].
 pub async fn handle_throttle<B>
 (
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
@@ -142,15 +154,15 @@ pub async fn handle_throttle<B>
         throttler.check_clear();
         if throttler.is_limited(addr, &request.uri().to_string())
         {
-            crate::debug(format!("Denying: {} @/{}", addr, request.uri().to_string()), None);
-            crate::debug(format!("Serve time:               {} s", serve_start.elapsed().as_secs_f64()), Some("PERFORMANCE".to_string()));
+            crate::debug(format!("Denying: {} @/{}", addr, request.uri().to_string()), Some("THROTTLE"));
+            crate::debug(format!("Serve time:               {} s", serve_start.elapsed().as_secs_f64()), Some("PERFORMANCE"));
             Err(StatusCode::TOO_MANY_REQUESTS)
         }
         else 
         {
             crate::debug(format!("Allowing: {} @/{}", addr, request.uri().to_string()), None);
             let response = next.run(request).await;
-            crate::debug(format!("Serve time:               {} s", serve_start.elapsed().as_secs_f64()), Some("PERFORMANCE".to_string()));
+            crate::debug(format!("Serve time:               {} s", serve_start.elapsed().as_secs_f64()), Some("PERFORMANCE"));
             Ok(response)
         }
     }

@@ -24,7 +24,7 @@ pub struct RuntimeOptions
 
 pub static mut OPTIONS: RuntimeOptions = RuntimeOptions { debug: false, debug_timestamp: false };
 
-pub fn debug(msg: String, context: Option<String>)
+pub fn debug(msg: String, context: Option<&str>)
 {
     unsafe { if OPTIONS.debug == false { return } }
 
