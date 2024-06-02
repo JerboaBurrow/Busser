@@ -6,6 +6,9 @@ use crate::config::{Config, CONFIG_PATH};
 
 use super::git::refresh::GitRefreshTask;
 
+/// If user-agent is GitHub-Hookshot, check if
+///  x-github-event is push. If so pull the repo if
+///  [crate::config::GitConfig] is not None
 pub async fn filter_github<B>
 (
     headers: HeaderMap,

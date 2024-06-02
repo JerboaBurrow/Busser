@@ -167,6 +167,7 @@ pub fn fast_forward_pull(repo: Repository, branch: &str) -> Result<Option<HeadIn
     }
 }
 
+/// Commit hash, author and timestamp for head commit
 pub struct HeadInfo
 {
     pub hash: git2::Oid,
@@ -174,6 +175,7 @@ pub struct HeadInfo
     pub datetime: String 
 }
 
+/// Get the [HeadInfo] if it exists
 pub fn head_info(repo: &Repository) -> Option<HeadInfo>
 {
     let head = match repo.head()

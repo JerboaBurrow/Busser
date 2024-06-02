@@ -36,6 +36,8 @@ impl GitRefreshTask
         }
     }
 
+    /// Attempt a fast forward pull of the repo in [crate::config::ContentConfig::path]
+    ///   clone if it is not there. Does nothing if [crate::config::GitConfig] is none
     pub fn pull(config: &Config) -> Option<HeadInfo>
     {
         
@@ -72,6 +74,7 @@ impl GitRefreshTask
         None
     }
 
+    /// Send a discord message with [HeadInfo] if it is Some
     pub async fn notify_pull(info: Option<HeadInfo>, config: &Config)
     {
         match info
