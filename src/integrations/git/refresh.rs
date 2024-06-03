@@ -1,4 +1,4 @@
-use std::{path::Path, sync::Arc};
+use std::{path::Path, sync::Arc, time::SystemTime};
 
 use axum::async_trait;
 use chrono::{DateTime, Utc};
@@ -13,7 +13,7 @@ use super::{clean_and_clone, fast_forward_pull, HeadInfo};
 
 pub struct GitRefreshTask
 {
-    pub lock: Arc<Mutex<()>>,
+    pub lock: Arc<Mutex<SystemTime>>,
     pub last_run: DateTime<Utc>,
     pub next_run: Option<DateTime<Utc>>,
     pub schedule: Option<Schedule>
@@ -23,7 +23,7 @@ impl GitRefreshTask
 {
     pub fn new
     (
-        lock: Arc<Mutex<()>>,
+        lock: Arc<Mutex<SystemTime>>,
         schedule: Option<Schedule>
     ) -> GitRefreshTask
     {
@@ -107,9 +107,10 @@ impl Task for GitRefreshTask
 {
     async fn run(&mut self) -> Result<(), crate::task::TaskError> 
     {
-        let _ = self.lock.lock().await;
+        let mut time = self.lock.lock().await;
         let config = Config::load_or_default(CONFIG_PATH);
         GitRefreshTask::notify_pull(GitRefreshTask::pull(&config), &config).await;
+        *time = SystemTime::now();
 
         self.schedule = schedule_from_option(config.stats.save_schedule.clone());
 

@@ -1,10 +1,10 @@
 use crate::
 {
-    config::{read_config, Config, CONFIG_PATH}, content::sitemap::SiteMap, integrations::git::refresh::GitRefreshTask, server::throttle::{handle_throttle, IpThrottler}, task::{schedule_from_option, TaskPool}, CRAB
+    config::{read_config, Config, CONFIG_PATH}, content::sitemap::SiteMap, integrations::{git::refresh::GitRefreshTask, github::filter_github}, server::throttle::{handle_throttle, IpThrottler}, task::{schedule_from_option, TaskPool}, CRAB
 };
 
 use core::time;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::{net::{IpAddr, Ipv4Addr, SocketAddr}, time::SystemTime};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -26,7 +26,6 @@ pub struct Server
     router: Router,
     config: Config,
     handle: Handle,
-    repo_mutex: Arc<Mutex<()>>,
     pub tasks: TaskPool
 }
 
@@ -89,7 +88,9 @@ impl Server
 
         router = router.layer(middleware::from_fn_with_state(Some(stats.clone()), StatsDigest::filter));
 
-        let repo_mutex = Arc::new(Mutex::new(()));
+        let repo_mutex = Arc::new(Mutex::new(SystemTime::now()));
+
+        router = router.layer(middleware::from_fn_with_state(repo_mutex.clone(), filter_github));
 
         let mut server = Server
         {
@@ -97,7 +98,6 @@ impl Server
             router,
             config: config.clone(),
             handle: Handle::new(),
-            repo_mutex: repo_mutex.clone(),
             tasks: TaskPool::new()
         };
 
