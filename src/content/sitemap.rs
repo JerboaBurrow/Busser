@@ -23,7 +23,7 @@ use super::{get_content, mime_type::Mime, Content};
 pub struct ContentTree
 {
     uri_stem: String,
-    contents: Vec<(Content, Arc<Mutex<bool>>)>,
+    contents: BTreeMap<String, (Content, Arc<Mutex<bool>>)>,
     children: BTreeMap<String, ContentTree>
 }
 
@@ -31,18 +31,18 @@ impl ContentTree
 {
     pub fn new(uri_stem: &str) -> ContentTree
     {
-        ContentTree { uri_stem: uri_stem.to_string(), contents: vec![], children: BTreeMap::new() }
+        ContentTree { uri_stem: uri_stem.to_string(), contents: BTreeMap::new(), children: BTreeMap::new() }
     }
 
     fn route(&self, static_router: bool) -> Router
     {
         let mut router: Router<(), axum::body::Body> = Router::new();
-        for (mut content, mutex) in self.contents.clone()
+        for (uri, (mut content, mutex)) in self.contents.clone()
         {
             content.refresh();
             router = router.route
             (
-                &content.get_uri(), 
+                &uri, 
                 get(move || async move 
                     {
                         // check if we should attempt a lock
@@ -72,11 +72,9 @@ impl ContentTree
     fn calculate_hash(&self, with_bodies: bool) -> Vec<u8>
     {
         let mut sha = Sha256::new();
-        let mut content: Vec<Content> = self.contents.clone().into_iter().map(|(x, _)| x).collect();
-        content.sort_by(|a, b| a.get_uri().cmp(&b.get_uri()));
-        for mut content in content
+        for (uri, (mut content, _)) in self.contents.clone().into_iter()
         {
-            sha.update(content.get_uri().as_bytes());
+            sha.update(uri.as_bytes());
             if with_bodies && content.is_stale() 
             {
                 content.refresh();
@@ -93,11 +91,8 @@ impl ContentTree
     }
 
     pub fn collect_uris(&self) -> Vec<String>
-    {
-        let mut content: Vec<Content> = self.contents.clone().into_iter().map(|(x, _)| x).collect();
-        content.sort_by(|a, b| a.get_uri().cmp(&b.get_uri()));
-        
-        let mut uris: Vec<String> = content.into_iter().map(|c| c.get_uri()).collect();
+    {        
+        let mut uris: Vec<String> = self.contents.keys().cloned().collect();
         for (_, child) in &self.children
         {
             uris.append(&mut child.collect_uris());
@@ -109,7 +104,7 @@ impl ContentTree
     {
         if uri_stem == "/"
         {
-            self.contents.push((content, Arc::new(Mutex::new(false))));
+            self.contents.insert(content.get_uri(),(content, Arc::new(Mutex::new(false))));
             return;
         }
 
@@ -143,14 +138,14 @@ impl ContentTree
             }
             None =>
             {
-                self.contents.push((content, Arc::new(Mutex::new(false))))
+                self.contents.insert(content.get_uri(), (content, Arc::new(Mutex::new(false))));
             }
         }
     }
 
     pub fn has_sitemap_content(&self) -> bool
     {
-        (!self.contents.is_empty()) && self.contents.clone().into_iter().any(|(c, _)| c.content_type.in_sitemap())
+        (!self.contents.is_empty()) && self.contents.clone().into_iter().any(|(_, (c, _))| c.content_type.in_sitemap())
     }
 
     /// Implements writing to an xml conforming to <https://www.sitemaps.org/protocol.html>
@@ -171,7 +166,7 @@ impl ContentTree
                 .write_inner_content::<_, Error>
                 (|writer|
                 {
-                    for (content, _) in &self.contents
+                    for (_, (content, _)) in &self.contents
                     {
                         if content.get_uri().contains("sitemap.xml")
                         {
