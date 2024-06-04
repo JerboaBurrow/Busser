@@ -123,7 +123,7 @@ impl Content
             server_cache_period_seconds: server_cache,
             browser_cache_period_seconds: browser_cache,
             hash: vec![],
-            last_refreshed: SystemTime::now(),
+            last_refreshed: SystemTime::UNIX_EPOCH,
             tag_insertion
         }
     }

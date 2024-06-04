@@ -12,7 +12,7 @@ use crate::{config::{read_config, Config, CONFIG_PATH}, content::{filter::Conten
 
 use crate::server::https::parse_uri;
 
-use super::{get_content, mime_type::Mime, Content};
+use super::{get_content, mime_type::{Mime, MIME}, Content};
 
 /// A tree structure representing a uri stem and content
 ///  convertable to a [Router] which monitors the content if
@@ -23,40 +23,38 @@ use super::{get_content, mime_type::Mime, Content};
 pub struct ContentTree
 {
     uri_stem: String,
-    contents: BTreeMap<String, (Content, Arc<Mutex<bool>>)>,
-    children: BTreeMap<String, ContentTree>
+    contents: BTreeMap<String, Arc<Mutex<Content>>>,
+    content_types: BTreeMap<String, MIME>,
+    children: BTreeMap<String, ContentTree>,
+    sitmap_content: bool
 }
 
 impl ContentTree
 {
     pub fn new(uri_stem: &str) -> ContentTree
     {
-        ContentTree { uri_stem: uri_stem.to_string(), contents: BTreeMap::new(), children: BTreeMap::new() }
+        ContentTree { uri_stem: uri_stem.to_string(), contents: BTreeMap::new(), children: BTreeMap::new(), sitmap_content: false, content_types: BTreeMap::new() }
     }
 
+    /// Build a [Router] to serve the content. If static_router then
+    ///   content is never refreshed within the router
     fn route(&self, static_router: bool) -> Router
     {
         let mut router: Router<(), axum::body::Body> = Router::new();
-        for (uri, (mut content, mutex)) in self.contents.clone()
+        for (uri, content) in self.contents.clone()
         {
-            content.refresh();
             router = router.route
             (
                 &uri, 
                 get(move || async move 
                     {
-                        // check if we should attempt a lock
+                        let mut content = content.lock().await;
                         if !static_router && content.server_cache_expired() && content.is_stale()
                         {
-                            let _ = mutex.lock().await;
-                            if content.server_cache_expired() && content.is_stale()
-                            {
-                                // got the lock, and still stale
-                                content.refresh();
-                                crate::debug(format!("Refresh called on Content {}", content.get_uri()), None);
-                            }
+                            content.refresh();
+                            crate::debug(format!("Refresh called on Content {}", content.get_uri()), None);
                         }
-                        content.into_response()
+                        content.clone().into_response()
                     })
             );
         }
@@ -69,27 +67,25 @@ impl ContentTree
         router
     }
 
-    fn calculate_hash(&self, with_bodies: bool) -> Vec<u8>
+    /// [Sha256] the uri's of all content in [ContentTree::contents]
+    ///   and in children
+    fn calculate_path_hash(&self) -> Vec<u8>
     {
         let mut sha = Sha256::new();
-        for (uri, (mut content, _)) in self.contents.clone().into_iter()
+        for (uri, _) in self.contents.clone().into_iter()
         {
             sha.update(uri.as_bytes());
-            if with_bodies && content.is_stale() 
-            {
-                content.refresh();
-                sha.update(&content.byte_body());
-            }
         }
 
         for (_, child) in &self.children
         {
-            sha.update(&child.calculate_hash(with_bodies));
+            sha.update(&child.calculate_path_hash());
         }
 
         sha.finish().to_vec()
     }
 
+    /// List all uris
     pub fn collect_uris(&self) -> Vec<String>
     {        
         let mut uris: Vec<String> = self.contents.keys().cloned().collect();
@@ -100,11 +96,16 @@ impl ContentTree
         uris
     }
 
+    /// Push some content into [ContentTree::contents]. Each are
+    ///   grouped by a path, uri_stem.
     pub fn push(&mut self, uri_stem: String, content: Content)
     {
         if uri_stem == "/"
         {
-            self.contents.insert(content.get_uri(),(content, Arc::new(Mutex::new(false))));
+            if content.content_type.in_sitemap() { self.sitmap_content = true; }
+            self.content_types.insert(content.get_uri(), content.content_type);
+            self.contents.insert(content.get_uri(),Arc::new(Mutex::new(content)));
+
             return;
         }
 
@@ -138,14 +139,17 @@ impl ContentTree
             }
             None =>
             {
-                self.contents.insert(content.get_uri(), (content, Arc::new(Mutex::new(false))));
+                if content.content_type.in_sitemap() { self.sitmap_content = true; }
+                self.content_types.insert(content.get_uri(), content.content_type);
+                self.contents.insert(content.get_uri(), Arc::new(Mutex::new(content)));
             }
         }
     }
 
+    /// If [ContentTree::contents] has any html, image, or video content
     pub fn has_sitemap_content(&self) -> bool
     {
-        (!self.contents.is_empty()) && self.contents.clone().into_iter().any(|(_, (c, _))| c.content_type.in_sitemap())
+        (!self.contents.is_empty()) && self.sitmap_content
     }
 
     /// Implements writing to an xml conforming to <https://www.sitemaps.org/protocol.html>
@@ -166,33 +170,33 @@ impl ContentTree
                 .write_inner_content::<_, Error>
                 (|writer|
                 {
-                    for (_, (content, _)) in &self.contents
+                    for (uri, content) in &self.content_types
                     {
-                        if content.get_uri().contains("sitemap.xml")
+                        if uri.contains("sitemap.xml")
                         {
                             continue;
                         }
-                        if content.get_content_type().is_image()
+                        if content.is_image()
                         {
                             writer.create_element("image:image").write_inner_content::<_, Error>(|writer|
                                 {
-                                    writer.create_element("image:loc").write_text_content(BytesText::new(&format!("{}{}",domain, content.get_uri())))?;
+                                    writer.create_element("image:loc").write_text_content(BytesText::new(&format!("{}{}",domain, uri)))?;
                                     Ok(())
                                 })?;
                         }
-                        else if content.get_content_type().is_video()
+                        else if content.is_video()
                         {
                             writer.create_element("video:video").write_inner_content::<_, Error>(|writer|
                                 {
-                                    writer.create_element("video:content_loc").write_text_content(BytesText::new(&format!("{}{}",domain, content.get_uri())))?;
-                                    writer.create_element("video:publication_date").write_text_content(BytesText::new(&lastmod(content.last_refreshed)))?;
+                                    writer.create_element("video:content_loc").write_text_content(BytesText::new(&format!("{}{}",domain, uri)))?;
+                                    writer.create_element("video:publication_date").write_text_content(BytesText::new(&lastmod(SystemTime::now())))?;
                                     Ok(())
                                 })?;
                         }
-                        else if content.get_content_type().is_html()
+                        else if content.is_html()
                         {
-                            writer.create_element("loc").write_text_content(BytesText::new(&format!("{}{}",domain, content.get_uri())))?;
-                            writer.create_element("lastmod").write_text_content(BytesText::new(&lastmod(content.last_refreshed)))?;
+                            writer.create_element("loc").write_text_content(BytesText::new(&format!("{}{}",domain, uri)))?;
+                            writer.create_element("lastmod").write_text_content(BytesText::new(&lastmod(SystemTime::now())))?;
                         }
                     }
                     Ok(())
@@ -338,7 +342,7 @@ impl SiteMap
             tag
         );
 
-        sitemap.push(home);
+        sitemap.push(home, Some("/"));
 
         if let Some(true) = config.content.generate_sitemap
         {
@@ -361,9 +365,11 @@ impl SiteMap
         write_file_bytes(&format!("{}/{}",self.path,"sitemap.xml"), &self.to_xml());
     }
 
-    pub fn push(&mut self, content: Content)
+    /// Push to [SiteMap::contents] and update the (path) hash
+    pub fn push(&mut self, content: Content, uri: Option<&str>)
     {
-        self.contents.push(content.uri.clone(), content);
+        let uri = match uri { Some(s) => s.to_string(), None => content.uri.clone() };
+        self.contents.push(uri, content);
         self.calculate_hash();
     }
 
@@ -375,9 +381,10 @@ impl SiteMap
 
     fn calculate_hash(&mut self)
     {
-        self.hash = self.contents.calculate_hash(false);
+        self.hash = self.contents.calculate_path_hash();
     }
 
+    /// Returns all uris in the [SiteMap]
     pub fn collect_uris(&self) -> Vec<String>
     {
         self.contents.collect_uris()
@@ -458,6 +465,7 @@ impl Into<Router> for SiteMap
     }
 }
 
+/// Format for lastmod (t) in an xml sitemap 
 pub fn lastmod(t: SystemTime) -> String
 {
     let date: DateTime<Utc> = t.into();
