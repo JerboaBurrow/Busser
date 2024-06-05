@@ -88,8 +88,14 @@ async fn main() {
 ///   A status message with (uri) additions and removals will be posted to Discord.
 async fn serve_observed(insert_tag: bool)
 {
-    let mut sitemap = SiteMap::build(&Config::load_or_default(CONFIG_PATH), insert_tag, false);
+    let config = Config::load_or_default(CONFIG_PATH);
+    let mut sitemap = SiteMap::build(&config, insert_tag, false);
     let mut hash = sitemap.get_hash();
+
+    if let Some(true) = config.content.static_content
+    {
+        sitemap.refresh_all().await;
+    }
 
     let server = Server::new(0,0,0,0,sitemap.clone());
     let mut server_handle = server.get_handle();
@@ -97,7 +103,7 @@ async fn serve_observed(insert_tag: bool)
     
     loop
     {
-        let config = Config::load_or_default(CONFIG_PATH);
+        
         busser::debug(format!("Next sitemap check: {}s", config.content.server_cache_period_seconds), None);
         tokio::time::sleep(Duration::from_secs(config.content.server_cache_period_seconds.into())).await;
         
@@ -112,6 +118,10 @@ async fn serve_observed(insert_tag: bool)
 
             let diffs = formatted_differences(new_sitemap.collect_uris(), sitemap.collect_uris());
             sitemap = new_sitemap.clone();
+            if let Some(true) = config.content.static_content
+            {
+                sitemap.refresh_all().await;
+            }
 
             let server = Server::new(0,0,0,0,new_sitemap);
             server_handle = server.get_handle();
@@ -120,7 +130,7 @@ async fn serve_observed(insert_tag: bool)
             busser::debug(format!("Re-served\n Diffs:\n{}", diffs), None);
             if config.content.message_on_sitemap_reload.is_some_and(|x|x)
             {
-                try_post(config.notification_endpoint, &format!("The sitemap was refreshed with diffs:\n```{}```", diffs)).await;
+                try_post(config.notification_endpoint.clone(), &format!("The sitemap was refreshed with diffs:\n```{}```", diffs)).await;
             }
         }
     }
@@ -129,7 +139,12 @@ async fn serve_observed(insert_tag: bool)
 /// Serve without checking for sitemap changes
 async fn serve(insert_tag: bool)
 {
-    let sitemap = SiteMap::build(&Config::load_or_default(CONFIG_PATH), insert_tag, false);
+    let config = Config::load_or_default(CONFIG_PATH);
+    let sitemap = SiteMap::build(&config, insert_tag, false);
+    if let Some(true) = config.content.static_content
+    {
+        sitemap.refresh_all().await;
+    }
     let server = Server::new(0,0,0,0,sitemap);
     server.serve().await;
 }

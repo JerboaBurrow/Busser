@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 /// Identifies the MIME type by file extension, no attempt is made to verify the file's content
 /// 
 /// Supported MIME types in Busser, default is ```"application/octet-stream"```
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum MIME 
 {
     TextPlain,
