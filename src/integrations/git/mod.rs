@@ -47,10 +47,11 @@ pub fn from_clone(path: &str, config: &GitConfig) -> Result<Repository, GitError
     if let GitConfig{auth: Some(_), remote: _, checkout_schedule: _, branch: _, remote_webhook_token: _} = config
     {
         let auth = config.auth.clone().unwrap();
-        let result = match &auth.key_path
+        let callbacks = match &auth.key_path
         {
             Some(_) => 
             {
+                crate::debug(format!("Attempting ssh key authenticated clone of {}", config.remote), Some("GIT"));
                 let mut callbacks = RemoteCallbacks::new();
                 callbacks.credentials(|_url, _username_from_url, _allowed_types|
                 {
@@ -65,6 +66,7 @@ pub fn from_clone(path: &str, config: &GitConfig) -> Result<Repository, GitError
             },
             None =>
             {
+                crate::debug(format!("Attempting passphrase authenticated clone of {}", config.remote), Some("GIT"));
                 let mut callbacks = RemoteCallbacks::new();
                 callbacks.credentials(|_url, _username_from_url, _allowed_types|
                 {
@@ -78,7 +80,7 @@ pub fn from_clone(path: &str, config: &GitConfig) -> Result<Repository, GitError
         };
 
         let mut fo = git2::FetchOptions::new();
-        fo.remote_callbacks(result);
+        fo.remote_callbacks(callbacks);
         let mut builder = git2::build::RepoBuilder::new();
         builder.fetch_options(fo);
         builder.branch(&config.branch);
@@ -94,6 +96,7 @@ pub fn from_clone(path: &str, config: &GitConfig) -> Result<Repository, GitError
     }
     else
     {
+        crate::debug(format!("Attempting un-authenticated clone of {}", config.remote), Some("GIT"));
         match Repository::clone(&config.remote, path)
         {
             Ok(repo) => Ok(repo),
@@ -123,7 +126,15 @@ pub fn remove_repository(dir: &str) -> Result<(), std::io::Error>
 ///  deleting any file/dir called [crate::config::ContentConfig::path]
 pub fn clean_and_clone(dir: &str, config: GitConfig) -> Result<Repository, GitError>
 {
-    remove_repository(dir)?;
+    let path = Path::new(dir);
+    if path.is_dir()
+    {
+        remove_repository(dir)?;
+    }
+    else if path.is_file()
+    {
+        std::fs::remove_file(path)?;
+    }
     match from_clone(dir, &config)
     {
         Ok(repo) =>

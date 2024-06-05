@@ -70,6 +70,18 @@ impl GitRefreshTask
                     return result.unwrap()
                 }
             }
+            else
+            {
+                let result = match clean_and_clone(&config.content.path, git.clone())
+                {
+                    Ok(repo) => fast_forward_pull(repo, &git.branch),
+                    Err(e) => Err(e)
+                };
+                if result.is_err()
+                {
+                    crate::debug(format!("{:?}", result.err()), Some("GIT"));
+                }
+            }
         }
         None
     }

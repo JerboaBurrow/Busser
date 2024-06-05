@@ -116,6 +116,8 @@ impl ContentConfig
 /// - ```key_path```: optional location of ssh key (ssh connection will be used)
 /// - ```user```: user name for authentication
 /// - ```passphrase```: passphrase for ssh key or for user-pass auth
+/// <div class="warning"><p>If using ssh keys be sure the host is added to ~/ssh/known_hosts for 
+///the user that runs busser, including root</p>
 #[derive(Clone, Serialize, Deserialize)]
 pub struct GitAuthConfig
 {
