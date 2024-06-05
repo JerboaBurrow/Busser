@@ -1,5 +1,5 @@
 
-use std::{collections::BTreeMap, sync::Arc, time::{Duration, Instant, SystemTime}, vec};
+use std::{collections::BTreeMap, future::Future, sync::Arc, time::{Duration, Instant, SystemTime}, vec};
 use openssl::sha::Sha256;
 use tokio::sync::Mutex;
 
@@ -34,6 +34,25 @@ impl ContentTree
     pub fn new(uri_stem: &str) -> ContentTree
     {
         ContentTree { uri_stem: uri_stem.to_string(), contents: BTreeMap::new(), children: BTreeMap::new(), sitmap_content: false, content_types: BTreeMap::new() }
+    }
+
+    fn collect(&self) -> Vec<Arc<Mutex<Content>>>
+    {
+        let mut contents: Vec<Arc<Mutex<Content>>> = self.contents.values().cloned().collect();
+        for (_, child) in &self.children
+        {
+            contents.append(&mut child.collect());
+        }
+        contents
+    }
+
+    /// Load all content
+    pub async fn refresh_all(&self)
+    {
+        for content in self.collect()
+        {
+            content.lock().await.refresh();
+        }
     }
 
     /// Build a [Router] to serve the content. If static_router then
@@ -371,6 +390,12 @@ impl SiteMap
         let uri = match uri { Some(s) => s.to_string(), None => content.uri.clone() };
         self.contents.push(uri, content);
         self.calculate_hash();
+    }
+
+    /// Load all content
+    pub async fn refresh_all(&self)
+    {
+        self.contents.refresh_all().await;
     }
 
     /// Hash a sitemap by detected uri's
