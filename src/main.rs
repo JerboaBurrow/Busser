@@ -54,7 +54,7 @@ async fn main() {
                     Ok(_) => (),
                     Err(e) =>
                     {
-                        busser::debug(format!("{}", e), None);
+                        busser::debug(format!("Inital clone: {}", e), None);
                         std::process::exit(1);
                     }
                 }

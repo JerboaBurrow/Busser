@@ -9,6 +9,7 @@ use regex::Regex;
 use crate::util::{read_bytes, dump_bytes};
 
 pub mod discord;
+pub mod github;
 pub mod git;
 pub mod webhook;
 

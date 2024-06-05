@@ -44,13 +44,14 @@ impl From<std::io::Error> for GitError
 /// Attempt to clone a remote repo from a [crate::config::GitConfig]
 pub fn from_clone(path: &str, config: &GitConfig) -> Result<Repository, GitError>
 {
-    if let GitConfig{auth: Some(_), remote: _, checkout_schedule: _, branch: _} = config
+    if let GitConfig{auth: Some(_), remote: _, checkout_schedule: _, branch: _, remote_webhook_token: _} = config
     {
         let auth = config.auth.clone().unwrap();
-        let result = match &auth.key_path
+        let callbacks = match &auth.key_path
         {
             Some(_) => 
             {
+                crate::debug(format!("Attempting ssh key authenticated clone of {}", config.remote), Some("GIT"));
                 let mut callbacks = RemoteCallbacks::new();
                 callbacks.credentials(|_url, _username_from_url, _allowed_types|
                 {
@@ -65,6 +66,7 @@ pub fn from_clone(path: &str, config: &GitConfig) -> Result<Repository, GitError
             },
             None =>
             {
+                crate::debug(format!("Attempting passphrase authenticated clone of {}", config.remote), Some("GIT"));
                 let mut callbacks = RemoteCallbacks::new();
                 callbacks.credentials(|_url, _username_from_url, _allowed_types|
                 {
@@ -78,7 +80,7 @@ pub fn from_clone(path: &str, config: &GitConfig) -> Result<Repository, GitError
         };
 
         let mut fo = git2::FetchOptions::new();
-        fo.remote_callbacks(result);
+        fo.remote_callbacks(callbacks);
         let mut builder = git2::build::RepoBuilder::new();
         builder.fetch_options(fo);
         builder.branch(&config.branch);
@@ -87,19 +89,20 @@ pub fn from_clone(path: &str, config: &GitConfig) -> Result<Repository, GitError
             Ok(repo) => Ok(repo),
             Err(e) =>
             {
-                crate::debug(format!("Error {} while cloning (authenticated) repo at {}", e, config.remote), None);
+                crate::debug(format!("Error {} while cloning (authenticated) repo at {}", e, config.remote), Some("GIT"));
                 Err(GitError::from(e))
             }
         }
     }
     else
     {
+        crate::debug(format!("Attempting un-authenticated clone of {}", config.remote), Some("GIT"));
         match Repository::clone(&config.remote, path)
         {
             Ok(repo) => Ok(repo),
             Err(e) => 
             {
-                crate::debug(format!("Error {} while cloning (pub) repo at {}", e, config.remote), None);
+                crate::debug(format!("Error {} while cloning (pub) repo at {}", e, config.remote), Some("GIT"));
                 Err(GitError::from(e))
             }
         }
@@ -123,7 +126,15 @@ pub fn remove_repository(dir: &str) -> Result<(), std::io::Error>
 ///  deleting any file/dir called [crate::config::ContentConfig::path]
 pub fn clean_and_clone(dir: &str, config: GitConfig) -> Result<Repository, GitError>
 {
-    remove_repository(dir)?;
+    let path = Path::new(dir);
+    if path.is_dir()
+    {
+        remove_repository(dir)?;
+    }
+    else if path.is_file()
+    {
+        std::fs::remove_file(path)?;
+    }
     match from_clone(dir, &config)
     {
         Ok(repo) =>
@@ -139,7 +150,7 @@ pub fn clean_and_clone(dir: &str, config: GitConfig) -> Result<Repository, GitEr
 
 /// Fast forward pull from the repository, makes no attempt to resolve
 ///  if a fast foward is not possible
-pub fn fast_forward_pull(repo: Repository, branch: &str) -> Result<(), GitError>
+pub fn fast_forward_pull(repo: Repository, branch: &str) -> Result<Option<HeadInfo>, GitError>
 {
     // modified from https://stackoverflow.com/questions/58768910/how-to-perform-git-pull-with-the-rust-git2-crate
     repo.find_remote("origin")?.fetch(&[branch], None, None)?;
@@ -150,7 +161,7 @@ pub fn fast_forward_pull(repo: Repository, branch: &str) -> Result<(), GitError>
 
     if analysis.is_up_to_date()
     {
-        Ok(())
+        Ok(None)
     }
     else if analysis.is_fast_forward()
     {
@@ -158,10 +169,50 @@ pub fn fast_forward_pull(repo: Repository, branch: &str) -> Result<(), GitError>
         let mut reference = repo.find_reference(&refname)?;
         reference.set_target(fetch_commit.id(), "Fast-Forward")?;
         repo.set_head(&refname)?;
-        Ok(repo.checkout_head(Some(git2::build::CheckoutBuilder::default().force()))?)
+        repo.checkout_head(Some(git2::build::CheckoutBuilder::default().force()))?;
+        Ok(head_info(&repo))
     }
     else
     {
         Err(GitError{why: "Cannot fastforward".to_owned()})
+    }
+}
+
+/// Commit hash, author and timestamp for head commit
+pub struct HeadInfo
+{
+    pub hash: git2::Oid,
+    pub author: String,
+    pub datetime: String 
+}
+
+/// Get the [HeadInfo] if it exists
+pub fn head_info(repo: &Repository) -> Option<HeadInfo>
+{
+    let head = match repo.head()
+    {
+        Ok(h) => match h.target()
+        {
+            Some(h) => h,
+            None => return None
+        },
+        Err(_) => return None
+    };
+
+    match repo.find_commit(head)
+    {
+        Ok(c) =>
+        {
+            Some
+            (
+                HeadInfo
+                {
+                    hash: c.id(),
+                    author: c.author().to_string(),
+                    datetime: format!("{:?}", c.time())
+                }
+            )
+        },
+        Err(_) => None
     }
 }

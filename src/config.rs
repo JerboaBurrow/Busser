@@ -116,6 +116,8 @@ impl ContentConfig
 /// - ```key_path```: optional location of ssh key (ssh connection will be used)
 /// - ```user```: user name for authentication
 /// - ```passphrase```: passphrase for ssh key or for user-pass auth
+/// <div class="warning"><p>If using ssh keys be sure the host is added to ~/ssh/known_hosts for 
+///the user that runs busser, including root</p>
 #[derive(Clone, Serialize, Deserialize)]
 pub struct GitAuthConfig
 {
@@ -128,11 +130,14 @@ pub struct GitAuthConfig
 /// - ```remote```: the url (public or private)
 /// - ```branch```: the tracked branch
 /// - ```auth```: if present either ssh key or passphrase will be used
+/// - ```checkout_schedule```: schedule for checking for new commits on [GitConfig::branch]
+/// - ```remote_webhook_token```: optional webhook token to recieve push events
 #[derive(Clone, Serialize, Deserialize)]
 pub struct GitConfig
 {
     pub remote: String,
     pub branch: String,
+    pub remote_webhook_token: Option<String>, 
     pub checkout_schedule: Option<String>,
     pub auth: Option<GitAuthConfig>
 }

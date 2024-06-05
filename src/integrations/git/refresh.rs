@@ -1,18 +1,19 @@
-use std::{path::Path, sync::Arc};
+use std::{path::Path, sync::Arc, time::SystemTime};
 
 use axum::async_trait;
 use chrono::{DateTime, Utc};
 use cron::Schedule;
 use git2::Repository;
+
 use tokio::sync::Mutex;
 
-use crate::{config::{Config, CONFIG_PATH}, task::{next_job_time, schedule_from_option, Task}};
+use crate::{config::{Config, CONFIG_PATH}, integrations::discord::post::try_post, task::{next_job_time, schedule_from_option, Task}};
 
-use super::{clean_and_clone, fast_forward_pull};
+use super::{clean_and_clone, fast_forward_pull, HeadInfo};
 
 pub struct GitRefreshTask
 {
-    pub lock: Arc<Mutex<()>>,
+    pub lock: Arc<Mutex<SystemTime>>,
     pub last_run: DateTime<Utc>,
     pub next_run: Option<DateTime<Utc>>,
     pub schedule: Option<Schedule>
@@ -22,7 +23,7 @@ impl GitRefreshTask
 {
     pub fn new
     (
-        lock: Arc<Mutex<()>>,
+        lock: Arc<Mutex<SystemTime>>,
         schedule: Option<Schedule>
     ) -> GitRefreshTask
     {
@@ -34,18 +35,15 @@ impl GitRefreshTask
             schedule
         }
     }
-}
 
-#[async_trait]
-impl Task for GitRefreshTask
-{
-    async fn run(&mut self) -> Result<(), crate::task::TaskError> 
+    /// Attempt a fast forward pull of the repo in [crate::config::ContentConfig::path]
+    ///   clone if it is not there. Does nothing if [crate::config::GitConfig] is none
+    pub fn pull(config: &Config) -> Option<HeadInfo>
     {
-        let _ = self.lock.lock().await;
-        let config = Config::load_or_default(CONFIG_PATH);
+        
         if config.git.is_some()
         {
-            let git = config.git.unwrap();
+            let git = config.git.clone().unwrap();
             let path = Path::new(&config.content.path);
             if path.is_dir()
             {
@@ -54,7 +52,7 @@ impl Task for GitRefreshTask
                     Ok(repo) => fast_forward_pull(repo, &git.branch),
                     Err(e) =>
                     {
-                        crate::debug(format!("{}, {:?} is not a git repo", e, path), None);
+                        crate::debug(format!("{}, {:?} is not a git repo", e, path), Some("GIT"));
                         match clean_and_clone(&config.content.path, git.clone())
                         {
                             Ok(repo) => fast_forward_pull(repo, &git.branch),
@@ -65,10 +63,66 @@ impl Task for GitRefreshTask
 
                 if result.is_err()
                 {
-                    crate::debug(format!("{:?}", result.err()), None);
+                    crate::debug(format!("{:?}", result.err()), Some("GIT"));
+                }
+                else
+                {
+                    return result.unwrap()
+                }
+            }
+            else
+            {
+                let result = match clean_and_clone(&config.content.path, git.clone())
+                {
+                    Ok(repo) => fast_forward_pull(repo, &git.branch),
+                    Err(e) => Err(e)
+                };
+                if result.is_err()
+                {
+                    crate::debug(format!("{:?}", result.err()), Some("GIT"));
                 }
             }
         }
+        None
+    }
+
+    /// Send a discord message with [HeadInfo] if it is Some
+    pub async fn notify_pull(info: Option<HeadInfo>, config: &Config)
+    {
+        match info
+        {
+            Some(info) =>
+            {
+                let msg = format!
+                (
+                    "Checked out new commit for {}:\n {}\n {}\n {}", 
+                    config.domain,
+                    info.hash,
+                    info.author,
+                    info.datetime
+                );
+                crate::debug(msg.clone(), Some("GIT"));
+                try_post
+                (
+                    config.notification_endpoint.clone(), 
+                    &msg
+                ).await;
+            },
+            None => {}
+        }
+        
+    }
+}
+
+#[async_trait]
+impl Task for GitRefreshTask
+{
+    async fn run(&mut self) -> Result<(), crate::task::TaskError> 
+    {
+        let mut time = self.lock.lock().await;
+        let config = Config::load_or_default(CONFIG_PATH);
+        GitRefreshTask::notify_pull(GitRefreshTask::pull(&config), &config).await;
+        *time = SystemTime::now();
 
         self.schedule = schedule_from_option(config.stats.save_schedule.clone());
 
