@@ -72,7 +72,7 @@ mod git
     {
         let config = GitConfig
         {
-            remote: "https://github.com/JerboaBurrow/test".into(),
+            remote: "git@github.com:JerboaBurrow/test.git".into(),
             branch: "main".into(),
             checkout_schedule: None,
             remote_webhook_token: None,
