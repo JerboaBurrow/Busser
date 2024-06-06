@@ -1,9 +1,9 @@
 use core::fmt;
 use std::path::Path;
 
-use git2::{Cred, RemoteCallbacks, Repository};
+use git2::{ Cred, FetchOptions, RemoteCallbacks, Repository};
 
-use crate::{config::GitConfig, filesystem::{folder::list_sub_dirs, set_dir_readonly}};
+use crate::{config::{GitAuthConfig, GitConfig}, filesystem::{folder::list_sub_dirs, set_dir_readonly}};
 
 pub mod refresh;
 
@@ -41,46 +41,51 @@ impl From<std::io::Error> for GitError
     }
 }
 
+fn build_fetch_option(auth: &GitAuthConfig, remote: String) -> FetchOptions
+{
+    let mut fo = git2::FetchOptions::new();
+    let callbacks = match &auth.key_path
+    {
+        Some(_) =>
+        {
+            crate::debug(format!("Attempting ssh key authenticated clone of {}", remote), Some("GIT"));
+            let mut callbacks = RemoteCallbacks::new();
+            callbacks.credentials(move |_url, username_from_url, _allowed_types|
+            {
+                Cred::ssh_key(
+                    username_from_url.unwrap(),
+                    None,
+                    Path::new(&auth.key_path.clone().unwrap()),
+                    Some(&auth.passphrase),
+                )
+            });
+            callbacks
+        },
+        None =>
+        {
+            crate::debug(format!("Attempting passphrase authenticated clone of {}", remote), Some("GIT"));
+            let mut callbacks = RemoteCallbacks::new();
+            callbacks.credentials(move |_url, _username_from_url, _allowed_types|
+            {
+                Cred::userpass_plaintext(
+                    &auth.user,
+                    &auth.passphrase,
+                )
+            });
+            callbacks
+        }
+    };
+    fo.remote_callbacks(callbacks);
+    fo
+}
+
 /// Attempt to clone a remote repo from a [crate::config::GitConfig]
 pub fn from_clone(path: &str, config: &GitConfig) -> Result<Repository, GitError>
 {
     if let GitConfig{auth: Some(_), remote: _, checkout_schedule: _, branch: _, remote_webhook_token: _} = config
     {
         let auth = config.auth.clone().unwrap();
-        let callbacks = match &auth.key_path
-        {
-            Some(_) => 
-            {
-                crate::debug(format!("Attempting ssh key authenticated clone of {}", config.remote), Some("GIT"));
-                let mut callbacks = RemoteCallbacks::new();
-                callbacks.credentials(|_url, username_from_url, _allowed_types|
-                {
-                    Cred::ssh_key(
-                        username_from_url.unwrap(),
-                        None,
-                        Path::new(&auth.key_path.clone().unwrap()),
-                        Some(&auth.passphrase),
-                    )
-                });
-                callbacks
-            },
-            None =>
-            {
-                crate::debug(format!("Attempting passphrase authenticated clone of {}", config.remote), Some("GIT"));
-                let mut callbacks = RemoteCallbacks::new();
-                callbacks.credentials(|_url, _username_from_url, _allowed_types|
-                {
-                    Cred::userpass_plaintext(
-                        &auth.user,
-                        &auth.passphrase,
-                    )
-                });
-                callbacks
-            }
-        };
-
-        let mut fo = git2::FetchOptions::new();
-        fo.remote_callbacks(callbacks);
+        let fo = build_fetch_option(&auth, config.remote.clone());
         let mut builder = git2::build::RepoBuilder::new();
         builder.fetch_options(fo);
         builder.branch(&config.branch);
@@ -150,10 +155,19 @@ pub fn clean_and_clone(dir: &str, config: GitConfig) -> Result<Repository, GitEr
 
 /// Fast forward pull from the repository, makes no attempt to resolve
 ///  if a fast foward is not possible
-pub fn fast_forward_pull(repo: Repository, branch: &str) -> Result<Option<HeadInfo>, GitError>
+pub fn fast_forward_pull(repo: Repository, git: GitConfig) -> Result<Option<HeadInfo>, GitError>
 {
-    // modified from https://stackoverflow.com/questions/58768910/how-to-perform-git-pull-with-the-rust-git2-crate
-    repo.find_remote("origin")?.fetch(&[branch], None, None)?;
+    let branch = git.branch.clone();
+    if git.auth.is_some()
+    {
+        let auth = git.auth.unwrap();
+        // modified from https://stackoverflow.com/questions/58768910/how-to-perform-git-pull-with-the-rust-git2-crate
+        repo.find_remote("origin")?.fetch(&[branch], Some(&mut build_fetch_option(&auth, git.remote)), None)?;
+    }
+    else
+    {
+        repo.find_remote("origin")?.fetch(&[branch], None, None)?;
+    };
 
     let fetch_head = repo.find_reference("FETCH_HEAD")?;
     let fetch_commit = repo.reference_to_annotated_commit(&fetch_head)?;
@@ -165,7 +179,7 @@ pub fn fast_forward_pull(repo: Repository, branch: &str) -> Result<Option<HeadIn
     }
     else if analysis.is_fast_forward()
     {
-        let refname = format!("refs/heads/{}", branch);
+        let refname = format!("refs/heads/{}", git.branch);
         let mut reference = repo.find_reference(&refname)?;
         reference.set_target(fetch_commit.id(), "Fast-Forward")?;
         repo.set_head(&refname)?;

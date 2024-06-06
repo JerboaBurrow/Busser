@@ -1,7 +1,6 @@
 use std::{collections::HashMap, sync::Arc, time::SystemTime};
 
 use axum::{body::Bytes, extract::State, http::{HeaderMap, Request}, middleware::Next, response::{IntoResponse, Response}};
-use openssl::conf;
 use regex::Regex;
 use reqwest::StatusCode;
 use tokio::sync::Mutex;

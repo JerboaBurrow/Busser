@@ -146,7 +146,7 @@ mod git
         assert!(!repo.as_ref().unwrap().is_empty().unwrap());
         assert!(Path::exists(Path::new(path)));
 
-        assert!(fast_forward_pull(repo.unwrap(), "main").is_ok());
+        assert!(fast_forward_pull(repo.unwrap(), config).is_ok());
 
         if Path::exists(Path::new(path))
         {
