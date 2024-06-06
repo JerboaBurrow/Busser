@@ -1,11 +1,12 @@
-use std::{sync::Arc, time::SystemTime};
+use std::{collections::HashMap, sync::Arc, time::SystemTime};
 
 use axum::{body::Bytes, extract::State, http::{HeaderMap, Request}, middleware::Next, response::{IntoResponse, Response}};
+use openssl::conf;
 use regex::Regex;
 use reqwest::StatusCode;
 use tokio::sync::Mutex;
 
-use crate::config::{Config, CONFIG_PATH};
+use crate::{config::{Config, CONFIG_PATH}, util::strip_control_characters};
 
 use super::git::refresh::GitRefreshTask;
 
@@ -21,11 +22,23 @@ pub async fn filter_github<B>
 ) -> Result<Response, StatusCode>
 where B: axum::body::HttpBody<Data = Bytes>
 {
+    let config = Config::load_or_default(CONFIG_PATH);
+    let remote = match config.git
+    {
+        Some(git) => git.remote,
+        None => {return Ok(next.run(request).await)}
+    };
     match is_push(&headers).await
     {
-        StatusCode::CONTINUE => Ok(next.run(request).await),
+        StatusCode::CONTINUE => Ok(StatusCode::OK.into_response()),
         StatusCode::OK =>
         {
+            let token = get_token();
+            if token.is_none()
+            {
+                return Ok(StatusCode::METHOD_NOT_ALLOWED.into_response());
+            }
+
             let body = request.into_body();
             let bytes = match body.collect().await {
                 Ok(collected) => collected.to_bytes(),
@@ -34,10 +47,9 @@ where B: axum::body::HttpBody<Data = Bytes>
                 }
             };
 
-            let token = get_token();
-            if token.is_none()
+            if !is_watched_repo(&bytes, &remote)
             {
-                return Ok(StatusCode::METHOD_NOT_ALLOWED.into_response());
+                return Ok(StatusCode::OK.into_response())
             }
 
             match super::is_authentic
@@ -47,13 +59,17 @@ where B: axum::body::HttpBody<Data = Bytes>
                 &bytes
             )
             {
-                StatusCode::OK =>
+                StatusCode::ACCEPTED =>
                 {
                     crate::debug("Github push event is authentic".to_string(), Some("GITHUB"));
                     pull(repo_lock).await;
                     return Ok(StatusCode::OK.into_response())
                 },
-                status => return Ok(status.into_response())
+                status => 
+                {
+                    crate::debug(format!("Authentication error: {}", status), Some("GITHUB"));
+                    return Ok(status.into_response())
+                }
             }
         },
         status => Ok(status.into_response())
@@ -80,6 +96,25 @@ async fn pull(repo_lock: Arc<Mutex<SystemTime>>)
     let config = Config::load_or_default(CONFIG_PATH);
     GitRefreshTask::notify_pull(GitRefreshTask::pull(&config), &config).await;
     *lock = SystemTime::now();
+}
+
+fn is_watched_repo(body: &Bytes, url: &str) -> bool
+{
+    let utf8_body = match std::str::from_utf8(&body)
+    {
+        Ok(s) => s.to_owned(),
+        Err(e) => { crate::debug(format!("Error parsing body: {}", e), Some("GITHUB")); return false;}
+    };
+    let parsed_data: HashMap<String, serde_json::Value> = match serde_json::from_str(&strip_control_characters(utf8_body))
+    {
+        Ok(d) => d,
+        Err(e) => 
+        {
+            crate::debug(format!("Error parsing body: {}", e), Some("GITHUB"));
+            return false;
+        }
+    };
+    parsed_data["repository"]["html_url"].as_str() == Some(url) || parsed_data["repository"]["ssh_url"].as_str() == Some(url)
 }
 
 /// Check if the headers conform to a github push webhook event
