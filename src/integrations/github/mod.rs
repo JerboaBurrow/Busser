@@ -49,6 +49,7 @@ where B: axum::body::HttpBody<Data = Bytes>
             {
                 StatusCode::OK =>
                 {
+                    crate::debug("Github push event is authentic".to_string(), Some("GITHUB"));
                     pull(repo_lock).await;
                     return Ok(StatusCode::OK.into_response())
                 },
@@ -101,8 +102,6 @@ pub async fn is_push(headers: &HeaderMap) -> StatusCode
 
     if Regex::new(r"GitHub-Hookshot").unwrap().captures(user_agent).is_some()
     {
-        crate::debug("Authentic github event".to_string(), Some("GITHUB"));
-
         if !headers.contains_key("x-github-event")
         {
             return StatusCode::BAD_REQUEST;
@@ -114,6 +113,7 @@ pub async fn is_push(headers: &HeaderMap) -> StatusCode
             {
                 if s.to_lowercase() == "push"
                 {
+                    crate::debug("Recieving github push event".to_string(), Some("GITHUB"));
                     return StatusCode::OK
                 }
             }

@@ -53,10 +53,10 @@ pub fn from_clone(path: &str, config: &GitConfig) -> Result<Repository, GitError
             {
                 crate::debug(format!("Attempting ssh key authenticated clone of {}", config.remote), Some("GIT"));
                 let mut callbacks = RemoteCallbacks::new();
-                callbacks.credentials(|_url, _username_from_url, _allowed_types|
+                callbacks.credentials(|_url, username_from_url, _allowed_types|
                 {
                     Cred::ssh_key(
-                        &auth.user,
+                        username_from_url.unwrap(),
                         None,
                         Path::new(&auth.key_path.clone().unwrap()),
                         Some(&auth.passphrase),
