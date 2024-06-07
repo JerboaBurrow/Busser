@@ -29,7 +29,7 @@ where B: axum::body::HttpBody<Data = Bytes>
     };
     match is_push(&headers).await
     {
-        StatusCode::CONTINUE => Ok(StatusCode::OK.into_response()),
+        StatusCode::CONTINUE => Ok(next.run(request).await),
         StatusCode::OK =>
         {
             let token = get_token();
@@ -138,7 +138,7 @@ pub async fn is_push(headers: &HeaderMap) -> StatusCode
     {
         if !headers.contains_key("x-github-event")
         {
-            return StatusCode::BAD_REQUEST;
+            return StatusCode::CONTINUE;
         }
 
         match std::str::from_utf8(headers["x-github-event"].as_bytes())
