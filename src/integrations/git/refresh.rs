@@ -49,13 +49,13 @@ impl GitRefreshTask
             {
                 let result = match Repository::open(path)
                 {
-                    Ok(repo) => fast_forward_pull(repo, &git.branch),
+                    Ok(repo) => fast_forward_pull(repo, git),
                     Err(e) =>
                     {
                         crate::debug(format!("{}, {:?} is not a git repo", e, path), Some("GIT"));
                         match clean_and_clone(&config.content.path, git.clone())
                         {
-                            Ok(repo) => fast_forward_pull(repo, &git.branch),
+                            Ok(_) => Ok(None),
                             Err(e) => Err(e)
                         }
                     }
@@ -74,7 +74,7 @@ impl GitRefreshTask
             {
                 let result = match clean_and_clone(&config.content.path, git.clone())
                 {
-                    Ok(repo) => fast_forward_pull(repo, &git.branch),
+                    Ok(repo) => fast_forward_pull(repo, git),
                     Err(e) => Err(e)
                 };
                 if result.is_err()

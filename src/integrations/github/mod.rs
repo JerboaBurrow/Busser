@@ -1,11 +1,11 @@
-use std::{sync::Arc, time::SystemTime};
+use std::{collections::HashMap, sync::Arc, time::SystemTime};
 
 use axum::{body::Bytes, extract::State, http::{HeaderMap, Request}, middleware::Next, response::{IntoResponse, Response}};
 use regex::Regex;
 use reqwest::StatusCode;
 use tokio::sync::Mutex;
 
-use crate::config::{Config, CONFIG_PATH};
+use crate::{config::{Config, CONFIG_PATH}, util::strip_control_characters};
 
 use super::git::refresh::GitRefreshTask;
 
@@ -21,45 +21,75 @@ pub async fn filter_github<B>
 ) -> Result<Response, StatusCode>
 where B: axum::body::HttpBody<Data = Bytes>
 {
+    let config = Config::load_or_default(CONFIG_PATH);
+    let remote = match config.git
+    {
+        Some(git) => git.remote,
+        None => {return Ok(next.run(request).await)}
+    };
+    let token = get_token();
+    if token.is_none()
+    {
+        return Ok(next.run(request).await)
+    }
     match is_push(&headers).await
     {
         StatusCode::CONTINUE => Ok(next.run(request).await),
         StatusCode::OK =>
         {
-            let body = request.into_body();
-            let bytes = match body.collect().await {
-                Ok(collected) => collected.to_bytes(),
-                Err(_) => {
-                    return Ok(StatusCode::BAD_REQUEST.into_response())
-                }
-            };
-
-            let token = get_token();
-            if token.is_none()
-            {
-                return Ok(StatusCode::METHOD_NOT_ALLOWED.into_response());
-            }
-
-            match super::is_authentic
-            (
-                &headers, "x-hub-signature-256",
-                token.unwrap(),
-                &bytes
-            )
-            {
-                StatusCode::OK =>
-                {
-                    pull(repo_lock).await;
-                    return Ok(StatusCode::OK.into_response())
-                },
-                status => return Ok(status.into_response())
-            }
+            Ok(handle_push(repo_lock, headers, request, remote, token.unwrap()).await.into_response())
         },
         status => Ok(status.into_response())
     }
 }
 
-pub fn get_token() -> Option<String>
+/// Checks the Github webhook event is authentic and
+///   matches remote. If so tries to pull
+pub async fn handle_push<B>
+(
+    repo_lock: Arc<Mutex<SystemTime>>,
+    headers: HeaderMap,
+    request: Request<B>,
+    remote: String,
+    token: String
+) -> StatusCode
+where B: axum::body::HttpBody<Data = Bytes>
+{
+    let body = request.into_body();
+    let bytes = match body.collect().await {
+        Ok(collected) => collected.to_bytes(),
+        Err(_) => {
+            return StatusCode::BAD_REQUEST;
+        }
+    };
+
+    if !is_watched_repo(&bytes, &remote)
+    {
+        return StatusCode::OK;
+    }
+
+    match super::is_authentic
+    (
+        &headers, "x-hub-signature-256",
+        token,
+        &bytes
+    )
+    {
+        StatusCode::ACCEPTED =>
+        {
+            crate::debug("Github push event is authentic".to_string(), Some("GITHUB"));
+            pull(repo_lock).await;
+            return StatusCode::OK;
+        },
+        status =>
+        {
+            crate::debug(format!("Authentication error: {}", status), Some("GITHUB"));
+            return status;
+        }
+    }
+}
+
+fn get_token() -> Option<String>
 {
     let config = Config::load_or_default(CONFIG_PATH);
     if config.git.is_some()
@@ -79,6 +109,41 @@ async fn pull(repo_lock: Arc<Mutex<SystemTime>>)
     let config = Config::load_or_default(CONFIG_PATH);
     GitRefreshTask::notify_pull(GitRefreshTask::pull(&config), &config).await;
     *lock = SystemTime::now();
+}
+
+/// Check the url in json path ["repository"]["html_url"] or
+///   ["repository"]["ssh_url"] of a [Bytes] body matches url
+pub fn is_watched_repo(body: &Bytes, url: &str) -> bool
+{
+    let utf8_body = match std::str::from_utf8(&body)
+    {
+        Ok(s) => s.to_owned(),
+        Err(e) => { crate::debug(format!("Error parsing body: {}", e), Some("GITHUB")); return false;}
+    };
+    let parsed_data: HashMap<String, serde_json::Value> = match serde_json::from_str(&strip_control_characters(utf8_body))
+    {
+        Ok(d) => d,
+        Err(e) => 
+        {
+            crate::debug(format!("Error parsing body: {}", e), Some("GITHUB"));
+            return false;
+        }
+    };
+    if !parsed_data.contains_key("repository") { return false }
+    let repo = match parsed_data["repository"].is_object()
+    {
+        true => parsed_data["repository"].as_object().unwrap(),
+        false => return false
+    };
+    if repo.contains_key("html_url")
+    {
+        if repo["html_url"].as_str() == Some(url) { return true }
+    }
+    if repo.contains_key("ssh_url")
+    {
+        if repo["ssh_url"].as_str() == Some(url) { return true }
+    }
+    false
 }
 
 /// Check if the headers conform to a github push webhook event
@@ -101,8 +166,6 @@ pub async fn is_push(headers: &HeaderMap) -> StatusCode
 
     if Regex::new(r"GitHub-Hookshot").unwrap().captures(user_agent).is_some()
     {
-        crate::debug("Authentic github event".to_string(), Some("GITHUB"));
-
         if !headers.contains_key("x-github-event")
         {
             return StatusCode::BAD_REQUEST;
@@ -114,6 +177,7 @@ pub async fn is_push(headers: &HeaderMap) -> StatusCode
             {
                 if s.to_lowercase() == "push"
                 {
+                    crate::debug("Recieving github push event".to_string(), Some("GITHUB"));
                     return StatusCode::OK
                 }
             }
