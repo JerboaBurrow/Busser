@@ -89,18 +89,10 @@ impl GitRefreshTask
     /// Send a discord message with [HeadInfo] if it is Some
     pub async fn notify_pull(info: Option<HeadInfo>, config: &Config)
     {
-        match info
+        match Self::head_info_to_message(info, config)
         {
-            Some(info) =>
+            Some(msg) =>
             {
-                let msg = format!
-                (
-                    "Checked out new commit for {}:\n {}\n {}\n {}", 
-                    config.domain,
-                    info.hash,
-                    info.author,
-                    info.datetime
-                );
                 crate::debug(msg.clone(), Some("GIT"));
                 try_post
                 (
@@ -111,6 +103,26 @@ impl GitRefreshTask
             None => {}
         }
         
+    }
+
+    /// Format a notification from a head info object and config. None if info is None
+    pub fn head_info_to_message(info: Option<HeadInfo>, config: &Config) -> Option<String>
+    {
+        match info
+        {
+            Some(info) =>
+            {
+                Some(format!
+                (
+                    "Checked out new commit for {}:```\n {}\n by {}\n at {}```",
+                    config.domain,
+                    info.hash,
+                    info.author_name,
+                    info.datetime
+                ))
+            },
+            None => None
+        }
     }
 }
 

@@ -1,7 +1,8 @@
 use core::fmt;
-use std::path::Path;
+use std::{cmp::min, path::Path};
 
-use git2::{ Cred, FetchOptions, RemoteCallbacks, Repository};
+use chrono::{DateTime, Utc};
+use git2::{ Cred, FetchOptions, Oid, RemoteCallbacks, Repository};
 
 use crate::{config::{GitAuthConfig, GitConfig}, filesystem::{folder::list_sub_dirs, set_dir_readonly}};
 
@@ -206,8 +207,9 @@ pub fn fast_forward_pull(repo: Repository, git: GitConfig) -> Result<Option<Head
 /// Commit hash, author and timestamp for head commit
 pub struct HeadInfo
 {
-    pub hash: git2::Oid,
-    pub author: String,
+    pub hash: String,
+    pub author_name: String,
+    pub author_email: String,
     pub datetime: String 
 }
 
@@ -228,16 +230,35 @@ pub fn head_info(repo: &Repository) -> Option<HeadInfo>
     {
         Ok(c) =>
         {
+            let dt: DateTime<Utc> = DateTime::from_timestamp(c.time().seconds(), 0).unwrap();
+            let name = match c.author().email()
+            {
+                Some(s) => s.to_string(),
+                None => "Unknown".to_string()
+            };
+            let email = match c.author().name()
+            {
+                Some(s) => s.to_string(),
+                None => "Unknown".to_string()
+            };
             Some
             (
                 HeadInfo
                 {
-                    hash: c.id(),
-                    author: c.author().to_string(),
-                    datetime: format!("{:?}", c.time())
+                    hash: short_oid(c.id()),
+                    author_email: email,
+                    author_name: name,
+                    datetime: format!("{}", dt)
                 }
             )
         },
         Err(_) => None
     }
+}
+
+/// Get first 7 digits of git hash
+pub fn short_oid(id: Oid) -> String
+{
+    let sid = id.to_string();
+    sid[0..min(sid.len(), 7)].to_string()
 }
