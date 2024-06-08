@@ -5,7 +5,8 @@ mod git
 {
     use std::path::Path;
 
-    use busser::{config::{Config, GitAuthConfig, GitConfig}, integrations::git::{clean_and_clone, fast_forward_pull, from_clone, refresh::GitRefreshTask, remove_repository}};
+    use busser::{config::{Config, GitAuthConfig, GitConfig}, integrations::git::{clean_and_clone, fast_forward_pull, from_clone, head_info, refresh::GitRefreshTask, remove_repository, HeadInfo}};
+    use git2::Oid;
 
     #[test]
     pub fn test_clone()
@@ -59,6 +60,8 @@ mod git
         println!("{:?}",repo.as_ref().err());
         assert!(repo.is_ok());
         assert!(!repo.as_ref().unwrap().is_empty().unwrap());
+        let head = head_info(&repo.unwrap());
+        println!("{:?}", GitRefreshTask::head_info_to_message(head, &Config::default()));
         assert!(Path::exists(Path::new(path)));
 
         if Path::exists(Path::new(path))
@@ -182,5 +185,25 @@ mod git
             let _ = remove_repository(&path);
         }
 
+    }
+
+    #[test]
+    pub fn test_head_info()
+    {
+        let id: Vec<u8> = (0..20).map(|x|x as u8).collect();
+        let info = HeadInfo
+        {
+            hash: Oid::from_bytes(&id).unwrap().to_string(),
+            author_name: "name".to_owned(),
+            author_email: "name@domain.com".to_owned(),
+            datetime: "yesterday".to_string(),
+        };
+        let config = Config::default();
+
+        let result = GitRefreshTask::head_info_to_message(Some(info), &config);
+
+        assert!(result.is_some());
+
+        assert!(GitRefreshTask::head_info_to_message(None, &config).is_none());
     }
 }
