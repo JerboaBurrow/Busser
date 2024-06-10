@@ -5,7 +5,7 @@ mod test_stats_graph
 {
     use std::{collections::HashMap, fs::remove_file, path::Path};
 
-    use busser::{config::Config, filesystem::file::File, server::stats::{digest::{hits_by_hour_text_graph, process_hits, Digest}, file::StatsFile, hits::{collect_hits, Hit, HitStats}}};
+    use busser::{config::Config, filesystem::file::File, server::stats::{digest::{digest_message, hits_by_hour_text_graph, process_hits, Digest}, file::StatsFile, hits::{collect_hits, Hit, HitStats}}};
     use chrono::DateTime;
 
     const GRAPH: &str = r#"00:00
@@ -118,6 +118,10 @@ mod test_stats_graph
         assert!(digest.top_resources.contains(&("/login.php/'%3E%3Csvg/onload=confirm%60xss%60%3E".to_string(), 2))); 
         assert!(digest.top_resources.contains(&("https://jerboa.app/console.js".to_string(), 2))); 
         assert!(digest.top_resources.contains(&("/admin/.env".to_string(), 2)));
+
+        let msg = digest_message(&digest, None, None);
+        let msg_at_epoch = digest_message(&digest, DateTime::UNIX_EPOCH.into(), DateTime::UNIX_EPOCH.into());
+        assert!(msg != msg_at_epoch);
     }
 
     #[test]

@@ -147,7 +147,7 @@ impl Task for StatsDigestTask
             try_post
             (
                 config.notification_endpoint,
-                &digest_message(stats.summary.clone(), Some(self.last_run), None)
+                &digest_message(&stats.summary, Some(self.last_run), None)
             ).await;
         }
 
