@@ -1,6 +1,6 @@
 use crate::
 {
-    config::{read_config, Config, CONFIG_PATH}, content::sitemap::SiteMap, integrations::{git::refresh::GitRefreshTask, github::filter_github}, server::throttle::{handle_throttle, IpThrottler}, task::{schedule_from_option, TaskPool}, CRAB
+    config::{read_config, CONFIG_PATH}, content::sitemap::SiteMap, integrations::{git::refresh::GitRefreshTask, github::filter_github}, server::throttle::{handle_throttle, IpThrottler}, task::{schedule_from_option, TaskPool}, CRAB
 };
 
 use core::time;
@@ -24,9 +24,10 @@ pub struct Server
 {
     addr: SocketAddr,
     router: Router,
-    config: Config,
     handle: Handle,
-    pub tasks: TaskPool
+    domain: String,
+    cert_path: String,
+    key_path: String
 }
 
 /// Checks a uri has a leading /, adds it if not
@@ -56,7 +57,7 @@ impl Server
         d: u8,
         sitemap: SiteMap
     ) 
-    -> Server
+    -> (Server, TaskPool)
     {
 
         let config = match read_config(CONFIG_PATH)
@@ -92,16 +93,19 @@ impl Server
 
         router = router.layer(middleware::from_fn_with_state(repo_mutex.clone(), filter_github));
 
-        let mut server = Server
+        let server = Server
         {
             addr: SocketAddr::new(IpAddr::V4(Ipv4Addr::new(a,b,c,d)), config.port_https),
             router,
-            config: config.clone(),
             handle: Handle::new(),
-            tasks: TaskPool::new()
+            cert_path: config.cert_path,
+            key_path: config.key_path,
+            domain: config.domain
         };
 
-        server.tasks.add
+        let mut tasks = TaskPool::new();
+
+        tasks.add
         (
             Box::new
             (
@@ -113,7 +117,7 @@ impl Server
             )
         );
 
-        server.tasks.add
+        tasks.add
         (
             Box::new
             (
@@ -127,7 +131,7 @@ impl Server
 
         if config.git.is_some()
         {
-            server.tasks.add
+            tasks.add
             (
                 Box::new
                 (
@@ -140,7 +144,7 @@ impl Server
             );
         }
 
-        server
+        (server, tasks)
     }
 
     pub fn get_addr(self: Server) -> SocketAddr
@@ -158,8 +162,8 @@ impl Server
 
         // configure https
 
-        let cert_path = self.config.cert_path.clone();
-        let key_path = self.config.key_path.clone();
+        let cert_path = self.cert_path.clone();
+        let key_path = self.key_path.clone();
 
         let config = match RustlsConfig::from_pem_file(
             PathBuf::from(cert_path.clone()),
@@ -175,13 +179,13 @@ impl Server
             }
         };
 
-        let domain = if self.config.domain.contains("https://")
+        let domain = if self.domain.contains("https://")
         {
-            self.config.domain.clone()
+            self.domain.clone()
         }
         else
         {
-            format!("https://{}", self.config.domain)
+            format!("https://{}", self.domain)
         };
 
         println!("Checkout your cool site, at {} {}!", domain, String::from_utf8(CRAB.to_vec()).unwrap());
@@ -189,8 +193,6 @@ impl Server
         {
             println!("(or https://127.0.0.1)");
         }
-        
-        self.tasks.clone().run();
         
         axum_server::bind_rustls(self.addr, config)
         .handle(self.handle.clone())

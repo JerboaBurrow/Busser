@@ -60,9 +60,6 @@ mod task
         assert!(wait > tokio::time::Duration::ZERO);
         assert_eq!(wait, DEFAULT_WAIT);
 
-        let handle = pool.run();
-        handle.abort();
-
     }
 
     #[test]
