@@ -7,7 +7,7 @@ use busser::integrations::git::clean_and_clone;
 use busser::server::http::ServerHttp;
 use busser::server::https::Server;
 use busser::util::formatted_differences;
-use busser::{openssl_version, program_version};
+use busser::{openssl_version, program_version, task};
 use tokio::task::spawn;
 
 #[tokio::main]
@@ -97,9 +97,10 @@ async fn serve_observed(insert_tag: bool)
         sitemap.refresh_all().await;
     }
 
-    let server = Server::new(0,0,0,0,sitemap.clone());
+    let (server, tasks) = Server::new(0,0,0,0,sitemap.clone());
     let mut server_handle = server.get_handle();
     let mut thread_handle = spawn(async move {server.serve()}.await);
+    let mut task_handle = spawn(async move {tasks.run()}.await);
     
     loop
     {
@@ -115,6 +116,7 @@ async fn serve_observed(insert_tag: bool)
             busser::debug(format!("Sitemap changed, shutting down"), None);
             server_handle.shutdown();
             thread_handle.abort();
+            task_handle.abort();
 
             let diffs = formatted_differences(new_sitemap.collect_uris(), sitemap.collect_uris());
             sitemap = new_sitemap.clone();
@@ -123,9 +125,10 @@ async fn serve_observed(insert_tag: bool)
                 sitemap.refresh_all().await;
             }
 
-            let server = Server::new(0,0,0,0,new_sitemap);
+            let (server, tasks) = Server::new(0,0,0,0,new_sitemap);
             server_handle = server.get_handle();
             thread_handle = spawn(async move {server.serve()}.await);
+            task_handle = spawn(async move {tasks.run()}.await);
             hash = sitemap_hash;
             busser::debug(format!("Re-served\n Diffs:\n{}", diffs), None);
             if config.content.message_on_sitemap_reload.is_some_and(|x|x)
@@ -145,6 +148,7 @@ async fn serve(insert_tag: bool)
     {
         sitemap.refresh_all().await;
     }
-    let server = Server::new(0,0,0,0,sitemap);
+    let (server, tasks) = Server::new(0,0,0,0,sitemap);
     server.serve().await;
+    let _ = spawn(async move {tasks.run()}.await);
 }

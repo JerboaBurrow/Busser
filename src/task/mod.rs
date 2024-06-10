@@ -117,37 +117,33 @@ impl TaskPool
         }
     }
 
-    pub fn run(self) -> tokio::task::JoinHandle<()>
+    pub async fn run(self)
     {
-        spawn(
-            async move {
-                loop
+        loop
+        {
+            for (id, task_lock) in &self.tasks
+            {
+                let mut task = task_lock.lock().await;
+                match task.runnable()
                 {
-                    for (id, task_lock) in &self.tasks
+                    true =>
                     {
-                        let mut task = task_lock.lock().await;
-                        match task.runnable()
+                        crate::debug(format!("Running task {}\n {}", id, task.info()), None); 
+                        match task.run().await
                         {
-                            true => 
-                            {
-                                crate::debug(format!("Running task {}\n {}", id, task.info()), None); 
-                                match task.run().await
-                                {
-                                    Ok(()) => (),
-                                    Err(e) => {crate::debug(format!("Task {}, exited with error {}", task.info(), e), None)}
-                                }
-                            },
-                            false => continue
+                            Ok(()) => (),
+                            Err(e) => {crate::debug(format!("Task {}, exited with error {}", task.info(), e), None)}
                         }
-                    }
-                    let (wait, info) = self.waiting_for().await;
-                    if wait > tokio::time::Duration::ZERO
-                    {   crate::debug(format!("Next task\n  {}\n Waiting for {}s", info, wait.as_secs()), None);
-                        tokio::time::sleep(wait).await;
-                    }
+                    },
+                    false => continue
                 }
             }
-        )
+            let (wait, info) = self.waiting_for().await;
+            if wait > tokio::time::Duration::ZERO
+            {   crate::debug(format!("Next task\n  {}\n Waiting for {}s", info, wait.as_secs()), None);
+                tokio::time::sleep(wait).await;
+            }
+        }
     }
 }
 
