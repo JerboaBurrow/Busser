@@ -3,7 +3,7 @@ mod common;
 #[cfg(test)]
 mod discord
 {
-    use busser::integrations::{discord::post::post_message, webhook::Webhook};
+    use busser::integrations::{discord::post::{post_message, try_post}, webhook::Webhook};
 
     #[tokio::test]
     async fn test_webhook()
@@ -20,5 +20,13 @@ mod discord
     {
         let w = Webhook::new("not_a_domain".to_string());
         assert!(post_message(&w, &"400".to_string()).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_try_post()
+    {
+        try_post(None, &"".to_string()).await;
+        let w = Webhook::new("not_a_domain".to_string());
+        try_post(Some(w), &"".to_string()).await;
     }
 }

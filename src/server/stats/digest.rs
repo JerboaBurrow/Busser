@@ -164,7 +164,7 @@ pub fn process_hits
 }
 
 /// Post a [Digest] as a formatted message to Discord
-pub fn digest_message(digest: Digest, from: Option<DateTime<chrono::Utc>>, to: Option<DateTime<chrono::Utc>>) -> String
+pub fn digest_message(digest: &Digest, from: Option<DateTime<chrono::Utc>>, to: Option<DateTime<chrono::Utc>>) -> String
 {
     let mut msg = String::new(); 
 

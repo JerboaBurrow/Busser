@@ -145,7 +145,7 @@ impl ApiRequest for StatsDigest
             None => None
         };
 
-        let msg = digest_message(process_hits( from,to,&config,stats), from, to);
+        let msg = digest_message(&process_hits( from,to,&config,stats), from, to);
 
         if self.payload.post_discord
         {

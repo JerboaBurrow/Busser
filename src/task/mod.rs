@@ -4,7 +4,7 @@ use std::{cmp::min, collections::HashMap, str::FromStr, sync::Arc};
 use axum::async_trait;
 use chrono::{DateTime, Local, Utc};
 use cron::Schedule;
-use tokio::{spawn, sync::Mutex};
+use tokio::sync::Mutex;
 use uuid::Uuid;
 
 pub const DEFAULT_WAIT: tokio::time::Duration = tokio::time::Duration::from_secs(60);
