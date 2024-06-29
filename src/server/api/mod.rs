@@ -27,13 +27,12 @@ pub trait ApiRequest
     ///     2. authenticate the request (HMAC)
     ///     3. respond to it
     ///     4. continue on to the next reqeust
-    async fn filter<B>
+    async fn filter
     (
         stats: State<Option<Arc<Mutex<HitStats>>>>,
         headers: HeaderMap,
-        request: Request<B>,
-        next: Next<B>
-    ) -> Result<Response, StatusCode>
-    where B: axum::body::HttpBody<Data = Bytes>;
+        request: Request<axum::body::Body>,
+        next: Next
+    ) -> Result<Response, StatusCode>;
 
 }

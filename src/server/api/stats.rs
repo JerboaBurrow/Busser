@@ -6,7 +6,7 @@ use reqwest::StatusCode;
 use serde::Deserialize;
 use tokio::sync::Mutex;
 
-use crate::{config::{read_config, CONFIG_PATH}, integrations::{discord::post::try_post, is_authentic}, server::stats::{digest::{digest_message, process_hits}, hits::HitStats}};
+use crate::{config::{read_config, CONFIG_PATH}, integrations::{discord::post::try_post, is_authentic}, server::stats::{digest::{digest_message, process_hits}, hits::HitStats}, util::extract_bytes};
 
 use super::ApiRequest;
 
@@ -159,14 +159,13 @@ impl ApiRequest for StatsDigest
         (Some(msg), StatusCode::OK)
     }
 
-    async fn filter<B>
+    async fn filter
     (
         State(stats): State<Option<Arc<Mutex<HitStats>>>>,
         headers: HeaderMap,
-        request: Request<B>,
-        next: Next<B>
+        request: Request<axum::body::Body>,
+        next: Next
     ) -> Result<Response, StatusCode>
-    where B: axum::body::HttpBody<Data = Bytes>
     {
 
         if !headers.contains_key("api")
@@ -190,13 +189,12 @@ impl ApiRequest for StatsDigest
             false => { return Ok(next.run(request).await) }
         }
 
-        let body = request.into_body();
-        let bytes = match body.collect().await {
-            Ok(collected) => collected.to_bytes(),
-            Err(_) => {
-                return Err(StatusCode::BAD_REQUEST)
-            }
+        let bytes = match extract_bytes(request).await
+        {
+            Ok(b) => b,
+            Err(_) => return Err(StatusCode::BAD_REQUEST)
         };
+    
 
         match StatsDigest::is_authentic(headers.clone(), bytes.clone())
         {

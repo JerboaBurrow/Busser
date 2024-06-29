@@ -93,10 +93,8 @@ impl ServerHttp
 
     pub async fn serve(self: ServerHttp)
     {
-        axum::Server::bind(&self.addr)
-        .serve(self.router.into_make_service_with_connect_info::<SocketAddr>())
-        .await
-        .unwrap();
+        let listener = tokio::net::TcpListener::bind(&self.addr).await.unwrap();
+        axum::serve(listener, self.router).await.unwrap();
     }
 
 }

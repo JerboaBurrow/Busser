@@ -78,7 +78,7 @@ impl Server
 
         let throttle_state = Arc::new(Mutex::new(requests));
         
-        let mut router: Router<(), axum::body::Body> = sitemap.into();
+        let mut router: Router = sitemap.into();
 
         let stats = Arc::new(Mutex::new(
             HitStats::new()
