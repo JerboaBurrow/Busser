@@ -114,7 +114,7 @@ impl GitRefreshTask
             {
                 Some(format!
                 (
-                    "Checked out new commit for {}:```\n {}\n by {}\n at {}```",
+                    "Checked out new commit for {}:\n```\n {}\n by {}\n at {}\n```",
                     config.domain,
                     info.hash,
                     info.author_name,
