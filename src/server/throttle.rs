@@ -140,12 +140,12 @@ impl IpThrottler
 
 /// Reflects any [Request]s in timeout (see [IpThrottler::is_limited]) as 
 ///   [StatusCode::TOO_MANY_REQUESTS].
-pub async fn handle_throttle<B>
+pub async fn handle_throttle
 (
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     State(state): State<Arc<Mutex<IpThrottler>>>,
-    request: http::Request<B>,
-    next: Next<B>
+    request: http::Request<axum::body::Body>,
+    next: Next
 ) -> Result<Response, StatusCode>
 {
     let serve_start = Instant::now();

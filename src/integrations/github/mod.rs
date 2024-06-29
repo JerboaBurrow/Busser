@@ -5,21 +5,20 @@ use regex::Regex;
 use reqwest::StatusCode;
 use tokio::sync::Mutex;
 
-use crate::{config::{Config, CONFIG_PATH}, util::strip_control_characters};
+use crate::{config::{Config, CONFIG_PATH}, util::{extract_bytes, strip_control_characters}};
 
 use super::git::refresh::GitRefreshTask;
 
 /// If user-agent is GitHub-Hookshot, check if
 ///  x-github-event is push. If so pull the repo if
 ///  [crate::config::GitConfig] is not None
-pub async fn filter_github<B>
+pub async fn filter_github
 (
     State(repo_lock): State<Arc<Mutex<SystemTime>>>,
     headers: HeaderMap,
-    request: Request<B>,
-    next: Next<B>
+    request: Request<axum::body::Body>,
+    next: Next
 ) -> Result<Response, StatusCode>
-where B: axum::body::HttpBody<Data = Bytes>
 {
     let config = Config::load_or_default(CONFIG_PATH);
     let remote = match config.git
@@ -45,22 +44,19 @@ where B: axum::body::HttpBody<Data = Bytes>
 
 /// Checks the Github webhook event is authentic and
 ///   matches remote. If so tries to pull
-pub async fn handle_push<B>
+pub async fn handle_push
 (
     repo_lock: Arc<Mutex<SystemTime>>,
     headers: HeaderMap,
-    request: Request<B>,
+    request: Request<axum::body::Body>,
     remote: String,
     token: String
 ) -> StatusCode
-where B: axum::body::HttpBody<Data = Bytes>
 {
-    let body = request.into_body();
-    let bytes = match body.collect().await {
-        Ok(collected) => collected.to_bytes(),
-        Err(_) => {
-            return StatusCode::BAD_REQUEST;
-        }
+    let bytes = match extract_bytes(request).await
+    {
+        Ok(b) => b,
+        Err(_) => return StatusCode::BAD_REQUEST
     };
 
     if !is_watched_repo(&bytes, &remote)

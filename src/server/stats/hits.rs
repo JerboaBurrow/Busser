@@ -54,12 +54,12 @@ impl HitStats
 }
 
 /// Launches a thread to log statistics for this request
-pub async fn log_stats<B>
+pub async fn log_stats
 (
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     State(state): State<Arc<Mutex<HitStats>>>,
-    request: Request<B>,
-    next: Next<B>
+    request: Request<axum::body::Body>,
+    next: Next
 ) -> Result<Response, StatusCode>
 {
     

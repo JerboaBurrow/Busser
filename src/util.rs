@@ -1,9 +1,12 @@
 use core::fmt;
 use std::{collections::HashSet, fmt::Write, io::{Read, Write as ioWrite}, time::Instant};
+use axum::{body::{to_bytes, Bytes}, http::Request};
 use chrono::{DateTime, Datelike, FixedOffset};
+use git2::Status;
 use libflate::deflate::{Encoder, Decoder};
 use openssl::sha::Sha256;
 use regex::Regex;
+use reqwest::StatusCode;
 
 use crate::BLAZING;
 
@@ -201,4 +204,25 @@ pub fn formatted_differences(new: Vec<String>, old: Vec<String>) -> String
     }
 
     diffs
+}
+
+#[derive(Debug, Clone)]
+pub struct BodyError
+{
+    pub why: String
+}
+
+impl fmt::Display for BodyError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.why)
+    }
+}
+
+pub async fn extract_bytes(request: Request<axum::body::Body>,) -> Result<Bytes, StatusCode>
+{
+    let body = request.into_body();
+    match to_bytes(body, usize::MAX).await {
+        Ok(collected) => Ok(collected),
+        Err(_) => Err(StatusCode::BAD_REQUEST)
+    }
 }

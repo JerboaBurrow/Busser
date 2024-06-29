@@ -59,7 +59,7 @@ impl ContentTree
     ///   content is never refreshed within the router
     fn route(&self, static_router: bool) -> Router
     {
-        let mut router: Router<(), axum::body::Body> = Router::new();
+        let mut router = Router::new();
         for (uri, content) in self.contents.clone()
         {
             router = router.route
