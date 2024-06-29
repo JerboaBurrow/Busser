@@ -15,7 +15,11 @@
 [![Coverage Status](https://coveralls.io/repos/github/JerboaBurrow/Busser/badge.svg?branch=main)](https://coveralls.io/github/JerboaBurrow/Busser?branch=main)
 </div>
 
-✔️ Host static (but automatically refreshable) website content from a given directory
+✔️ Quickly host static sites, via free tier cloud services (Google Cloud e2-micro) or a Raspberry Pi!
+
+✔️ Git based content management (with Github webhook integration) with automated checkouts, content re-serving, and sitemap generation.
+
+✔️ Status messages on content updates and hit statistics (Currently via Discord webhook integration)
 
 ✔️ URL shortening, e.g. ```/x/y/z/webpage.html``` aliased as ```/x/y/z/webpage```
 
@@ -23,15 +27,24 @@
 
 ✔️ IP throttling, and anonymised hit statistics 
 
-✔️ Authenticated API for status/statistics polling, with Discord webhook integration
-
 ✔️ Hot :fire: loadable configuration
 
-✔️ Host via **free tier** cloud services or a Raspberry Pi!
+# Contents
 
+- [Planned features](#planned-features)
 - [Spinning up](#spinning-up)
     - [Configuration](#configuration)
 - [Free static website hosting example with Google Cloud Free Tier](#free-static-website-hosting-example-with-google-cloud-free-tier)
+___
+
+# Planned features
+
+- Zulip, Slack, etc. webhook integration.
+- Gitlab webhook integration
+- Proxy relaying (e.g. relay POSTS to AWS Lambda based apis)
+- System health status messages.
+- System alerts (user configurable burst events, RAM/DISC usage, etc.)
+
 ___
 
 # Spinning up
@@ -58,28 +71,43 @@ The ```config.json``` specifies key properties of the site and its content
     },
     "stats": 
     {
-        "save_period_seconds": 10,
         "path": "stats",
-        "hit_cooloff_seconds": 60,
-        "digest_period_seconds": 86400,
-        "log_files_clear_period_seconds": 2419200,
+        "hit_cooloff_seconds": 3600,
+        "save_schedule": "0 0 * * * * *",
+        "digest_schedule": "0 0 0 * * * *",
         "ignore_regexes": ["/favicon.ico"]
     },
     "content": 
     {
-        "path": "/home/jerboa/Website/",
-        "home": "/home/jerboa/Website/jerboa.html",
+        "path": "PATH_TO_SITE_FILES",
+        "home": "PATH_TO_SITE_ROOT_PAGE",
         "allow_without_extension": true,
         "browser_cache_period_seconds": 3600,
-        "server_cache_period_seconds": 1,
-        "ignore_regexes": ["/.git", "workspace"]
+        "server_cache_period_seconds": 3600,
+        "ignore_regexes": ["/.git", "workspace"],
+        "generate_sitemap": true,
+        "message_on_sitemap_reload": true
+    },
+    "git":
+    {
+        "remote": "git@github.com:JerboaBurrow/website.git",
+        "branch": "main",
+        "checkout_schedule": "10 * * * * * *",
+        "remote_webhook_token": "GITHUB_WEBHOOK_SECRET",
+        "auth":
+        {
+            "key_path": "YOUR_KEY_PATH",
+            "user": "Jerboa-app",
+            "passphrase": "YOUR_KEY_PASS"
+        }
     },
     "domain": "127.0.0.1",
-    "api_token": "some_secure_secret_token",
-    "notification_endpoint": { "addr": "https://discord.com/api/webhooks/abc/xyz" },
+    "api_token": "YOUR_BUSSER_API_TOKEN",
+    "notification_endpoint": { "addr": "https://discord.com/api/webhooks/xxx/yyy" },
     "cert_path": "certs/cert.pem",
     "key_path": "certs/key.pem"
 }
+
 ```
 ____
 
