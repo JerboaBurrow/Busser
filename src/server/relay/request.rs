@@ -1,8 +1,10 @@
 use std::str::{from_utf8, FromStr};
 
-use axum::{body::{Body, Bytes}, http::{HeaderMap, HeaderName, HeaderValue, Request}, middleware::Next, response::Response};
+use axum::{body::Body, http::{HeaderMap, HeaderName, HeaderValue, Request}, middleware::Next, response::Response};
 use reqwest::StatusCode;
 use serde::Deserialize;
+
+use crate::util::extract_bytes;
 
 #[derive(Deserialize)]
 struct RelayRequest
@@ -12,24 +14,24 @@ struct RelayRequest
     endpoint: String
 }
 
-pub async fn filter<B>
+pub async fn filter
     (
         headers: HeaderMap,
-        request: Request<B>,
-        next: Next<B>
+        request: Request<axum::body::Body>,
+        next: Next
     ) -> Result<Response, StatusCode>
-    where B: axum::body::HttpBody<Data = Bytes>
 {
     if !headers.contains_key("relay")
     {
         return Ok(next.run(request).await);
     }
 
-    let body = request.into_body();
-    let bytes = match body.collect().await {
-        Ok(collected) => collected.to_bytes(),
+    let bytes = match extract_bytes(request).await
+    {
+        Ok(b) => b,
         Err(_) => return Err(StatusCode::BAD_REQUEST)
     };
+
     let body = match from_utf8(&bytes)
     {
         Ok(b) => b,
@@ -73,5 +75,8 @@ pub async fn filter<B>
         let value = HeaderValue::from_bytes(value.as_ref()).unwrap();
         (name, value)
     }));
-    response_builder.body(Body::wrap_stream(response.bytes_stream())).
+    match response_builder.body(Body::from_stream(response.bytes_stream())) {
+        Ok(resp) => Ok(resp),
+        Err(_) => Err(StatusCode::BAD_REQUEST)
+    }
 }
