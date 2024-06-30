@@ -1,7 +1,7 @@
 use std::str::{from_utf8, FromStr};
 
 use axum::{body::Body, http::{HeaderMap, HeaderName, HeaderValue, Request}, middleware::Next, response::Response};
-use reqwest::StatusCode;
+use reqwest::{header, StatusCode};
 use serde::Deserialize;
 
 use crate::{config::{Config, RelayConfig, CONFIG_PATH}, util::extract_bytes};
@@ -9,11 +9,43 @@ use crate::{config::{Config, RelayConfig, CONFIG_PATH}, util::extract_bytes};
 #[derive(Deserialize)]
 /// Information to relay a request, name must match a name of
 ///   a [RelayConfig], see [filter_relay].
-struct RelayRequest
+pub struct RelayRequest
 {
     body: String,
     headers: Vec<(String, String)>,
     name: String
+}
+
+/// Checks for relay header
+pub fn is_relay(headers: HeaderMap) -> bool
+{
+    headers.contains_key("relay")
+}
+
+/// Parses the body into a [RelayRequest] or [None].
+pub async fn get_request(request: Request<axum::body::Body>) -> Option<RelayRequest>
+{
+    let bytes = match extract_bytes(request).await
+    {
+        Ok(b) => b,
+        Err(_) => return None
+    };
+
+    let body = match from_utf8(&bytes)
+    {
+        Ok(b) => b,
+        Err(_) => return None
+    };
+
+    match serde_json::from_str(body)
+    {
+        Ok(r) => r,
+        Err(_) => 
+        {
+            crate::debug(format!("Bad JSON body"), Some("Relay"));
+            return None
+        }
+    }
 }
 
 /// Relay a request, if the header "relay" is present
@@ -31,31 +63,13 @@ pub async fn filter_relay
         next: Next
     ) -> Result<Response, StatusCode>
 {
-    if !headers.contains_key("relay")
-    {
-        return Ok(next.run(request).await);
-    }
 
-    let bytes = match extract_bytes(request).await
-    {
-        Ok(b) => b,
-        Err(_) => return Err(StatusCode::BAD_REQUEST)
-    };
+    if !is_relay(headers) { return Ok(next.run(request).await); }
 
-    let body = match from_utf8(&bytes)
+    let req = match get_request(request).await
     {
-        Ok(b) => b,
-        Err(_) => return Err(StatusCode::BAD_REQUEST)
-    };
-
-    let req: RelayRequest = match serde_json::from_str(body)
-    {
-        Ok(r) => r,
-        Err(_) => 
-        {
-            crate::debug(format!("Bad JSON body"), Some("Relay"));
-            return Err(StatusCode::BAD_REQUEST)
-        }
+        Some(r) => r,
+        None => return Err(StatusCode::BAD_REQUEST),
     };
 
     let mut relay_headers = HeaderMap::new();
