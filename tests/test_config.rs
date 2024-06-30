@@ -44,6 +44,14 @@ mod config
         assert_eq!(config.content.ignore_regexes.unwrap(), vec!["/.git", "workspace"]);
         assert_eq!(config.content.static_content, None);
         assert_eq!(config.content.generate_sitemap, Some(false));
+
+        assert!(config.relay.is_some());
+        let relay = config.relay.unwrap();
+        assert_eq!(relay.len(), 1);
+        assert_eq!(relay[0].name, "crud");
+        assert_eq!(relay[0].headers.len(), 1);
+        assert_eq!(relay[0].headers[0], ("x-api-key".to_string(), "KEY".to_string()));
+        assert_eq!(relay[0].url, "url");
     }
 
     #[test]
@@ -98,6 +106,7 @@ mod config
         assert_eq!(config.domain, "127.0.0.1");
 
         assert!(config.git.is_none());
+        assert!(config.relay.is_none());
 
     }
 

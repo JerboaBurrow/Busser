@@ -137,9 +137,21 @@ pub struct GitConfig
 {
     pub remote: String,
     pub branch: String,
-    pub remote_webhook_token: Option<String>, 
+    pub remote_webhook_token: Option<String>,
     pub checkout_schedule: Option<String>,
     pub auth: Option<GitAuthConfig>
+}
+
+/// Relay request config
+/// - ```name```: to match inbound relays to configs
+/// - ```headers```: a list of private headers to add to the relayed request
+/// - ```url```: a private url to make the request to
+#[derive(Clone, Serialize, Deserialize)]
+pub struct RelayConfig
+{
+    pub name: String,
+    pub headers: Vec<(String, String)>,
+    pub url: String
 }
 
 /// Configure the server
@@ -154,7 +166,7 @@ pub struct GitConfig
 /// - ```stats```: [StatsConfig]
 /// - ```content```: [ContentConfig]
 /// - ```git```: [GitConfig] if present busser will track a git repo for content
-/// 
+/// - ```relay```: [RelayConfig] a list of requests to relay, headers and url may be stored in the config to hide them.
 /// <div class="warning"><p>The config.json is a sensitive file which may contain plaintext access tokens/ passphrases.
 /// Content matching "config.json" is not served.
 /// </p>
@@ -172,7 +184,8 @@ pub struct Config
     pub throttle: ThrottleConfig,
     pub stats: StatsConfig,
     pub content: ContentConfig,
-    pub git: Option<GitConfig>
+    pub git: Option<GitConfig>,
+    pub relay: Option<Vec<RelayConfig>>
 }
 
 impl Config 
@@ -191,7 +204,8 @@ impl Config
             throttle: ThrottleConfig::default(),
             stats: StatsConfig::default(),
             content: ContentConfig::default(),
-            git: None
+            git: None,
+            relay: None
         }
     }
 
