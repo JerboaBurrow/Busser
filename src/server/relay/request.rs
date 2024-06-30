@@ -7,6 +7,8 @@ use serde::Deserialize;
 use crate::{config::{Config, RelayConfig, CONFIG_PATH}, util::extract_bytes};
 
 #[derive(Deserialize)]
+/// Information to relay a request, name must match a name of
+///   a [RelayConfig], see [filter_relay].
 struct RelayRequest
 {
     body: String,
@@ -14,7 +16,15 @@ struct RelayRequest
     name: String
 }
 
-pub async fn filter
+/// Relay a request, if the header "relay" is present
+///   and matches some [RelayConfig] in [Config].
+/// 
+/// The request body should be json deserializable into
+///   a [RelayRequest]. Using this proxy one may hide API
+///   tokens and urls behind a request sent to Busser. E.g
+///   an AWS lambda CRUD API may be called by proxy hiding its
+///   url and token.
+pub async fn filter_relay
     (
         headers: HeaderMap,
         request: Request<axum::body::Body>,
@@ -41,13 +51,11 @@ pub async fn filter
     let req: RelayRequest = match serde_json::from_str(body)
     {
         Ok(r) => r,
-        Err(_) => return Err(StatusCode::BAD_REQUEST)
-    };
-
-    let _: serde::de::IgnoredAny = match serde_json::from_str(&req.body)
-    {
-        Ok(j) => j,
-        Err(_) => return Err(StatusCode::BAD_REQUEST),
+        Err(_) => 
+        {
+            crate::debug(format!("Bad JSON body"), Some("Relay"));
+            return Err(StatusCode::BAD_REQUEST)
+        }
     };
 
     let mut relay_headers = HeaderMap::new();
@@ -58,7 +66,11 @@ pub async fn filter
 
     match get_relay_config(req.name)
     {
-        None => return Err(StatusCode::BAD_REQUEST),
+        None => 
+        {
+            crate::debug(format!("No matching config"), Some("Relay"));
+            return Err(StatusCode::BAD_REQUEST)
+        },
         Some(relay) =>
         {
             for (key, value) in relay.headers
@@ -68,7 +80,8 @@ pub async fn filter
 
             let client = reqwest::Client::new();
             let response = match client.post(relay.url)
-                .json(&serde_json::json!(req.body))
+                .headers(relay_headers)
+                .body(req.body)
                 .send()
                 .await
             {
@@ -77,7 +90,6 @@ pub async fn filter
             };
 
             let response_builder = Response::builder().status(response.status().as_u16());
-            // Here the mapping of headers is required due to reqwest and axum differ on the http crate versions
             let mut headers = HeaderMap::with_capacity(response.headers().len());
             headers.extend(response.headers().into_iter().map(|(name, value)| {
                 let name = HeaderName::from_bytes(name.as_ref()).unwrap();
