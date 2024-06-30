@@ -25,6 +25,14 @@
         "ignore_regexes": ["/.git", "workspace"],
         "generate_sitemap": false
     },
+    "relay":
+    [
+        {
+            "name": "crud",
+            "headers": [["x-api-key", "KEY"]],
+            "url": "url"
+        }
+    ],
     "domain": "127.0.0.1",
     "api_token": "some_secure_secret_token",
     "notification_endpoint": { "addr": "https://discord.com/api/webhooks/abc/xyz" },

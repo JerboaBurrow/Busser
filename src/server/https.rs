@@ -16,7 +16,7 @@ use axum::
 };
 use axum_server::{tls_rustls::RustlsConfig, Handle};
 
-use super::{api::{stats::StatsDigest, ApiRequest}, stats::{hits::{log_stats, HitStats}, StatsSaveTask, StatsDigestTask}};
+use super::{api::{stats::StatsDigest, ApiRequest}, relay::request::filter_relay, stats::{hits::{log_stats, HitStats}, StatsDigestTask, StatsSaveTask}};
 
 /// An https server that reads a directory configured with [Config]
 /// ```.html``` pages and resources, then serves them.
@@ -92,6 +92,7 @@ impl Server
         let repo_mutex = Arc::new(Mutex::new(SystemTime::now()));
 
         router = router.layer(middleware::from_fn_with_state(repo_mutex.clone(), filter_github));
+        router = router.layer(middleware::from_fn(filter_relay));
 
         let server = Server
         {
