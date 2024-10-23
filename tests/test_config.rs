@@ -44,6 +44,7 @@ mod config
         assert_eq!(config.content.ignore_regexes.unwrap(), vec!["/.git", "workspace"]);
         assert_eq!(config.content.static_content, None);
         assert_eq!(config.content.generate_sitemap, Some(false));
+        assert_eq!(config.content.error_template, None);
 
         assert!(config.relay.is_some());
         let relay = config.relay.unwrap();
@@ -95,6 +96,7 @@ mod config
         assert_eq!(content.server_cache_period_seconds, 3600);
         assert_eq!(content.static_content, Some(false));
         assert_eq!(content.message_on_sitemap_reload, Some(false));
+        assert_eq!(content.error_template, None);
 
         let config = Config::default();
 
@@ -174,6 +176,7 @@ mod config
         assert_eq!(config.content.browser_cache_period_seconds, 3600);
         assert_eq!(config.content.server_cache_period_seconds, 1);
         assert_eq!(config.content.ignore_regexes.unwrap(), vec!["/.git", "workspace"]);
+        assert_eq!(config.content.error_template, None);
     }
 
     #[test]

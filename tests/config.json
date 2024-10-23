@@ -1,13 +1,13 @@
 {
     "port_https": 443,
-    "port_http": 80, 
-    "throttle": 
+    "port_http": 80,
+    "throttle":
     {
-        "max_requests_per_second": 64.0, 
-        "timeout_millis": 5000, 
+        "max_requests_per_second": 64.0,
+        "timeout_millis": 5000,
         "clear_period_seconds": 3600
     },
-    "stats": 
+    "stats":
     {
         "path": "tests/stats",
         "hit_cooloff_seconds": 60,
@@ -15,7 +15,7 @@
         "digest_schedule": "0 0 1 * * Fri *",
         "ignore_regexes": ["/favicon.ico"]
     },
-    "content": 
+    "content":
     {
         "path": "tests/pages",
         "home": "tests/pages/a.html",

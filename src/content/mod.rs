@@ -17,9 +17,10 @@ use self::mime_type::{Mime, MIME};
 pub mod mime_type;
 pub mod filter;
 pub mod sitemap;
+pub mod error_page;
 
-/// Store web content 
-/// 
+/// Store web content
+///
 /// - The body is unpopulated until [Content::load_from_file] is called
 /// - The body may be converted to a utf8 string using [Content::utf8_body]
 /// - A hash of the file is used to check it is stale, used by [Observed]
@@ -38,9 +39,9 @@ pub struct Content
     tag_insertion: bool
 }
 
-pub trait HasUir 
+pub trait HasUir
 {
-    fn get_uri(&self) -> String;  
+    fn get_uri(&self) -> String;
 }
 
 impl PartialEq for Content
@@ -96,7 +97,7 @@ impl Observed for Content
         }
     }
 
-    fn last_refreshed(&self) -> SystemTime 
+    fn last_refreshed(&self) -> SystemTime
     {
         self.last_refreshed.clone()
     }
@@ -114,11 +115,11 @@ impl Content
 {
     pub fn new(uri: &str, disk_path: &str, server_cache: u16, browser_cache: u16, tag_insertion: bool) -> Content
     {
-        Content 
-        { 
-            uri: uri.to_string(), 
-            body: vec![], 
-            disk_path: disk_path.to_string(), 
+        Content
+        {
+            uri: uri.to_string(),
+            body: vec![],
+            disk_path: disk_path.to_string(),
             content_type: <MIME as Mime>::infer_mime_type(disk_path),
             server_cache_period_seconds: server_cache,
             browser_cache_period_seconds: browser_cache,
@@ -145,14 +146,14 @@ impl Content
     {
         match self.read_bytes()
         {
-            Some(data) => 
+            Some(data) =>
             {
                 self.body = data.clone();
                 self.hash = hash(data);
                 self.last_refreshed = SystemTime::now();
                 Ok(())
             }
-            None => 
+            None =>
             {
                 self.last_refreshed = SystemTime::now();
                 Err(FileError { why: format!("Could not read bytes from {}", self.disk_path)})
@@ -180,7 +181,7 @@ impl Content
         let preview_body = match self.utf8_body()
         {
             Ok(s) => s[0..min(s.len(), n)].to_string(),
-            Err(_e) => 
+            Err(_e) =>
             {
                 dump_bytes(&self.body)[0..min(self.body.len(), n)].to_string()
             }
@@ -193,13 +194,13 @@ impl Content
 /// this may be disabled by launching as busser --no-tagging
 pub fn insert_tag(body: String)
  -> String
-{   
+{
     format!("<!--Hosted by Busser {}, https://github.com/JerboaBurrow/Busser-->\n{}", program_version(), body)
 }
 
 impl IntoResponse for Content {
     fn into_response(self) -> Response {
-        
+
         let mut response = if self.content_type == MIME::TextHtml
         {
             let mut string_body = match self.utf8_body()
@@ -229,22 +230,22 @@ impl IntoResponse for Content {
 
         response.headers_mut()
             .insert("cache-control", format!("public, max-age={}", self.browser_cache_period_seconds).parse().unwrap());
-        
+
         response
     }
 }
 
 pub fn is_page(uri: &str, domain: &str) -> bool
 {
-    if uri == "/" 
+    if uri == "/"
     {
         return true
     }
-    
+
     let domain_escaped = domain.replace("https://", "").replace("http://", "").replace(".", r"\.");
     match Regex::new(format!(r"((^|(http)(s|)://){})(/|/[^\.]+|/[^\.]+.html|$)$",domain_escaped).as_str())
     {
-        Ok(re) => 
+        Ok(re) =>
         {
             re.is_match(uri)
         },

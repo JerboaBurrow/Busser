@@ -5,7 +5,7 @@ mod test_content
 {
     use std::{collections::HashMap, fs::remove_file, path::Path, thread::sleep, time};
 
-    use busser::{content::{filter::ContentFilter, get_content, insert_tag, is_page, mime_type::MIME, Content, HasUir}, filesystem::file::{file_hash, write_file_bytes, Observed}, util::read_bytes};
+    use busser::{config::{read_config, Config}, content::{error_page::{ErrorPage, DEFAULT_BODY}, filter::ContentFilter, get_content, insert_tag, is_page, mime_type::MIME, Content, HasUir}, filesystem::file::{file_hash, write_file_bytes, Observed}, util::read_bytes};
 
     #[test]
     fn test_load_content()
@@ -231,6 +231,32 @@ mod test_content
             assert_eq!(is_page(&uri, &domain_a), a);
             assert_eq!(is_page(&uri, &domain_b), b);
         }
+    }
+
+    #[test]
+    fn test_error_page()
+    {
+        let mut config = Config::default();
+        let default_error = ErrorPage::from(&config);
+        assert_ne!(default_error.body_template, DEFAULT_BODY);
+        assert!(default_error.body_template.contains("127.0.0.1"));
+        assert!(!default_error.body_template.contains("LINK_TO_HOME"));
+        assert!(default_error.body_template.contains("ERROR_CODE"));
+
+        let body = default_error.expand_error_code("404");
+        assert!(!body.contains("ERROR_CODE"));
+        assert!(body.contains("404"));
+
+        let config = read_config("tests/config.json").unwrap();
+        let default_error = ErrorPage::from(&config);
+        assert_ne!(default_error.body_template, DEFAULT_BODY);
+        assert!(default_error.body_template.contains("127.0.0.1"));
+        assert!(!default_error.body_template.contains("LINK_TO_HOME"));
+        assert!(default_error.body_template.contains("ERROR_CODE"));
+
+        let body = default_error.expand_error_code("404");
+        assert!(!body.contains("ERROR_CODE"));
+        assert!(body.contains("404"));
     }
 
 }
