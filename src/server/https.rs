@@ -1,18 +1,18 @@
 use crate::
 {
-    config::{read_config, CONFIG_PATH}, content::sitemap::SiteMap, integrations::{git::refresh::GitRefreshTask, github::filter_github}, server::throttle::{handle_throttle, IpThrottler}, task::{schedule_from_option, TaskPool}, CRAB
+    config::{read_config, CONFIG_PATH}, content::{error_page::ErrorPage, sitemap::SiteMap}, integrations::{git::refresh::GitRefreshTask, github::filter_github}, server::throttle::{handle_throttle, IpThrottler}, task::{schedule_from_option, TaskPool}, CRAB
 };
 
 use core::time;
 use std::{net::{IpAddr, Ipv4Addr, SocketAddr}, time::SystemTime};
 use std::path::PathBuf;
 use std::sync::Arc;
+
 use tokio::sync::Mutex;
 
 use axum::
 {
-    middleware, 
-    Router
+    middleware, response::Html, Router
 };
 use axum_server::{tls_rustls::RustlsConfig, Handle};
 
@@ -47,16 +47,16 @@ pub fn parse_uri(uri: String, path: String) -> String
     }
 }
 
-impl Server 
+impl Server
 {
-    pub fn new 
+    pub fn new
     (
         a: u8,
         b: u8,
         c: u8,
         d: u8,
         sitemap: SiteMap
-    ) 
+    )
     -> (Server, TaskPool)
     {
 
@@ -71,13 +71,13 @@ impl Server
 
         let requests: IpThrottler = IpThrottler::new
         (
-            config.throttle.max_requests_per_second, 
+            config.throttle.max_requests_per_second,
             config.throttle.timeout_millis,
             config.throttle.clear_period_seconds
         );
 
         let throttle_state = Arc::new(Mutex::new(requests));
-        
+
         let mut router: Router = sitemap.into();
 
         let stats = Arc::new(Mutex::new(
@@ -93,6 +93,9 @@ impl Server
 
         router = router.layer(middleware::from_fn_with_state(repo_mutex.clone(), filter_github));
         router = router.layer(middleware::from_fn(filter_relay));
+
+        let error_page = ErrorPage::from(&config);
+        router = router.fallback(Html(error_page.expand_error_code("404")));
 
         let server = Server
         {
@@ -112,9 +115,9 @@ impl Server
             (
                 StatsSaveTask::new
                 (
-                    stats.clone(), 
+                    stats.clone(),
                     schedule_from_option(config.stats.save_schedule.clone())
-                ) 
+                )
             )
         );
 
@@ -124,9 +127,9 @@ impl Server
             (
                 StatsDigestTask::new
                 (
-                    stats.clone(), 
+                    stats.clone(),
                     schedule_from_option(config.stats.digest_schedule.clone())
-                ) 
+                )
             )
         );
 
@@ -173,7 +176,7 @@ impl Server
         .await
         {
             Ok(c) => c,
-            Err(e) => 
+            Err(e) =>
             {
                 println!("error while reading certificates in {} and key {}\n{}", cert_path, key_path, e);
                 std::process::exit(1);
@@ -194,7 +197,7 @@ impl Server
         {
             println!("(or https://127.0.0.1)");
         }
-        
+
         axum_server::bind_rustls(self.addr, config)
         .handle(self.handle.clone())
         .serve(self.router.clone().into_make_service_with_connect_info::<SocketAddr>())

@@ -77,8 +77,9 @@ impl ThrottleConfig
 /// - ```server_cache_period_seconds: u16```: internal cache period if content is not static
 /// - ```static_content: Option<bool>```: all content is immutably cached at launch
 /// - ```ignore_regexes: Option<Vec<String>>```: do not serve content matching any of these patterns
-/// - ```generate_sitemap: Option<bool>```: sitemap.xml will be automatically generated (and updated) 
+/// - ```generate_sitemap: Option<bool>```: sitemap.xml will be automatically generated (and updated)
 /// - ```message_on_sitemap_reload: Option<bool>```: optionally send Discord notifications when sitemap is reloaded
+/// - ```error_template: Option<String>```: path to error template page.
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ContentConfig
 {
@@ -90,7 +91,8 @@ pub struct ContentConfig
     pub server_cache_period_seconds: u16,
     pub static_content: Option<bool>,
     pub generate_sitemap: Option<bool>,
-    pub message_on_sitemap_reload: Option<bool>
+    pub message_on_sitemap_reload: Option<bool>,
+    pub error_template: Option<String>
 }
 
 impl ContentConfig
@@ -107,7 +109,8 @@ impl ContentConfig
             server_cache_period_seconds: 3600,
             static_content: Some(false),
             generate_sitemap: Some(true),
-            message_on_sitemap_reload: Some(false)
+            message_on_sitemap_reload: Some(false),
+            error_template: None
         }
     }
 }
@@ -116,7 +119,7 @@ impl ContentConfig
 /// - ```key_path```: optional location of ssh key (ssh connection will be used)
 /// - ```user```: user name for authentication
 /// - ```passphrase```: passphrase for ssh key or for user-pass auth
-/// <div class="warning"><p>If using ssh keys be sure the host is added to ~/ssh/known_hosts for 
+/// <div class="warning"><p>If using ssh keys be sure the host is added to ~/ssh/known_hosts for
 ///the user that runs busser, including root</p>
 #[derive(Clone, Serialize, Deserialize)]
 pub struct GitAuthConfig
@@ -188,7 +191,7 @@ pub struct Config
     pub relay: Option<Vec<RelayConfig>>
 }
 
-impl Config 
+impl Config
 {
     pub fn default() -> Config
     {
@@ -239,7 +242,7 @@ pub fn read_config(path: &str) -> Option<Config>
         let config: Config = match serde_json::from_str(&data)
         {
             Ok(data) => {data},
-            Err(why) => 
+            Err(why) =>
             {
                 crate::debug(format!("Error reading configuration file {}\n{}", path, why), None);
                 return None
@@ -248,7 +251,7 @@ pub fn read_config(path: &str) -> Option<Config>
 
         Some(config)
     }
-    else 
+    else
     {
         crate::debug(format!("Error configuration file {} does not exist", path), None);
         None

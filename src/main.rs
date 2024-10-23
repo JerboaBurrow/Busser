@@ -7,14 +7,14 @@ use busser::integrations::git::clean_and_clone;
 use busser::server::http::ServerHttp;
 use busser::server::https::Server;
 use busser::util::formatted_differences;
-use busser::{openssl_version, program_version, task};
+use busser::{openssl_version, program_version};
 use tokio::task::spawn;
 
 #[tokio::main]
 async fn main() {
 
     let args: Vec<String> = std::env::args().collect();
- 
+
     if args.iter().any(|x| x == "-v")
     {
         println!("Version: {}\n{}", program_version(), openssl_version());
@@ -39,13 +39,13 @@ async fn main() {
     {
         true
     };
-    
+
     let http_server = ServerHttp::new(0,0,0,0);
     let _http_redirect = spawn(http_server.serve());
 
     match read_config(CONFIG_PATH)
     {
-        Some(c) => 
+        Some(c) =>
         {
             if c.git.is_some()
             {
@@ -81,9 +81,9 @@ async fn main() {
 
 /// Serve by observing the site content found at the path [busser::config::ContentConfig]
 ///  every [busser::config::ContentConfig::server_cache_period_seconds] the sitemap
-///  hash (see [busser::content::sitemap::SiteMap::get_hash]) is checked, if it is 
-///  different the server is re-served. 
-/// 
+///  hash (see [busser::content::sitemap::SiteMap::get_hash]) is checked, if it is
+///  different the server is re-served.
+///
 ///  On a re-serve if [busser::config::ContentConfig::message_on_sitemap_reload] is true
 ///   A status message with (uri) additions and removals will be posted to Discord.
 async fn serve_observed(insert_tag: bool)
@@ -101,13 +101,13 @@ async fn serve_observed(insert_tag: bool)
     let mut server_handle = server.get_handle();
     let mut thread_handle = spawn(async move {server.serve()}.await);
     let mut task_handle = spawn(async move {tasks.run()}.await);
-    
+
     loop
     {
-        
+
         busser::debug(format!("Next sitemap check: {}s", config.content.server_cache_period_seconds), None);
         tokio::time::sleep(Duration::from_secs(config.content.server_cache_period_seconds.into())).await;
-        
+
         let new_sitemap = SiteMap::build(&config, insert_tag, false);
         let sitemap_hash = new_sitemap.get_hash();
 
