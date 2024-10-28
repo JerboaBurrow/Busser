@@ -69,7 +69,9 @@ impl ErrorPage
 {
     fn expand_template(template: String, config: &Config) -> String
     {
-        template.replace("LINK_TO_HOME", &format!("https://{}",&config.domain))
+        let mut domain = config.domain.to_string();
+        if !domain.starts_with("https://") {domain = format!("https://{domain}")}
+        template.replace("LINK_TO_HOME", &domain)
     }
 
     pub fn expand_error_code(&self, code: &str) -> String
