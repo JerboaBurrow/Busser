@@ -11,14 +11,14 @@ on:
       - 'LICENSE'
       - '.gitignore'
       - 'CONTRIBUTING'
-      
+
   workflow_dispatch:
 
 
 jobs:
 
   coverage:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
     - uses: actions/checkout@v4
@@ -32,7 +32,7 @@ jobs:
   build_test_and_bundle:
     strategy:
       matrix:
-        os: [ubuntu-latest, ubuntu-20.04, windows-latest, macos-latest]
+        os: [ubuntu-latest, ubuntu-22.04, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -59,7 +59,7 @@ jobs:
         path: Busser
 
   build_test_and_bundle_arm:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
     - uses: actions/checkout@v4
@@ -69,7 +69,7 @@ jobs:
         curl https://sh.rustup.rs -sSf | sh -s -- -y
         rustup target add armv7-unknown-linux-gnueabi
         rustup target add aarch64-unknown-linux-gnu
-        sudo apt-get install -y gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
+        sudo sudo apt-get update && apt-get install -y gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
 
     - name: unit tests
       run: |
@@ -102,13 +102,13 @@ jobs:
     needs: [build_test_and_bundle, build_test_and_bundle_arm]
     if: github.ref_type == 'tag'
     runs-on: ubuntu-22.04
-    
+
     steps:
 
       - name: get linux build
         uses: actions/download-artifact@v4
         with:
-          name: ubuntu-20.04
+          name: ubuntu-22.04
 
       - name: get windows build
         uses: actions/download-artifact@v4
@@ -134,15 +134,14 @@ jobs:
         run: |
               mkdir linux windows macos armv7 aarch64
               ls
-              mv busser-ubuntu-20.04 busser-linux-x86_64
+              mv busser-ubuntu-22.04 busser-linux-x86_64
               for arch in linux-x86_64 macos-latest armv7 aarch64; do mv busser-$arch busser && chmod +x busser && tar -cvf busser-$arch.tar.gz busser LICENSE; done
-              
+
               mv busser-macos-latest.tar.gz busser-macOS.tar.gz
               mv busser-windows-latest.exe busser.exe
               chmod +x busser.exe
               zip busser-windows.zip busser.exe LICENSE
               ls
-              
 
   #     https://github.com/softprops/action-gh-release
       - name: release
