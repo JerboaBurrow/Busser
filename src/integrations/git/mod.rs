@@ -42,7 +42,7 @@ impl From<std::io::Error> for GitError
     }
 }
 
-fn build_fetch_option(auth: &GitAuthConfig) -> FetchOptions
+fn build_fetch_option(auth: &GitAuthConfig) -> FetchOptions<'_>
 {
     let mut fo = git2::FetchOptions::new();
     let callbacks = match &auth.key_path
