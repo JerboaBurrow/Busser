@@ -1,7 +1,7 @@
 use std::str::{from_utf8, FromStr};
 
 use axum::{body::Body, http::{HeaderMap, HeaderName, HeaderValue, Request}, middleware::Next, response::Response};
-use reqwest::{header, StatusCode};
+use reqwest::StatusCode;
 use serde::Deserialize;
 
 use crate::{config::{Config, RelayConfig, CONFIG_PATH}, util::extract_bytes};
@@ -40,7 +40,7 @@ pub async fn get_request(request: Request<axum::body::Body>) -> Option<RelayRequ
     match serde_json::from_str(body)
     {
         Ok(r) => r,
-        Err(_) => 
+        Err(_) =>
         {
             crate::debug(format!("Bad JSON body"), Some("Relay"));
             return None
@@ -50,7 +50,7 @@ pub async fn get_request(request: Request<axum::body::Body>) -> Option<RelayRequ
 
 /// Relay a request, if the header "relay" is present
 ///   and matches some [RelayConfig] in [Config].
-/// 
+///
 /// The request body should be json deserializable into
 ///   a [RelayRequest]. Using this proxy one may hide API
 ///   tokens and urls behind a request sent to Busser. E.g
@@ -80,7 +80,7 @@ pub async fn filter_relay
 
     match get_relay_config(req.name)
     {
-        None => 
+        None =>
         {
             crate::debug(format!("No matching config"), Some("Relay"));
             return Err(StatusCode::BAD_REQUEST)
